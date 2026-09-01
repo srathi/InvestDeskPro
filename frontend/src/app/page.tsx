@@ -45,6 +45,12 @@ export default function Home() {
     setActiveTab("company");
   };
 
+  const handleResetHome = () => {
+    setSelectedStockTicker("");
+    setSelectedFundCode(undefined);
+    setActiveTab("company");
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-100 selection:bg-cyan-500 selection:text-slate-950 font-sans">
       {/* Top Navbar with Omni Search & Market Ribbon */}
@@ -53,6 +59,7 @@ export default function Home() {
         setActiveTab={setActiveTab}
         apiOnline={apiOnline}
         onSelectEntity={handleSelectEntity}
+        onResetHome={handleResetHome}
       />
 
       {/* Main Content Area */}

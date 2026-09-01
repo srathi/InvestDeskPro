@@ -73,6 +73,12 @@ InvestDeskPro has been enhanced with Screener.in-grade financial statements, dyn
 
 ---
 
+### 7. Header Brand Logo & Title Navigation to Main Page
+- **InvestDeskPro** brand logo and title in the top navigation header are now interactive with hover states (`group-hover:scale-105`, `group-hover:text-cyan-300`).
+- Clicking on **InvestDeskPro** immediately resets the view to the primary main landing screen (`Company 360°` default view with fresh search state).
+
+---
+
 ## Verification & Test Results
 
 ```bash

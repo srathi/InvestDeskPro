@@ -23,6 +23,7 @@ interface HeaderProps {
   setActiveTab: (tab: "company" | "screener" | "bundles" | "quant") => void;
   apiOnline: boolean;
   onSelectEntity?: (id: string, type: "stock" | "fund") => void;
+  onResetHome?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   apiOnline,
   onSelectEntity,
+  onResetHome,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OmniSearchResult[]>([]);
@@ -75,6 +77,14 @@ export const Header: React.FC<HeaderProps> = ({
     setSearchQuery("");
     if (onSelectEntity) {
       onSelectEntity(item.symbol_or_code || item.id, item.type);
+    }
+  };
+
+  const handleBrandClick = () => {
+    if (onResetHome) {
+      onResetHome();
+    } else {
+      setActiveTab("company");
     }
   };
 
@@ -135,16 +145,23 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Main Navigation & Omni Search Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Brand Logo */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-600 p-0.5 shadow-lg shadow-cyan-950">
+        {/* Brand Logo & Title (Click to return to main page) */}
+        <button
+          type="button"
+          onClick={handleBrandClick}
+          className="flex items-center gap-3 shrink-0 text-left group hover:opacity-90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl cursor-pointer"
+          title="InvestDeskPro - Return to Main Page"
+        >
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-600 p-0.5 shadow-lg shadow-cyan-950 group-hover:scale-105 transition-transform">
             <div className="h-full w-full bg-slate-950 rounded-[10px] flex items-center justify-center">
               <Activity className="h-5 w-5 text-cyan-400" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-white tracking-tight">InvestDeskPro</h1>
+              <h1 className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
+                InvestDeskPro
+              </h1>
               <span className="px-2 py-0.5 text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-full uppercase tracking-wider">
                 FINOLOGY + TIJORI HYBRID
               </span>
@@ -153,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
               Indian Equities & AMFI Mutual Funds Research Terminal
             </p>
           </div>
-        </div>
+        </button>
 
         {/* Global Omni Search Bar */}
         <div ref={searchRef} className="relative flex-1 max-w-md mx-auto md:mx-4">

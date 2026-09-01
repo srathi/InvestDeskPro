@@ -186,7 +186,7 @@ def optimize_risk_parity_portfolio(
     # Build Covariance & Correlation Matrices for JSON response
     cov_dict: Dict[str, Dict[str, float]] = {}
     corr_dict: Dict[str, Dict[str, float]] = {}
-    corr_df = returns_df[valid_tickers].corr()
+    corr_df = df_returns[valid_tickers].corr()
 
     for i, t_row in enumerate(valid_tickers):
         cov_dict[t_row] = {}
@@ -196,16 +196,16 @@ def optimize_risk_parity_portfolio(
             corr_dict[t_row][t_col] = round(float(corr_df.loc[t_row, t_col]), 2)
 
     # 1-Year Cumulative Backtest Series (Portfolio Visualizer style)
-    rp_daily = returns_df[valid_tickers].values @ final_weights
-    ew_daily = returns_df[valid_tickers].values @ np.repeat(1.0 / len(valid_tickers), len(valid_tickers))
+    rp_daily = df_returns[valid_tickers].values @ final_weights
+    ew_daily = df_returns[valid_tickers].values @ np.repeat(1.0 / len(valid_tickers), len(valid_tickers))
 
     rp_cum = np.cumprod(1.0 + rp_daily) - 1.0
     ew_cum = np.cumprod(1.0 + ew_daily) - 1.0
 
     backtest_series: List[PortfolioBacktestPoint] = []
-    step = max(1, len(returns_df) // 40)
-    dates = returns_df.index
-    for idx in range(0, len(returns_df), step):
+    step = max(1, len(df_returns) // 40)
+    dates = df_returns.index
+    for idx in range(0, len(df_returns), step):
         dt_str = dates[idx].strftime("%Y-%m-%d") if hasattr(dates[idx], "strftime") else str(dates[idx])[:10]
         backtest_series.append(
             PortfolioBacktestPoint(
@@ -216,8 +216,8 @@ def optimize_risk_parity_portfolio(
         )
 
     # Add final point
-    if len(returns_df) > 0 and (len(returns_df) - 1) % step != 0:
-        last_idx = len(returns_df) - 1
+    if len(df_returns) > 0 and (len(df_returns) - 1) % step != 0:
+        last_idx = len(df_returns) - 1
         dt_str = dates[last_idx].strftime("%Y-%m-%d") if hasattr(dates[last_idx], "strftime") else str(dates[last_idx])[:10]
         backtest_series.append(
             PortfolioBacktestPoint(
