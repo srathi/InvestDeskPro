@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={handleBrandClick}
-          className="flex items-center gap-3 shrink-0 text-left group hover:opacity-90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl cursor-pointer"
+          className="flex items-center gap-3 shrink-0 text-left group hover:opacity-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl cursor-pointer"
           title="InvestDeskPro - Return to Main Page"
         >
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-600 p-0.5 shadow-lg shadow-cyan-950 group-hover:scale-105 transition-transform">
@@ -158,14 +158,9 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
-                InvestDeskPro
-              </h1>
-              <span className="px-2 py-0.5 text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-full uppercase tracking-wider">
-                FINOLOGY + TIJORI HYBRID
-              </span>
-            </div>
+            <h1 className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
+              InvestDeskPro
+            </h1>
             <p className="text-[11px] text-slate-400">
               Indian Equities & AMFI Mutual Funds Research Terminal
             </p>

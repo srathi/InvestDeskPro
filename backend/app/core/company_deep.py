@@ -656,7 +656,7 @@ def fetch_company_360(ticker: str) -> Company360Response:
         "longBusinessSummary",
         f"{company_name} is an Indian enterprise operating in the {sector} sector ({industry}), listed on the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE).",
     )
-    website = info.get("website", "https://www.nseindia.com")
+    website = info.get("website") or None
 
     essentials = CompanyEssentials(
         market_cap_cr=mcap_cr,

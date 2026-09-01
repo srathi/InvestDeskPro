@@ -49,6 +49,9 @@ export default function Home() {
     setSelectedStockTicker("");
     setSelectedFundCode(undefined);
     setActiveTab("company");
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   return (
@@ -125,7 +128,7 @@ export default function Home() {
             {/* Right Disclaimer */}
             <div className="flex items-center gap-2 text-slate-500 text-[11px]">
               <ShieldAlert className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-              <span>Finology & Tijori Hybrid Quantitative Analytics • Institutional Research Only</span>
+              <span>Quantitative Financial Intelligence & Diagnostics • Institutional Research Only</span>
             </div>
           </div>
         </div>
