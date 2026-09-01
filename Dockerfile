@@ -1,20 +1,5 @@
-# =========================================================================
-# Stage 1: Build Next.js Static Export Frontend
-# =========================================================================
-FROM node:20-slim AS frontend-builder
-WORKDIR /app/frontend
-
-COPY frontend/package*.json ./
-RUN npm install
-
-COPY frontend/ ./
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
-
-# =========================================================================
-# Stage 2: Minimal Python FastAPI Runtime
-# =========================================================================
-FROM python:3.11-slim AS runtime
+# Single Production Dockerfile for InvestDeskPro (Python 3.11 + Pre-built Static Frontend)
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -34,8 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy Backend Code
 COPY backend/app/ ./app
 
-# Copy Built Static Frontend from Stage 1
-COPY --from=frontend-builder /app/frontend/out ./frontend/out
+# Copy Pre-built Static Frontend SPA
+COPY frontend/out/ ./frontend/out
 
 USER appuser
 
