@@ -12,6 +12,7 @@ import yfinance as yf
 from app.core.factors import normalize_ticker
 from app.schemas import (
     PortfolioAssetAllocation,
+    PortfolioBacktestPoint,
     PortfolioOptimizeResponse,
 )
 
@@ -182,12 +183,49 @@ def optimize_risk_parity_portfolio(
             )
         )
 
-    # Build Covariance Matrix Dict for JSON response
+    # Build Covariance & Correlation Matrices for JSON response
     cov_dict: Dict[str, Dict[str, float]] = {}
+    corr_dict: Dict[str, Dict[str, float]] = {}
+    corr_df = returns_df[valid_tickers].corr()
+
     for i, t_row in enumerate(valid_tickers):
         cov_dict[t_row] = {}
+        corr_dict[t_row] = {}
         for j, t_col in enumerate(valid_tickers):
             cov_dict[t_row][t_col] = round(float(cov_matrix_ann[i, j]), 4)
+            corr_dict[t_row][t_col] = round(float(corr_df.loc[t_row, t_col]), 2)
+
+    # 1-Year Cumulative Backtest Series (Portfolio Visualizer style)
+    rp_daily = returns_df[valid_tickers].values @ final_weights
+    ew_daily = returns_df[valid_tickers].values @ np.repeat(1.0 / len(valid_tickers), len(valid_tickers))
+
+    rp_cum = np.cumprod(1.0 + rp_daily) - 1.0
+    ew_cum = np.cumprod(1.0 + ew_daily) - 1.0
+
+    backtest_series: List[PortfolioBacktestPoint] = []
+    step = max(1, len(returns_df) // 40)
+    dates = returns_df.index
+    for idx in range(0, len(returns_df), step):
+        dt_str = dates[idx].strftime("%Y-%m-%d") if hasattr(dates[idx], "strftime") else str(dates[idx])[:10]
+        backtest_series.append(
+            PortfolioBacktestPoint(
+                date=dt_str,
+                risk_parity=round(float(rp_cum[idx] * 100.0), 2),
+                equal_weight=round(float(ew_cum[idx] * 100.0), 2),
+            )
+        )
+
+    # Add final point
+    if len(returns_df) > 0 and (len(returns_df) - 1) % step != 0:
+        last_idx = len(returns_df) - 1
+        dt_str = dates[last_idx].strftime("%Y-%m-%d") if hasattr(dates[last_idx], "strftime") else str(dates[last_idx])[:10]
+        backtest_series.append(
+            PortfolioBacktestPoint(
+                date=dt_str,
+                risk_parity=round(float(rp_cum[last_idx] * 100.0), 2),
+                equal_weight=round(float(ew_cum[last_idx] * 100.0), 2),
+            )
+        )
 
     return PortfolioOptimizeResponse(
         tickers=valid_tickers,
@@ -199,5 +237,7 @@ def optimize_risk_parity_portfolio(
         portfolio_sharpe_ratio=sharpe,
         max_weight_constraint=round(max_weight_pct, 1),
         covariance_matrix=cov_dict,
+        correlation_matrix=corr_dict,
+        backtest_series=backtest_series,
         effective_number_of_assets=enb,
     )

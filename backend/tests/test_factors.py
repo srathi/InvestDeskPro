@@ -7,6 +7,7 @@ from app.core.factors import (
     compute_value_score,
     normalize_ticker,
     safe_float,
+    search_indian_stocks,
 )
 from app.schemas import StockFundamentals
 
@@ -100,3 +101,21 @@ def test_poor_quality_expensive_stock():
     
     total = q_score + v_score + m_score
     assert 0.0 <= total <= 30.0
+
+
+def test_search_indian_stocks():
+    # Search by ticker prefix
+    res1 = search_indian_stocks("TATA")
+    assert len(res1) > 0
+    assert any("TATAMOTORS" in r.ticker for r in res1)
+
+    # Search by company name
+    res2 = search_indian_stocks("Reliance")
+    assert len(res2) > 0
+    assert res2[0].ticker == "RELIANCE.NS"
+
+    # Search non-curated ticker
+    res3 = search_indian_stocks("INFY")
+    assert len(res3) > 0
+    assert any("INFY.NS" in r.ticker for r in res3)
+

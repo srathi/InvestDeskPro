@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   PieChart as PieChartIcon,
   Plus,
@@ -15,6 +15,11 @@ import {
   Loader2,
   ArrowRight,
   Info,
+  ChevronRight,
+  Grid,
+  TrendingUp,
+  Activity,
+  Layers,
 } from "lucide-react";
 import {
   PieChart,
@@ -27,11 +32,16 @@ import {
   XAxis,
   YAxis,
   Legend,
+  LineChart,
+  Line,
 } from "recharts";
 import {
   optimizePortfolio,
+  searchStocks,
   PortfolioOptimizeResponse,
+  StockSearchResult,
 } from "../lib/api";
+import { useDebounce } from "../hooks/useDebounce";
 
 const PRESET_BASKETS = [
   {
@@ -81,6 +91,15 @@ export const PortfolioOptimizerView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PortfolioOptimizeResponse | null>(null);
 
+  // Autocomplete state for portfolio stock additions
+  const [suggestions, setSuggestions] = useState<StockSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+
+  const debouncedInput = useDebounce(newTicker, 250);
+
   const runOptimization = async (tickers: string[], cap: number) => {
     if (tickers.length < 2) {
       setError("Please add at least 2 stock tickers for portfolio optimization.");
@@ -102,14 +121,73 @@ export const PortfolioOptimizerView: React.FC = () => {
     runOptimization(tickerList, maxWeight);
   }, []);
 
-  const addTicker = (e: React.FormEvent) => {
-    e.preventDefault();
-    const clean = newTicker.trim().toUpperCase();
+  // Fetch stock suggestions for basket
+  useEffect(() => {
+    const fetchStockSuggestions = async () => {
+      const clean = debouncedInput.trim();
+      if (clean.length >= 1) {
+        setIsSearching(true);
+        try {
+          const results = await searchStocks(clean);
+          setSuggestions(results);
+          setShowDropdown(results.length > 0);
+          setSelectedIndex(-1);
+        } catch {
+          setSuggestions([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSuggestions([]);
+        setShowDropdown(false);
+      }
+    };
+
+    fetchStockSuggestions();
+  }, [debouncedInput]);
+
+  // Click outside listener
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (inputContainerRef.current && !inputContainerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const addTickerSymbol = (tickerToAdd: string) => {
+    const clean = tickerToAdd.trim().toUpperCase().replace(".NS", "").replace(".BO", "");
     if (clean && !tickerList.includes(clean)) {
       const updated = [...tickerList, clean];
       setTickerList(updated);
       setNewTicker("");
+      setShowDropdown(false);
       runOptimization(updated, maxWeight);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+      addTickerSymbol(suggestions[selectedIndex].ticker);
+    } else if (newTicker.trim()) {
+      addTickerSymbol(newTicker);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown || suggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
     }
   };
 
@@ -128,34 +206,90 @@ export const PortfolioOptimizerView: React.FC = () => {
     runOptimization(basket.tickers, maxWeight);
   };
 
+  const getCorrBg = (val: number) => {
+    if (val >= 0.7) return "bg-rose-950/60 text-rose-300 font-bold";
+    if (val >= 0.4) return "bg-amber-950/60 text-amber-300";
+    if (val >= 0.1) return "bg-cyan-950/60 text-cyan-300";
+    return "bg-emerald-950/60 text-emerald-300 font-bold";
+  };
+
   return (
     <div className="space-y-6">
       {/* Basket Configuration Panel */}
-      <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+      <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 relative z-30">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Add Ticker Form */}
-          <form onSubmit={addTicker} className="flex items-center gap-2 flex-1 max-w-md">
-            <input
-              type="text"
-              value={newTicker}
-              onChange={(e) => setNewTicker(e.target.value)}
-              placeholder="Add Ticker (e.g. SBIN, MARUTI, TITAN)..."
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-indigo-950 flex items-center gap-1 shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Stock</span>
-            </button>
-          </form>
+          {/* Add Ticker Form with Autocomplete */}
+          <div ref={inputContainerRef} className="relative flex-1 max-w-md">
+            <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={newTicker}
+                  onChange={(e) => {
+                    setNewTicker(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => {
+                    if (suggestions.length > 0) setShowDropdown(true);
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search stock to add (e.g. SBIN, Tata, Maruti)..."
+                  className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-4 pr-9 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono uppercase"
+                />
+                {isSearching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-indigo-400 animate-spin" />
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-indigo-950 flex items-center gap-1 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Stock</span>
+              </button>
+            </form>
+
+            {/* Dropdown Suggestions */}
+            {showDropdown && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-xl max-h-72 overflow-y-auto divide-y divide-slate-800/60 z-50">
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/60 flex items-center justify-between">
+                  <span>Add Asset to Basket</span>
+                  <span className="text-[9px] font-mono lowercase">↑↓ navigate • ↵ select</span>
+                </div>
+                {suggestions.map((item, idx) => (
+                  <button
+                    key={item.ticker}
+                    type="button"
+                    onClick={() => addTickerSymbol(item.ticker)}
+                    className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between text-xs transition-colors ${
+                      idx === selectedIndex ? "bg-indigo-950/60 text-indigo-200" : "hover:bg-slate-900/80 text-slate-200"
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white font-mono">{item.ticker.replace(".NS", "")}</span>
+                        <span className="px-1.5 py-0.2 text-[9px] font-semibold bg-slate-800 text-slate-300 rounded">
+                          {item.exchange}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">{item.name}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                      <span className="hidden sm:inline-block text-indigo-400/80">{item.sector}</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Allocation Cap Slider */}
-          <div className="flex items-center gap-3 bg-slate-950/60 px-4 py-2 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-3 bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800">
             <Sliders className="h-4 w-4 text-cyan-400" />
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Max Weight Cap:</span>
+              <span className="text-xs text-slate-400">Max Asset Cap:</span>
               <span className="text-xs font-bold text-cyan-300 font-mono w-8">{maxWeight}%</span>
             </div>
             <input
@@ -176,7 +310,7 @@ export const PortfolioOptimizerView: React.FC = () => {
 
         {/* Preset Baskets */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mr-1">Institutional Baskets:</span>
+          <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mr-1">Institutional Models:</span>
           {PRESET_BASKETS.map((basket) => (
             <button
               key={basket.name}
@@ -241,7 +375,7 @@ export const PortfolioOptimizerView: React.FC = () => {
               <div className="text-2xl font-black text-emerald-400 font-mono font-tabular flex items-center gap-1">
                 <span>-{result.volatility_reduction_pct}%</span>
               </div>
-              <span className="text-[10px] text-slate-500">Equal-Weight Baseline: {result.equal_weight_volatility}%</span>
+              <span className="text-[10px] text-slate-500">Equal-Weight: {result.equal_weight_volatility}%</span>
             </div>
 
             {/* 3. Expected Return */}
@@ -259,7 +393,7 @@ export const PortfolioOptimizerView: React.FC = () => {
               <div className="text-2xl font-black text-amber-400 font-mono font-tabular">
                 {result.portfolio_sharpe_ratio}
               </div>
-              <span className="text-[10px] text-slate-500">Assuming 6.5% Indian Risk-Free Rate</span>
+              <span className="text-[10px] text-slate-500">Effective Assets (ENB): {result.effective_number_of_assets.toFixed(1)}</span>
             </div>
           </div>
 
@@ -330,7 +464,7 @@ export const PortfolioOptimizerView: React.FC = () => {
                   <BarChart2 className="h-4 w-4 text-emerald-400" />
                   <span>Asset Weight vs % Risk Contribution</span>
                 </h3>
-                <span className="text-[10px] text-slate-500 font-mono">Risk Parity Balance</span>
+                <span className="text-[10px] text-slate-500 font-mono">Capitalmind Model</span>
               </div>
 
               <div className="h-72 w-full pt-2">
@@ -373,10 +507,132 @@ export const PortfolioOptimizerView: React.FC = () => {
               </div>
 
               <p className="text-[11px] text-slate-400 text-center">
-                Risk-parity ensures high-volatility assets do not dominate the total portfolio risk profile.
+                Risk-parity ensures higher volatility stocks receive lower capital weights so marginal risk is balanced.
               </p>
             </div>
           </div>
+
+          {/* Portfolio Visualizer Style Cumulative Backtest Chart */}
+          {result.backtest_series && result.backtest_series.length > 0 && (
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-cyan-400" />
+                    <span>Portfolio Visualizer 1-Year Cumulative Backtest</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Risk-Parity vs Equal-Weight cumulative total returns (%)</p>
+                </div>
+                <div className="flex items-center gap-4 text-xs font-mono">
+                  <span className="text-cyan-400 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-cyan-400" />
+                    <span>Risk-Parity</span>
+                  </span>
+                  <span className="text-slate-400 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-slate-500" />
+                    <span>Equal-Weight</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="h-64 w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={result.backtest_series} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <XAxis
+                      dataKey="date"
+                      stroke="#475569"
+                      fontSize={10}
+                      tickLine={false}
+                      tickFormatter={(v) => v.slice(5)}
+                    />
+                    <YAxis
+                      stroke="#475569"
+                      fontSize={10}
+                      tickLine={false}
+                      domain={["auto", "auto"]}
+                      tickFormatter={(v) => `${v.toFixed(0)}%`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0f172a",
+                        borderColor: "#334155",
+                        borderRadius: "0.75rem",
+                        color: "#f8fafc",
+                        fontSize: "12px",
+                      }}
+                      formatter={(value: any, name: any) => [
+                        `${Number(value).toFixed(2)}%`,
+                        name === "risk_parity" ? "Risk-Parity Return" : "Equal-Weight Return",
+                      ]}
+                      labelFormatter={(label) => `Date: ${label}`}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="risk_parity"
+                      stroke="#06b6d4"
+                      strokeWidth={2.5}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="equal_weight"
+                      stroke="#64748b"
+                      strokeWidth={1.5}
+                      strokeDasharray="4 4"
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {/* Correlation Heatmap Matrix */}
+          {result.correlation_matrix && Object.keys(result.correlation_matrix).length > 0 && (
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Grid className="h-4 w-4 text-emerald-400" />
+                  <span>Asset Correlation Matrix (Pearson $r$)</span>
+                </h3>
+                <span className="text-xs font-mono text-slate-500">Lower Correlation = Higher Diversification</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-center text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                      <th className="pb-2 text-left">Asset</th>
+                      {result.tickers.map((t) => (
+                        <th key={`head-${t}`} className="pb-2 px-2 font-mono">
+                          {t.replace(".NS", "")}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                    {result.tickers.map((rowTicker) => (
+                      <tr key={`row-${rowTicker}`} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-2.5 text-left font-bold text-slate-200">
+                          {rowTicker.replace(".NS", "")}
+                        </td>
+                        {result.tickers.map((colTicker) => {
+                          const val = result.correlation_matrix[rowTicker]?.[colTicker] ?? 1.0;
+                          return (
+                            <td key={`cell-${rowTicker}-${colTicker}`} className="py-2.5 px-2">
+                              <span className={`px-2 py-1 rounded text-xs block ${getCorrBg(val)}`}>
+                                {val.toFixed(2)}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Detailed Asset Breakdown Table */}
           <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">

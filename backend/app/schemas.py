@@ -1,4 +1,6 @@
-"""Pydantic data models and API schemas for InvestDeskPro."""
+"""Pydantic data models and API schemas for InvestDeskPro.
+Incorporates Trendlyne DVM, Simply Wall St Radar, Tickertape Red Flags, Morningstar Style Box & Portfolio Visualizer Models.
+"""
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
@@ -7,11 +9,11 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     timestamp: str
     service: str = "investdeskpro-api"
-    version: str = "1.0.0"
+    version: str = "1.1.0"
 
 
 # ---------------------------------------------------------------------------
-# Stock Factor Scorecard Models
+# Stock Factor Scorecard Models (Trendlyne DVM + Simply Wall St + Tickertape)
 # ---------------------------------------------------------------------------
 
 class FactorScoreDetail(BaseModel):
@@ -19,6 +21,24 @@ class FactorScoreDetail(BaseModel):
     max_score: float = Field(..., description="Maximum possible sub-score")
     grade: str = Field(..., description="Verbal grade e.g. High, Moderate, Low")
     summary: str = Field(..., description="Human-readable breakdown")
+
+
+class DVMScorecard(BaseModel):
+    durability: float = Field(..., ge=0, le=100, description="Durability / Quality Score (0-100)")
+    valuation: float = Field(..., ge=0, le=100, description="Valuation Score (0-100)")
+    momentum: float = Field(..., ge=0, le=100, description="Momentum & Volatility Score (0-100)")
+    classification: str = Field(..., description="Institutional DVM classification (e.g. High Quality Compounder, Momentum Trap)")
+
+
+class RadarAxis(BaseModel):
+    axis: str
+    value: float
+    max_value: float = 100.0
+
+
+class StockFlags(BaseModel):
+    green_flags: List[str] = Field(default_factory=list)
+    red_flags: List[str] = Field(default_factory=list)
 
 
 class StockFundamentals(BaseModel):
@@ -52,7 +72,10 @@ class StockScorecardResponse(BaseModel):
     sector: Optional[str] = "N/A"
     industry: Optional[str] = "N/A"
     total_score: float = Field(..., ge=0, le=100, description="Overall institutional rating out of 100")
-    verdict: str = Field(..., description="Institutional verdict (e.g., High Quality Compounder, Value Opportunity, Watchlist)")
+    verdict: str = Field(..., description="Institutional verdict")
+    dvm: DVMScorecard
+    radar_axes: List[RadarAxis] = Field(default_factory=list)
+    flags: StockFlags
     quality: FactorScoreDetail
     value: FactorScoreDetail
     momentum_low_vol: FactorScoreDetail
@@ -60,8 +83,15 @@ class StockScorecardResponse(BaseModel):
     price_history: List[StockPricePoint] = Field(default_factory=list)
 
 
+class StockSearchResult(BaseModel):
+    ticker: str
+    name: str
+    sector: Optional[str] = "Equities"
+    exchange: str = "NSE"
+
+
 # ---------------------------------------------------------------------------
-# Mutual Fund Models
+# Mutual Fund Models (Advisorkhoj + Morningstar + PrimeInvestor)
 # ---------------------------------------------------------------------------
 
 class FundMeta(BaseModel):
@@ -70,6 +100,18 @@ class FundMeta(BaseModel):
     fund_house: Optional[str] = None
     scheme_type: Optional[str] = None
     scheme_category: Optional[str] = None
+
+
+class FundStyleBox(BaseModel):
+    size: str = Field("Large", description="Market cap size: Large, Mid, Small, Flexi")
+    style: str = Field("Blend", description="Investment style: Value, Blend, Growth")
+
+
+class FundRollingSummary(BaseModel):
+    total_windows: int
+    outperforming_windows: int
+    outperformance_rate_pct: float
+    verdict: str
 
 
 class FundRollingDataPoint(BaseModel):
@@ -99,6 +141,8 @@ class FundRiskStats(BaseModel):
 class FundAnalysisResponse(BaseModel):
     meta: FundMeta
     benchmark_name: str = "Nifty 50 TRI (^NSEI)"
+    style_box: FundStyleBox
+    rolling_summary: FundRollingSummary
     stats: FundRiskStats
     rolling_series: List[FundRollingDataPoint] = Field(default_factory=list)
     latest_nav: float
@@ -111,7 +155,7 @@ class FundSearchResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Portfolio Optimizer Models
+# Portfolio Optimizer Models (Portfolio Visualizer & Capitalmind)
 # ---------------------------------------------------------------------------
 
 class PortfolioAssetAllocation(BaseModel):
@@ -124,8 +168,8 @@ class PortfolioAssetAllocation(BaseModel):
     expected_return_1y: float = Field(..., description="Historical 1Y annualized return (%)")
 
 
-class PortfolioComparisonMetric(BaseModel):
-    metric: str
+class PortfolioBacktestPoint(BaseModel):
+    date: str
     risk_parity: float
     equal_weight: float
 
@@ -140,4 +184,6 @@ class PortfolioOptimizeResponse(BaseModel):
     portfolio_sharpe_ratio: float = Field(..., description="Sharpe ratio (assuming 6.5% risk-free rate)")
     max_weight_constraint: float = Field(..., description="Enforced maximum weight cap (%)")
     covariance_matrix: Dict[str, Dict[str, float]]
+    correlation_matrix: Dict[str, Dict[str, float]] = Field(default_factory=dict)
+    backtest_series: List[PortfolioBacktestPoint] = Field(default_factory=list)
     effective_number_of_assets: float = Field(..., description="Diversification ratio / ENB metric")

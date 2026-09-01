@@ -17,7 +17,9 @@ from app.schemas import (
     FundMeta,
     FundRiskStats,
     FundRollingDataPoint,
+    FundRollingSummary,
     FundSearchResult,
+    FundStyleBox,
 )
 
 
@@ -331,12 +333,55 @@ async def analyze_mutual_fund(scheme_code: str) -> FundAnalysisResponse:
         scheme_category=meta_raw.get("scheme_category"),
     )
 
+    # Morningstar Category & Style Box Classification
+    full_text = f"{meta.scheme_name} {meta.scheme_category or ''}".lower()
+    if any(k in full_text for k in ["small cap", "smallcap", "emerging business"]):
+        size = "Small"
+    elif any(k in full_text for k in ["mid cap", "midcap", "emerging equity"]):
+        size = "Mid"
+    elif any(k in full_text for k in ["large cap", "largecap", "bluechip", "top 100", "nifty 50", "frontline"]):
+        size = "Large"
+    else:
+        size = "Flexi"
+
+    if any(k in full_text for k in ["value", "contra", "contrarian", "dividend yield"]):
+        style = "Value"
+    elif any(k in full_text for k in ["growth", "active", "opportunities", "dynamic", "alpha", "quant"]):
+        style = "Growth"
+    else:
+        style = "Blend"
+
+    style_box = FundStyleBox(size=size, style=style)
+
+    # Advisorkhoj Outperformance Summary
+    total_windows = len(rolling_points)
+    outperforming_windows = sum(1 for p in rolling_points if p.rolling_alpha > 0)
+    win_rate = round((outperforming_windows / max(1, total_windows)) * 100.0, 1)
+
+    if win_rate >= 80.0 and downside_capture <= 85.0:
+        rolling_verdict = "Elite Alpha Generator (Consistent Outperformer)"
+    elif win_rate >= 65.0:
+        rolling_verdict = "Reliable Core Holding (Positive Active Alpha)"
+    elif win_rate >= 50.0:
+        rolling_verdict = "Market Performer (Selective Accumulation)"
+    else:
+        rolling_verdict = "Underperforming Benchmark (Review / Switch)"
+
+    rolling_summary = FundRollingSummary(
+        total_windows=total_windows,
+        outperforming_windows=outperforming_windows,
+        outperformance_rate_pct=win_rate,
+        verdict=rolling_verdict,
+    )
+
     latest_nav = float(combined["Fund"].iloc[-1])
     latest_nav_date = combined.index[-1].strftime("%Y-%m-%d")
 
     return FundAnalysisResponse(
         meta=meta,
         benchmark_name="Nifty 50 TRI (^NSEI)",
+        style_box=style_box,
+        rolling_summary=rolling_summary,
         stats=stats,
         rolling_series=rolling_points,
         latest_nav=round(latest_nav, 4),
