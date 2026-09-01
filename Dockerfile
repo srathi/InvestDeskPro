@@ -1,8 +1,11 @@
 # =========================================================================
-# Stage 1: Build Next.js Static Export Frontend
+# Stage 1: Build Next.js Static Export Frontend (Debian-slim with glibc)
 # =========================================================================
-FROM node:20-alpine AS frontend-builder
+FROM node:20-slim AS frontend-builder
 WORKDIR /app/frontend
+
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 
 COPY frontend/package*.json ./
 RUN npm install
