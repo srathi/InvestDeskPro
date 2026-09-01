@@ -71,6 +71,7 @@ export const FundAnalyzerView: React.FC = () => {
       const res = await fetchFundAnalysis(code);
       setData(res);
     } catch (err: any) {
+      setData(null);
       setError(err.message || "Failed to analyze mutual fund scheme.");
     } finally {
       setLoading(false);

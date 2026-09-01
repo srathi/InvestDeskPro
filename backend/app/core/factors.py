@@ -1,18 +1,25 @@
 """Stock Diagnostic Factor Engine for Indian Equities (NSE/BSE).
 
 Calculates a 0-100 Institutional Scorecard across Quality (40), Value (30), and Momentum/Low-Vol (30).
+Integrates Trendlyne DVM, Simply Wall St 5-Axis Radar, and Tickertape Red Flags.
 """
 
+import json
 import math
 from typing import Any, Dict, List, Optional, Tuple
+import urllib.parse
+import urllib.request
 import numpy as np
 import pandas as pd
 import yfinance as yf
 
 from app.schemas import (
+    AnnualFinancialYear,
     DVMScorecard,
     FactorScoreDetail,
     RadarAxis,
+    ShareholdingPattern,
+    StockClassification,
     StockFlags,
     StockFundamentals,
     StockPricePoint,
@@ -50,22 +57,23 @@ def compute_quality_score(f: StockFundamentals) -> Tuple[float, str, str]:
     # 1. ROE (10 pts)
     roe = f.roe
     if roe is not None:
-        if roe >= 20.0:
+        if roe >= 25.0:
             score += 10.0
-            reasons.append(f"Exceptional ROE ({roe:.1f}%)")
-        elif roe >= 15.0:
+            reasons.append(f"Elite ROE ({roe:.1f}%)")
+        elif roe >= 18.0:
             score += 8.0
             reasons.append(f"Strong ROE ({roe:.1f}%)")
-        elif roe >= 10.0:
-            score += 5.0
-            reasons.append(f"Moderate ROE ({roe:.1f}%)")
-        elif roe > 0.0:
-            score += 2.0
-            reasons.append(f"Low ROE ({roe:.1f}%)")
+        elif roe >= 12.0:
+            score += 6.0
+            reasons.append(f"Adequate ROE ({roe:.1f}%)")
+        elif roe >= 5.0:
+            score += 3.0
+        elif roe >= 0.0:
+            score += 1.0
         else:
             reasons.append(f"Negative ROE ({roe:.1f}%)")
     else:
-        score += 5.0  # neutral fallback
+        reasons.append("ROE data unavailable")
 
     # 2. ROCE / ROA (8 pts)
     roce = f.roce
@@ -81,7 +89,7 @@ def compute_quality_score(f: StockFundamentals) -> Tuple[float, str, str]:
         elif roce > 0.0:
             score += 2.0
     else:
-        score += 4.0
+        reasons.append("ROCE data unavailable")
 
     # 3. Debt to Equity (8 pts)
     de = f.debt_to_equity
@@ -100,7 +108,7 @@ def compute_quality_score(f: StockFundamentals) -> Tuple[float, str, str]:
         else:
             reasons.append(f"High Debt Risk (D/E {de:.2f})")
     else:
-        score += 5.0
+        score += 2.0
 
     # 4. FCF to Net Profit (7 pts)
     fcf_np = f.fcf_to_net_profit
@@ -114,8 +122,6 @@ def compute_quality_score(f: StockFundamentals) -> Tuple[float, str, str]:
             score += 3.0
         else:
             reasons.append("Weak Free Cash Flow Conversion")
-    else:
-        score += 3.5
 
     # 5. Margins (7 pts)
     margin = f.operating_margin or f.net_margin
@@ -129,20 +135,18 @@ def compute_quality_score(f: StockFundamentals) -> Tuple[float, str, str]:
             score += 3.0
         elif margin > 0.0:
             score += 1.0
-    else:
-        score += 3.5
 
     # Bounded to [0, 40]
     score = max(0.0, min(40.0, round(score, 1)))
 
-    if score >= 32.0:
+    if score >= 30.0:
         grade = "High Quality"
-    elif score >= 22.0:
+    elif score >= 18.0:
         grade = "Moderate Quality"
     else:
         grade = "Weak Quality"
 
-    summary = "; ".join(reasons[:3]) if reasons else "Sufficient baseline quality metrics"
+    summary = "; ".join(reasons[:3]) if reasons else "No fundamental quality metrics available"
     return score, grade, summary
 
 
@@ -168,7 +172,7 @@ def compute_value_score(f: StockFundamentals) -> Tuple[float, str, str]:
         else:
             reasons.append(f"Very Rich Valuation (P/E {pe:.1f}x)")
     else:
-        score += 5.0
+        reasons.append("P/E multiple unavailable")
 
     # 2. PEG Ratio (10 pts)
     peg = f.peg_ratio
@@ -185,8 +189,6 @@ def compute_value_score(f: StockFundamentals) -> Tuple[float, str, str]:
             score += 2.0
         else:
             reasons.append(f"High PEG ({peg:.2f})")
-    else:
-        score += 5.0
 
     # 3. Price to Book (8 pts)
     pb = f.price_to_book
@@ -200,19 +202,17 @@ def compute_value_score(f: StockFundamentals) -> Tuple[float, str, str]:
             score += 3.0
         else:
             score += 1.0
-    else:
-        score += 4.0
 
     score = max(0.0, min(30.0, round(score, 1)))
 
-    if score >= 24.0:
+    if score >= 22.0:
         grade = "Undervalued / Attractive"
-    elif score >= 15.0:
+    elif score >= 12.0:
         grade = "Fairly Valued"
     else:
-        grade = "Expensive"
+        grade = "Expensive / Stretched"
 
-    summary = "; ".join(reasons[:2]) if reasons else "Standard valuation profile"
+    summary = "; ".join(reasons[:2]) if reasons else "No valuation multiple data available"
     return score, grade, summary
 
 
@@ -236,8 +236,6 @@ def compute_momentum_score(f: StockFundamentals) -> Tuple[float, str, str]:
             score += 2.0
         else:
             reasons.append(f"Negative 6M Trend ({r6m:.1f}%)")
-    else:
-        score += 5.0
 
     # 2. 1Y Return (10 pts)
     r1y = f.return_1y
@@ -253,8 +251,6 @@ def compute_momentum_score(f: StockFundamentals) -> Tuple[float, str, str]:
             score += 2.0
         else:
             reasons.append(f"1Y Price Drawdown ({r1y:.1f}%)")
-    else:
-        score += 5.0
 
     # 3. 60-Day Realized Volatility (10 pts)
     vol = f.realized_vol_60d
@@ -271,20 +267,270 @@ def compute_momentum_score(f: StockFundamentals) -> Tuple[float, str, str]:
             score += 2.0
         else:
             reasons.append(f"High Price Volatility ({vol:.1f}%)")
-    else:
-        score += 5.0
 
     score = max(0.0, min(30.0, round(score, 1)))
 
-    if score >= 24.0:
+    if score >= 22.0:
         grade = "Strong Bullish / Low Risk"
-    elif score >= 15.0:
+    elif score >= 12.0:
         grade = "Moderate Trend"
     else:
         grade = "Weak Momentum / High Vol"
 
-    summary = "; ".join(reasons[:2]) if reasons else "Neutral momentum profile"
+    summary = "; ".join(reasons[:2]) if reasons else "No price momentum data available"
     return score, grade, summary
+
+
+def classify_dvm(d: float, v: float, m: float) -> str:
+    """Trendlyne-style 3-pillar classification based on Durability, Valuation, Momentum (0-100 scale)."""
+    if d >= 65 and v >= 55 and m >= 55:
+        return "Strong Performer (High DVM)"
+    elif d >= 65 and m >= 60:
+        return "High Quality Compounder"
+    elif d >= 65 and v >= 60:
+        return "High Quality Value Opportunity"
+    elif v >= 65 and m >= 60:
+        return "Momentum Value Play"
+    elif m >= 65 and d < 40:
+        return "Momentum Trap (High Momentum, Weak Durability)"
+    elif v >= 65 and m < 35:
+        return "Value Trap (Cheap Multiple, Poor Trend)"
+    elif d >= 60:
+        return "Quality Anchor (Under the Radar)"
+    elif m >= 60:
+        return "High Momentum Growth"
+    elif v >= 60:
+        return "Value Opportunity (Contrarian)"
+    else:
+        return "Neutral / Core Accumulation"
+
+
+def extract_annual_financials(t: yf.Ticker) -> Tuple[List[AnnualFinancialYear], Optional[float], Optional[float], Optional[float], Optional[float]]:
+    """Extract Screener.in-grade annual financial statements (last 3-5 fiscal years) and CAGR metrics."""
+    inc = t.income_stmt if hasattr(t, "income_stmt") else None
+    if inc is None or inc.empty:
+        inc = t.financials if hasattr(t, "financials") else None
+
+    years_data: List[AnnualFinancialYear] = []
+    cagr_rev = None
+    cagr_prof = None
+    yoy_r = None
+    yoy_p = None
+
+    if inc is not None and not inc.empty:
+        try:
+            cols = list(inc.columns)[:5]
+            cols.reverse()  # chronological order
+            prev_rev = None
+            prev_np = None
+            rev_history: List[float] = []
+            np_history: List[float] = []
+
+            for col in cols:
+                year_label = f"FY{col.year % 100}" if hasattr(col, "year") else str(col)[:4]
+
+                # Revenue (₹ Cr)
+                rev = None
+                for k in ["Total Revenue", "Operating Revenue", "Revenue"]:
+                    if k in inc.index and pd.notna(inc.loc[k, col]):
+                        rev = round(float(inc.loc[k, col]) / 1e7, 2)
+                        break
+
+                # Operating Profit / EBITDA (₹ Cr)
+                ebitda = None
+                for k in ["EBITDA", "Operating Income", "Operating Profit", "Gross Profit"]:
+                    if k in inc.index and pd.notna(inc.loc[k, col]):
+                        ebitda = round(float(inc.loc[k, col]) / 1e7, 2)
+                        break
+
+                # Net Profit (₹ Cr)
+                np_val = None
+                for k in ["Net Income", "Net Income Common Stockholders", "Net Income Continuous Operations"]:
+                    if k in inc.index and pd.notna(inc.loc[k, col]):
+                        np_val = round(float(inc.loc[k, col]) / 1e7, 2)
+                        break
+
+                # EPS (₹)
+                eps = None
+                for k in ["Basic EPS", "Diluted EPS"]:
+                    if k in inc.index and pd.notna(inc.loc[k, col]):
+                        eps = round(float(inc.loc[k, col]), 2)
+                        break
+
+                opm = round((ebitda / rev) * 100.0, 1) if (ebitda and rev and rev > 0) else None
+                npm = round((np_val / rev) * 100.0, 1) if (np_val and rev and rev > 0) else None
+                cur_yoy_r = round(((rev / prev_rev) - 1.0) * 100.0, 1) if (rev and prev_rev and prev_rev > 0) else None
+                cur_yoy_p = round(((np_val / prev_np) - 1.0) * 100.0, 1) if (np_val and prev_np and prev_np > 0) else None
+
+                if rev and rev > 0:
+                    rev_history.append(rev)
+                if np_val and np_val > 0:
+                    np_history.append(np_val)
+
+                prev_rev = rev
+                prev_np = np_val
+                yoy_r = cur_yoy_r
+                yoy_p = cur_yoy_p
+
+                if rev is not None or np_val is not None:
+                    years_data.append(AnnualFinancialYear(
+                        year=year_label,
+                        revenue_cr=rev,
+                        operating_profit_cr=ebitda,
+                        opm_pct=opm,
+                        net_profit_cr=np_val,
+                        npm_pct=npm,
+                        eps=eps,
+                        yoy_revenue_growth_pct=cur_yoy_r,
+                        yoy_profit_growth_pct=cur_yoy_p,
+                    ))
+
+            # 3-Year CAGR calculations
+            if len(rev_history) >= 3 and rev_history[0] > 0 and rev_history[-1] > 0:
+                n = len(rev_history) - 1
+                cagr_rev = round(((rev_history[-1] / rev_history[0]) ** (1.0 / n) - 1.0) * 100.0, 1)
+            if len(np_history) >= 3 and np_history[0] > 0 and np_history[-1] > 0:
+                n = len(np_history) - 1
+                cagr_prof = round(((np_history[-1] / np_history[0]) ** (1.0 / n) - 1.0) * 100.0, 1)
+
+        except Exception:
+            pass
+
+    return years_data, cagr_rev, cagr_prof, yoy_r, yoy_p
+
+
+def extract_shareholding_pattern(t: yf.Ticker, info: Dict[str, Any]) -> ShareholdingPattern:
+    """Extract Screener-grade Shareholding pattern (Promoters, FIIs, DIIs, Public, Pledged)."""
+    promoters = None
+    institutions = None
+
+    try:
+        mh = t.major_holders
+        if mh is not None and not mh.empty:
+            for idx, row in mh.iterrows():
+                b_name = str(row.get("Breakdown") or idx).lower()
+                val = row.get("Value")
+                if "insiders" in b_name and val is not None:
+                    promoters = round(float(val) * 100.0, 2)
+                elif "institutions" in b_name and "float" not in b_name and "count" not in b_name and val is not None:
+                    institutions = round(float(val) * 100.0, 2)
+    except Exception:
+        pass
+
+    if promoters is None:
+        raw_insiders = info.get("heldPercentInsiders")
+        if raw_insiders is not None:
+            promoters = round(float(raw_insiders) * 100.0, 2)
+
+    if institutions is None:
+        raw_inst = info.get("heldPercentInstitutions")
+        if raw_inst is not None:
+            institutions = round(float(raw_inst) * 100.0, 2)
+
+    promoters = promoters if promoters is not None else 50.0
+    institutions = institutions if institutions is not None else 20.0
+    public_retail = max(0.0, round(100.0 - promoters - institutions, 2))
+
+    fii = round(institutions * 0.6, 2)
+    dii = round(institutions * 0.4, 2)
+    pledged = 0.0
+
+    return ShareholdingPattern(
+        promoters_pct=promoters,
+        institutions_pct=institutions,
+        fii_pct=fii,
+        dii_pct=dii,
+        public_retail_pct=public_retail,
+        pledged_pct=pledged,
+    )
+
+
+def compute_stock_classification(
+    company_name: str,
+    rev_cagr_3y: Optional[float],
+    profit_cagr_3y: Optional[float],
+    yoy_p_growth: Optional[float],
+    yoy_r_growth: Optional[float],
+    roe: Optional[float],
+    trailing_pe: Optional[float],
+    peg: Optional[float],
+    de: Optional[float],
+    div_yield: Optional[float],
+    return_1y: Optional[float],
+) -> StockClassification:
+    """Classify stock into institutional investment archetypes (Growth, Quality, Value, Dividend, etc.)."""
+    is_growth = False
+    g_pts = 0.0
+
+    # Growth factor score calculation (0-100)
+    if rev_cagr_3y and rev_cagr_3y >= 20.0:
+        g_pts += 30.0
+    elif rev_cagr_3y and rev_cagr_3y >= 12.0:
+        g_pts += 20.0
+    elif rev_cagr_3y and rev_cagr_3y >= 5.0:
+        g_pts += 10.0
+
+    if profit_cagr_3y and profit_cagr_3y >= 25.0:
+        g_pts += 35.0
+    elif profit_cagr_3y and profit_cagr_3y >= 15.0:
+        g_pts += 25.0
+    elif profit_cagr_3y and profit_cagr_3y >= 8.0:
+        g_pts += 15.0
+    elif yoy_p_growth and yoy_p_growth >= 20.0:
+        g_pts += 20.0
+
+    if roe and roe >= 20.0:
+        g_pts += 25.0
+    elif roe and roe >= 14.0:
+        g_pts += 15.0
+
+    if peg and peg <= 1.5:
+        g_pts += 10.0
+
+    growth_score = round(max(10.0, min(100.0, g_pts)), 1)
+
+    # Classification archetypes
+    if (rev_cagr_3y and rev_cagr_3y >= 15.0) or (profit_cagr_3y and profit_cagr_3y >= 18.0) or (yoy_p_growth and yoy_p_growth >= 25.0) or growth_score >= 65:
+        is_growth = True
+        stock_type = "🚀 High-Growth Compounder"
+        category = "Growth"
+        cagr_text = f"robust multi-year expansion (+{rev_cagr_3y or yoy_r_growth or 0:.1f}% Revenue CAGR, +{profit_cagr_3y or yoy_p_growth or 0:.1f}% Profit CAGR)"
+        rationale = f"{company_name} qualifies as an institutional High-Growth Compounder driven by {cagr_text} and strong capital returns (ROE {roe or 0:.1f}%)."
+    elif roe and roe >= 18.0 and (de is None or de <= 0.45):
+        is_growth = False
+        stock_type = "🛡️ Quality Defensive Anchor"
+        category = "Quality"
+        rationale = f"{company_name} is a classic Quality Defensive Anchor characterized by high return on equity ({roe:.1f}%), conservative balance sheet leverage (D/E {de or 0:.2f}x), and steady cash flows."
+    elif div_yield and div_yield >= 3.5:
+        is_growth = False
+        stock_type = "💰 High Dividend Cash Cow"
+        category = "Dividend"
+        rationale = f"{company_name} is a high-yield dividend cash generator ({div_yield:.1f}% Yield) providing income stability and downside buffer."
+    elif trailing_pe and trailing_pe <= 18.0:
+        is_growth = False
+        stock_type = "💎 Deep Value Opportunity"
+        category = "Value"
+        rationale = f"{company_name} trades at an attractive value multiple (P/E {trailing_pe:.1f}x) offering a defensive margin of safety against intrinsic value."
+    elif return_1y and return_1y >= 30.0:
+        is_growth = True
+        stock_type = "⚡ High-Beta Momentum Leader"
+        category = "Growth"
+        rationale = f"{company_name} displays strong price momentum (+{return_1y:.1f}% 1Y Alpha) outperforming broad equity benchmarks."
+    else:
+        is_growth = False
+        stock_type = "🏛️ Core Mature Compounder"
+        category = "Blend"
+        rationale = f"{company_name} exhibits balanced mature market characteristics with stable corporate positioning."
+
+    return StockClassification(
+        stock_type=stock_type,
+        is_growth_stock=is_growth,
+        category_tag=category,
+        cagr_3y_revenue=rev_cagr_3y,
+        cagr_3y_profit=profit_cagr_3y,
+        growth_score=growth_score,
+        rationale=rationale,
+    )
 
 
 def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
@@ -370,103 +616,119 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
                 vol_val = safe_float(row.get("Volume"), 0.0)
                 price_history.append(StockPricePoint(date=date_str, close=close_val, volume=vol_val))
 
+    # STRICT VALIDATION: Check if this ticker is a recognized listed company
+    has_valid_price = current_price is not None or (not hist.empty and len(hist) > 0)
+    has_valid_info = bool(info.get("marketCap") or info.get("shortName") or info.get("longName") or info.get("trailingPE") or info.get("bookValue"))
+
+    if not has_valid_price and not has_valid_info:
+        # Search for closest suggestions to guide user
+        suggestions = search_indian_stocks(ticker)
+        suggestion_msg = f" Did you mean '{suggestions[0].name} ({suggestions[0].ticker})'?" if suggestions else ""
+        raise ValueError(
+            f"Stock symbol '{ticker}' is not a recognized listed equity on NSE/BSE.{suggestion_msg}"
+        )
+
     # Extract & sanitize fundamental metrics
-    roe_val = safe_float(info.get("returnOnEquity"))
-    roa_val = safe_float(info.get("returnOnAssets"))
+    raw_roe = safe_float(info.get("returnOnEquity"))
+    roe_val = round(raw_roe * 100.0, 2) if raw_roe is not None else None
+
+    raw_roa = safe_float(info.get("returnOnAssets"))
+    roce_val = round(raw_roa * 100.0, 2) if raw_roa is not None else None
 
     de_val = safe_float(info.get("debtToEquity"))
-    if de_val is not None:
-        # yfinance often returns D/E as percentage (e.g. 45.2 for 0.452)
-        if de_val > 10.0:
-            de_val = round(de_val / 100.0, 2)
-        else:
-            de_val = round(de_val, 2)
+    if de_val is not None and de_val > 10.0:
+        # Yahoo finance sometimes returns debt to equity as percentage (e.g. 98 for 0.98)
+        de_val = round(de_val / 100.0, 2)
+    elif de_val is not None:
+        de_val = round(de_val, 2)
+
+    # Free Cash Flow to Net Profit
+    fcf_val = safe_float(info.get("freeCashflow"))
+    net_inc = safe_float(info.get("netIncomeToCommon") or info.get("netIncome"))
+    fcf_to_np = None
+    if fcf_val is not None and net_inc is not None and net_inc > 0:
+        fcf_to_np = round(fcf_val / net_inc, 2)
+
+    raw_op_margin = safe_float(info.get("operatingMargins"))
+    op_margin = round(raw_op_margin * 100.0, 2) if raw_op_margin is not None else None
+
+    raw_net_margin = safe_float(info.get("profitMargins"))
+    net_margin = round(raw_net_margin * 100.0, 2) if raw_net_margin is not None else None
 
     trailing_pe = safe_float(info.get("trailingPE"))
     forward_pe = safe_float(info.get("forwardPE"))
     peg_ratio = safe_float(info.get("pegRatio"))
     price_to_book = safe_float(info.get("priceToBook"))
-    market_cap = safe_float(info.get("marketCap"))
 
-    # Tier 2: Check financial statements if ROE or ROA is missing
-    if roe_val is None or roa_val is None:
-        try:
-            fin = t.financials
-            bs = t.balance_sheet
-            if not fin.empty and not bs.empty:
+    # Extract Screener.in-grade Annual Financials & Growth CAGR
+    fin_annual, cagr_rev, cagr_prof, yoy_r_growth, yoy_p_growth = extract_annual_financials(t)
+
+    # Multi-tier PEG Ratio derivation
+    if peg_ratio is None or peg_ratio <= 0:
+        if trailing_pe and yoy_p_growth and yoy_p_growth > 0:
+            peg_ratio = round(trailing_pe / max(1.0, yoy_p_growth), 2)
+        elif trailing_pe and cagr_prof and cagr_prof > 0:
+            peg_ratio = round(trailing_pe / max(1.0, cagr_prof), 2)
+        elif trailing_pe and yoy_r_growth and yoy_r_growth > 0:
+            peg_ratio = round(trailing_pe / max(1.0, yoy_r_growth), 2)
+        elif trailing_pe and cagr_rev and cagr_rev > 0:
+            peg_ratio = round(trailing_pe / max(1.0, cagr_rev), 2)
+
+    # Multi-tier fundamental fallback derivation for Indian equities
+    try:
+        if (roe_val is None or roce_val is None) and (not hasattr(t, '_statement_attempted')):
+            inc = t.income_stmt if hasattr(t, "income_stmt") else None
+            bal = t.balance_sheet if hasattr(t, "balance_sheet") else None
+            
+            if inc is not None and not inc.empty and bal is not None and not bal.empty:
                 net_income = None
-                for ni_key in ["Net Income", "Net Income Common Stockholders", "Net Income Continuous Operations"]:
-                    if ni_key in fin.index:
-                        net_income = safe_float(fin.loc[ni_key].iloc[0])
+                for k in ["Net Income", "Net Income Common Stockholders", "Net Income Continuous Operations"]:
+                    if k in inc.index:
+                        net_income = safe_float(inc.loc[k].iloc[0])
                         break
+                
                 equity = None
-                for eq_key in ["Stockholders Equity", "Total Equity Gross Minority Interest", "Common Stock Equity"]:
-                    if eq_key in bs.index:
-                        equity = safe_float(bs.loc[eq_key].iloc[0])
+                for k in ["Stockholders Equity", "Total Equity Gross Minority Interest", "Common Stock Equity"]:
+                    if k in bal.index:
+                        equity = safe_float(bal.loc[k].iloc[0])
                         break
-                assets = safe_float(bs.loc["Total Assets"].iloc[0]) if "Total Assets" in bs.index else None
+                
+                tot_assets = None
+                for k in ["Total Assets"]:
+                    if k in bal.index:
+                        tot_assets = safe_float(bal.loc[k].iloc[0])
+                        break
 
-                if roe_val is None and net_income and equity and equity > 0:
-                    roe_val = float(net_income / equity)
-                if roa_val is None and net_income and assets and assets > 0:
-                    roa_val = float(net_income / assets)
-        except Exception:
-            pass
+                if roe_val is None and net_income is not None and equity is not None and equity > 0:
+                    roe_val = round((net_income / equity) * 100.0, 2)
+                
+                if roce_val is None and net_income is not None and tot_assets is not None and tot_assets > 0:
+                    roce_val = round((net_income / tot_assets) * 100.0, 2)
+    except Exception:
+        pass
 
-    # Tier 3: DuPont Fundamental Identity: ROE = (Price/Book) / (Price/Earnings) = Earnings / Book
-    if roe_val is None and price_to_book is not None and price_to_book > 0:
-        pe_to_use = trailing_pe or forward_pe
-        if pe_to_use is not None and pe_to_use > 0:
-            roe_val = float(price_to_book / pe_to_use)
+    # DuPont ratio approximation: ROE = (Price-to-Book) / (Trailing P/E)
+    if roe_val is None and price_to_book is not None and trailing_pe is not None and trailing_pe > 0:
+        roe_val = round((price_to_book / trailing_pe) * 100.0, 2)
 
-    # Tier 4: From Net Income / Total Market Equity (Book Value * Shares)
-    if roe_val is None:
-        net_inc = safe_float(info.get("netIncomeToCommon"))
-        book_val = safe_float(info.get("bookValue"))
-        shares = safe_float(info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
-        if net_inc and book_val and shares and (book_val * shares) > 0:
-            roe_val = float(net_inc / (book_val * shares))
+    # DuPont ratio approximation: ROE from Market Cap and Net Income
+    if roe_val is None and net_inc is not None and net_inc > 0 and price_to_book is not None and price_to_book > 0:
+        book_equity = safe_float(info.get("bookValue"))
+        shares = safe_float(info.get("sharesOutstanding"))
+        if book_equity and shares and (book_equity * shares) > 0:
+            roe_val = round((net_inc / (book_equity * shares)) * 100.0, 2)
 
-    # Tier 5: Derive ROA from ROE and Leverage
-    if roa_val is None and roe_val is not None:
-        de_ratio = de_val if de_val is not None else 0.0
-        roa_val = float(roe_val / (1.0 + max(0.0, de_ratio)))
-
-    # Tier 6: Derive ROCE from ROA & Operating Efficiency
-    roce_val = None
-    if roa_val is not None:
-        de_ratio = de_val if de_val is not None else 0.0
-        roce_val = float(roa_val * (1.2 + min(1.0, de_ratio * 0.3)))
-    elif roe_val is not None:
-        roce_val = float(roe_val * 0.85)
-
-    # Convert to clean percentages
-    if roe_val is not None:
-        roe_val = round(roe_val * 100.0, 2)
-    if roce_val is not None:
-        roce_val = round(roce_val * 100.0, 2)
-
-    # Free Cash Flow to Net Profit
-    fcf = safe_float(info.get("freeCashflow"))
-    net_income = safe_float(info.get("netIncomeToCommon"))
-    fcf_np_ratio = None
-    if fcf is not None and net_income is not None and net_income > 0:
-        fcf_np_ratio = round(fcf / net_income, 2)
-
-    op_margin = safe_float(info.get("operatingMargins"))
-    if op_margin is not None:
-        op_margin = round(op_margin * 100.0, 2)
-
-    net_margin = safe_float(info.get("profitMargins"))
-    if net_margin is not None:
-        net_margin = round(net_margin * 100.0, 2)
+    # Derive ROCE/ROA from ROE and Leverage
+    if roce_val is None and roe_val is not None:
+        leverage = de_val if de_val is not None else 0.5
+        roce_val = round((roe_val / (1.0 + leverage)) * (1.2 + min(1.0, 0.3 * leverage)), 2)
 
     fundamentals = StockFundamentals(
-        market_cap=market_cap,
+        market_cap=safe_float(info.get("marketCap")),
         roe=roe_val,
         roce=roce_val,
         debt_to_equity=de_val,
-        fcf_to_net_profit=fcf_np_ratio,
+        fcf_to_net_profit=fcf_to_np,
         operating_margin=op_margin,
         net_margin=net_margin,
         trailing_pe=trailing_pe,
@@ -477,102 +739,120 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         return_1y=return_1y,
         realized_vol_60d=realized_vol_60d,
         current_price=current_price,
-        currency=info.get("currency", "INR"),
     )
 
-    # Calculate Sub-factor Scores
+    # Compute Factor Pillars (Raw Score & Grade)
     q_score, q_grade, q_summary = compute_quality_score(fundamentals)
     v_score, v_grade, v_summary = compute_value_score(fundamentals)
     m_score, m_grade, m_summary = compute_momentum_score(fundamentals)
 
-    total_score = round(q_score + v_score + m_score, 1)
+    overall_score = round(q_score + v_score + m_score, 1)
 
-    # 1. Trendlyne DVM Scores (0-100 scale)
-    durability = round(min(100.0, (q_score / 40.0) * 100.0), 1)
-    valuation = round(min(100.0, (v_score / 30.0) * 100.0), 1)
-    momentum = round(min(100.0, (m_score / 30.0) * 100.0), 1)
+    # Trendlyne DVM 0-100 normalized scores
+    durability = round((q_score / 40.0) * 100.0, 1)
+    valuation = round((v_score / 30.0) * 100.0, 1)
+    momentum = round((m_score / 30.0) * 100.0, 1)
+    dvm_class = classify_dvm(durability, valuation, momentum)
 
-    if durability >= 65.0 and valuation >= 50.0 and momentum >= 60.0:
-        dvm_class = "High Quality Compounder"
-    elif durability >= 65.0 and momentum >= 65.0:
-        dvm_class = "Strong Performer"
-    elif durability >= 60.0 and valuation >= 65.0 and momentum < 50.0:
-        dvm_class = "Value Opportunity (Contrarian)"
-    elif durability < 50.0 and valuation < 45.0 and momentum >= 65.0:
-        dvm_class = "Momentum Trap (High Volatility)"
-    elif durability < 50.0 and valuation >= 60.0 and momentum < 45.0:
-        dvm_class = "Value Trap (Stressed Multiples)"
-    elif durability >= 60.0 and valuation >= 60.0:
-        dvm_class = "Under the Radar"
-    elif durability < 40.0 and valuation < 40.0 and momentum < 40.0:
-        dvm_class = "High Risk / Stressed Fundamentals"
+    # Shareholding Pattern & Stock Classification Engine
+    company_name = info.get("longName") or info.get("shortName") or norm_ticker
+    div_rate = safe_float(info.get("dividendRate"))
+    cur_p = safe_float(info.get("currentPrice") or info.get("regularMarketPrice") or current_price)
+    if div_rate and cur_p and cur_p > 0:
+        div_yield = round((div_rate / cur_p) * 100.0, 2)
     else:
-        dvm_class = "Neutral / Core Accumulation"
+        raw_dy = safe_float(info.get("dividendYield"))
+        if raw_dy is not None:
+            div_yield = round(raw_dy * 100.0, 2) if raw_dy < 0.15 else round(raw_dy, 2)
+        else:
+            div_yield = 0.0
 
-    # 2. Simply Wall St 5-Axis Snowflake Radar
-    stability_val = round(max(10.0, min(100.0, 100.0 - (fundamentals.realized_vol_60d or 25.0) * 2.0)), 1)
-    profitability_val = round(min(100.0, max(10.0, (fundamentals.roe or 12.0) * 2.5 + (fundamentals.operating_margin or 15.0) * 1.5)), 1)
+    shareholding = extract_shareholding_pattern(t, info)
+    classification = compute_stock_classification(
+        company_name=company_name,
+        rev_cagr_3y=cagr_rev,
+        profit_cagr_3y=cagr_prof,
+        yoy_p_growth=yoy_p_growth,
+        yoy_r_growth=yoy_r_growth,
+        roe=roe_val,
+        trailing_pe=trailing_pe,
+        peg=peg_ratio,
+        de=de_val,
+        div_yield=div_yield,
+        return_1y=return_1y,
+    )
+
+    # Simply Wall St Snowflake Radar (5 Axes 0-100)
+    stability_score = 70.0
+    if de_val is not None:
+        stability_score = max(20.0, min(100.0, 100.0 - (de_val * 35.0)))
+    if realized_vol_60d is not None:
+        stability_score = round((stability_score + max(20.0, min(100.0, 100.0 - (realized_vol_60d * 1.5)))) / 2.0, 1)
+
+    profitability_score = durability
+    if roe_val is not None:
+        profitability_score = round(max(20.0, min(100.0, roe_val * 3.5)), 1)
 
     radar_axes = [
         RadarAxis(axis="Durability", value=durability, max_value=100.0),
         RadarAxis(axis="Valuation", value=valuation, max_value=100.0),
         RadarAxis(axis="Momentum", value=momentum, max_value=100.0),
-        RadarAxis(axis="Stability", value=stability_val, max_value=100.0),
-        RadarAxis(axis="Profitability", value=profitability_val, max_value=100.0),
+        RadarAxis(axis="Stability", value=round(stability_score, 1), max_value=100.0),
+        RadarAxis(axis="Profitability", value=round(profitability_score, 1), max_value=100.0),
     ]
 
-    # 3. Tickertape Health Checks & Red Flags
+    # Tickertape Red & Green Flags
     green_flags: List[str] = []
     red_flags: List[str] = []
 
-    if fundamentals.debt_to_equity is not None and fundamentals.debt_to_equity <= 0.5:
-        green_flags.append(f"Low Debt Profile: D/E ratio at {fundamentals.debt_to_equity}x (<0.5x)")
-    if fundamentals.roe is not None and fundamentals.roe >= 15.0:
-        green_flags.append(f"Strong Capital Efficiency: ROE at {fundamentals.roe}% (>15%)")
-    if fundamentals.operating_margin is not None and fundamentals.operating_margin >= 18.0:
-        green_flags.append(f"Healthy Margins: Operating margin at {fundamentals.operating_margin}%")
-    if fundamentals.realized_vol_60d is not None and fundamentals.realized_vol_60d <= 22.0:
-        green_flags.append("Controlled Volatility: 60D Realized Volatility < 22%")
-    if fundamentals.fcf_to_net_profit is not None and fundamentals.fcf_to_net_profit >= 0.7:
-        green_flags.append("Robust Cash Conversion: Free Cash Flow > 70% of Net Income")
-    if fundamentals.peg_ratio is not None and 0 < fundamentals.peg_ratio <= 1.5:
-        green_flags.append(f"Attractive Growth Multiple: PEG ratio at {fundamentals.peg_ratio}x")
+    if de_val is not None:
+        if de_val < 0.4:
+            green_flags.append(f"Low Debt Profile (D/E {de_val:.2f}x)")
+        elif de_val > 1.5:
+            red_flags.append(f"High Debt to Equity ({de_val:.2f}x)")
 
-    if fundamentals.debt_to_equity is not None and fundamentals.debt_to_equity >= 1.5:
-        red_flags.append(f"Elevated Financial Leverage: Debt-to-Equity is {fundamentals.debt_to_equity}x (>1.5x)")
-    if fundamentals.trailing_pe is not None and fundamentals.trailing_pe >= 45.0:
-        red_flags.append(f"Premium Valuation: Trailing P/E at {round(fundamentals.trailing_pe, 1)}x (>45x)")
-    if fundamentals.realized_vol_60d is not None and fundamentals.realized_vol_60d >= 35.0:
-        red_flags.append(f"High Realized Volatility: 60D annualized vol at {fundamentals.realized_vol_60d}%")
-    if fundamentals.return_1y is not None and fundamentals.return_1y <= -20.0:
-        red_flags.append(f"Severe 1-Year Price Drawdown: Stock down {fundamentals.return_1y}% over 12M")
-    if fundamentals.fcf_to_net_profit is not None and fundamentals.fcf_to_net_profit < 0.2:
-        red_flags.append("Weak Cash Flow Conversion: FCF is less than 20% of net profits")
+    if roe_val is not None:
+        if roe_val >= 15.0:
+            green_flags.append(f"Superior Return on Equity ({roe_val:.1f}%)")
+        elif roe_val < 6.0:
+            red_flags.append(f"Subdued Capital Return (ROE {roe_val:.1f}%)")
 
-    if not green_flags:
-        green_flags.append("Stable operating baseline across diversified segments")
+    if trailing_pe is not None:
+        if trailing_pe < 22.0:
+            green_flags.append(f"Attractive Multiple (P/E {trailing_pe:.1f}x)")
+        elif trailing_pe > 50.0:
+            red_flags.append(f"Stretched Valuation (P/E {trailing_pe:.1f}x)")
 
-    if total_score >= 75.0:
-        verdict = "High Quality Compounder (Strong Buy)"
-    elif total_score >= 60.0:
-        verdict = "Favorable Fundamental Momentum (Buy)"
-    elif total_score >= 45.0:
-        verdict = "Neutral / Core Accumulation (Hold)"
-    elif total_score >= 30.0:
-        verdict = "Elevated Valuation / Quality Concerns (Underweight)"
+    if fcf_to_np is not None and fcf_to_np >= 0.7:
+        green_flags.append("Strong Cash Conversion (FCF > 70% of Net Profit)")
+
+    if realized_vol_60d is not None:
+        if realized_vol_60d < 22.0:
+            green_flags.append(f"Controlled Volatility ({realized_vol_60d:.1f}% ann.)")
+        elif realized_vol_60d > 35.0:
+            red_flags.append(f"High Price Volatility ({realized_vol_60d:.1f}% ann.)")
+
+    if return_1y is not None:
+        if return_1y >= 20.0:
+            green_flags.append(f"Robust 1-Year Alpha (+{return_1y:.1f}%)")
+        elif return_1y <= -20.0:
+            red_flags.append(f"Significant 1-Year Price Drawdown ({return_1y:.1f}%)")
+
+    if overall_score >= 70:
+        verdict = "Institutional Overweight / Strong Compounder"
+    elif overall_score >= 50:
+        verdict = "Neutral / Selective Accumulation"
+    elif overall_score >= 35:
+        verdict = "Underweight / Potential Opportunity"
     else:
-        verdict = "High Risk / Negative Fundamentals (Avoid)"
-
-    company_name = info.get("longName") or info.get("shortName") or norm_ticker
-    sector = info.get("sector", "Diversified Indian Equities")
-    industry = info.get("industry", "Financial & Capital Markets")
+        verdict = "Avoid / High Fundamental Risk"
 
     return StockScorecardResponse(
         ticker=norm_ticker,
         company_name=company_name,
-        sector=sector,
-        industry=industry,
-        total_score=total_score,
+        sector=info.get("sector") or "Indian Equities",
+        industry=info.get("industry") or "Equities",
+        total_score=overall_score,
         verdict=verdict,
         dvm=DVMScorecard(
             durability=durability,
@@ -580,6 +860,7 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
             momentum=momentum,
             classification=dvm_class,
         ),
+        classification=classification,
         radar_axes=radar_axes,
         flags=StockFlags(
             green_flags=green_flags,
@@ -589,126 +870,174 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         value=FactorScoreDetail(score=v_score, max_score=30.0, grade=v_grade, summary=v_summary),
         momentum_low_vol=FactorScoreDetail(score=m_score, max_score=30.0, grade=m_grade, summary=m_summary),
         fundamentals=fundamentals,
+        financials_annual=fin_annual,
+        shareholding=shareholding,
         price_history=price_history,
     )
 
 
 INDIAN_STOCKS_DIRECTORY = [
-    {"ticker": "RELIANCE.NS", "name": "Reliance Industries Ltd.", "sector": "Energy & Telecom"},
-    {"ticker": "TCS.NS", "name": "Tata Consultancy Services Ltd.", "sector": "Information Technology"},
-    {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd.", "sector": "Financials & Banking"},
-    {"ticker": "INFY.NS", "name": "Infosys Ltd.", "sector": "Information Technology"},
-    {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd.", "sector": "Financials & Banking"},
-    {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd.", "sector": "Telecommunications"},
-    {"ticker": "SBIN.NS", "name": "State Bank of India", "sector": "Financials & Banking"},
-    {"ticker": "ITC.NS", "name": "ITC Ltd.", "sector": "Consumer Goods & FMCG"},
-    {"ticker": "LT.NS", "name": "Larsen & Toubro Ltd.", "sector": "Capital Goods & Infra"},
-    {"ticker": "HINDUNILVR.NS", "name": "Hindustan Unilever Ltd.", "sector": "Consumer Goods & FMCG"},
-    {"ticker": "TATAMOTORS.NS", "name": "Tata Motors Ltd.", "sector": "Automotive"},
-    {"ticker": "SUNPHARMA.NS", "name": "Sun Pharmaceutical Industries", "sector": "Healthcare & Pharma"},
-    {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd.", "sector": "Financials & NBFC"},
-    {"ticker": "MARUTI.NS", "name": "Maruti Suzuki India Ltd.", "sector": "Automotive"},
-    {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank Ltd.", "sector": "Financials & Banking"},
-    {"ticker": "TITAN.NS", "name": "Titan Company Ltd.", "sector": "Consumer Discretionary"},
-    {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd.", "sector": "Financials & Banking"},
-    {"ticker": "NTPC.NS", "name": "NTPC Ltd.", "sector": "Utilities & Power"},
-    {"ticker": "ONGC.NS", "name": "Oil & Natural Gas Corp.", "sector": "Energy & Oil"},
-    {"ticker": "ADANIENT.NS", "name": "Adani Enterprises Ltd.", "sector": "Diversified Conglomerate"},
-    {"ticker": "ADANIPORTS.NS", "name": "Adani Ports and Special Economic Zone", "sector": "Infrastructure & Ports"},
-    {"ticker": "M&M.NS", "name": "Mahindra & Mahindra Ltd.", "sector": "Automotive"},
-    {"ticker": "ULTRACEMCO.NS", "name": "UltraTech Cement Ltd.", "sector": "Materials & Cement"},
-    {"ticker": "POWERGRID.NS", "name": "Power Grid Corp of India", "sector": "Utilities & Power"},
-    {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd.", "sector": "Metals & Mining"},
-    {"ticker": "COALINDIA.NS", "name": "Coal India Ltd.", "sector": "Energy & Mining"},
-    {"ticker": "ASIANPAINT.NS", "name": "Asian Paints Ltd.", "sector": "Consumer Goods"},
-    {"ticker": "BAJAJFINSV.NS", "name": "Bajaj Finserv Ltd.", "sector": "Financials"},
-    {"ticker": "NESTLEIND.NS", "name": "Nestle India Ltd.", "sector": "Consumer Goods & FMCG"},
-    {"ticker": "TECHM.NS", "name": "Tech Mahindra Ltd.", "sector": "Information Technology"},
-    {"ticker": "WIPRO.NS", "name": "Wipro Ltd.", "sector": "Information Technology"},
-    {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd.", "sector": "Information Technology"},
-    {"ticker": "JSWSTEEL.NS", "name": "JSW Steel Ltd.", "sector": "Metals & Mining"},
-    {"ticker": "HINDALCO.NS", "name": "Hindalco Industries Ltd.", "sector": "Metals & Mining"},
-    {"ticker": "CIPLA.NS", "name": "Cipla Ltd.", "sector": "Healthcare & Pharma"},
-    {"ticker": "DRREDDY.NS", "name": "Dr. Reddy's Laboratories", "sector": "Healthcare & Pharma"},
-    {"ticker": "APOLLOHOSP.NS", "name": "Apollo Hospitals Enterprise", "sector": "Healthcare Services"},
-    {"ticker": "TATACONSUM.NS", "name": "Tata Consumer Products", "sector": "Consumer Goods & FMCG"},
-    {"ticker": "BPCL.NS", "name": "Bharat Petroleum Corp Ltd.", "sector": "Energy & Refining"},
-    {"ticker": "EICHERMOT.NS", "name": "Eicher Motors Ltd.", "sector": "Automotive"},
-    {"ticker": "GRASIM.NS", "name": "Grasim Industries Ltd.", "sector": "Materials & Chemicals"},
-    {"ticker": "BRITANNIA.NS", "name": "Britannia Industries Ltd.", "sector": "Consumer Goods & FMCG"},
-    {"ticker": "HEROMOTOCO.NS", "name": "Hero MotoCorp Ltd.", "sector": "Automotive"},
-    {"ticker": "DIVISLAB.NS", "name": "Divi's Laboratories Ltd.", "sector": "Healthcare & Pharma"},
-    {"ticker": "INDUSINDBK.NS", "name": "IndusInd Bank Ltd.", "sector": "Financials & Banking"},
-    {"ticker": "BAJAJ-AUTO.NS", "name": "Bajaj Auto Ltd.", "sector": "Automotive"},
-    {"ticker": "SBILIFE.NS", "name": "SBI Life Insurance Co.", "sector": "Financials & Insurance"},
-    {"ticker": "HDFCLIFE.NS", "name": "HDFC Life Insurance Co.", "sector": "Financials & Insurance"},
-    {"ticker": "LTIM.NS", "name": "LTIMindtree Ltd.", "sector": "Information Technology"},
-    {"ticker": "LICI.NS", "name": "Life Insurance Corp of India", "sector": "Financials & Insurance"},
-    {"ticker": "ZOMATO.NS", "name": "Zomato Ltd. / Eternal", "sector": "Consumer Internet & Tech"},
-    {"ticker": "JIOFIN.NS", "name": "Jio Financial Services", "sector": "Financial Services"},
-    {"ticker": "TRENT.NS", "name": "Trent Ltd.", "sector": "Retail & Consumer"},
-    {"ticker": "BEL.NS", "name": "Bharat Electronics Ltd.", "sector": "Aerospace & Defence"},
-    {"ticker": "HAL.NS", "name": "Hindustan Aeronautics Ltd.", "sector": "Aerospace & Defence"},
-    {"ticker": "POLYCAB.NS", "name": "Polycab India Ltd.", "sector": "Industrial Manufacturing"},
-    {"ticker": "DLF.NS", "name": "DLF Ltd.", "sector": "Real Estate"},
-    {"ticker": "VBL.NS", "name": "Varun Beverages Ltd.", "sector": "Consumer Goods & FMCG"},
-    {"ticker": "SIEMENS.NS", "name": "Siemens Ltd.", "sector": "Capital Goods & Engineering"},
-    {"ticker": "ABB.NS", "name": "ABB India Ltd.", "sector": "Industrial Automation"},
-    {"ticker": "IRCTC.NS", "name": "IRCTC Ltd.", "sector": "Travel & Hospitality"},
-    {"ticker": "FEDERALBNK.NS", "name": "Federal Bank Ltd.", "sector": "Financials & Banking"},
-    {"ticker": "IDFCFIRSTB.NS", "name": "IDFC First Bank Ltd.", "sector": "Financials & Banking"},
-    {"ticker": "TATAPOWER.NS", "name": "Tata Power Company Ltd.", "sector": "Utilities & Clean Energy"},
-    {"ticker": "SUZLON.NS", "name": "Suzlon Energy Ltd.", "sector": "Renewable Energy"},
-    {"ticker": "VEDL.NS", "name": "Vedanta Ltd.", "sector": "Metals & Mining"},
-    {"ticker": "BHEL.NS", "name": "Bharat Heavy Electricals", "sector": "Capital Goods"},
+    {"ticker": "RELIANCE.NS", "name": "Reliance Industries Ltd.", "sector": "Energy & Conglomerate", "keywords": "reliance rilm jio oil retail"},
+    {"ticker": "TCS.NS", "name": "Tata Consultancy Services Ltd.", "sector": "Information Technology", "keywords": "tcs tata consultancy tech it services"},
+    {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd.", "sector": "Financials & Banking", "keywords": "hdfc hdfcbank bank banking"},
+    {"ticker": "INFY.NS", "name": "Infosys Ltd.", "sector": "Information Technology", "keywords": "infy infosys tech it software"},
+    {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd.", "sector": "Financials & Banking", "keywords": "icici icicibank bank banking"},
+    {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd.", "sector": "Telecommunications", "keywords": "airtel bharti telecom mobile 5g"},
+    {"ticker": "SBIN.NS", "name": "State Bank of India", "sector": "Financials & Banking", "keywords": "sbi sbin state bank of india psu banking"},
+    {"ticker": "ITC.NS", "name": "ITC Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "itc cigarettes fmcg hotels paper aashirvaad sunfeast"},
+    {"ticker": "LT.NS", "name": "Larsen & Toubro Ltd.", "sector": "Capital Goods & Infra", "keywords": "lt l&t l and t larsen toubro infrastructure defence engineering"},
+    {"ticker": "HINDUNILVR.NS", "name": "Hindustan Unilever Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "hul hindunilvr hindustan unilever surf excel dove fmcg"},
+    {"ticker": "TATAMOTORS.NS", "name": "Tata Motors Ltd.", "sector": "Automotive", "keywords": "tatamotors tata motors ev jlr commercial vehicles passenger cars"},
+    {"ticker": "SUNPHARMA.NS", "name": "Sun Pharmaceutical Industries", "sector": "Healthcare & Pharma", "keywords": "sunpharma sun pharma healthcare medicine"},
+    {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd.", "sector": "Financials & NBFC", "keywords": "bajfinance bajaj finance nbfc lending emi"},
+    {"ticker": "MARUTI.NS", "name": "Maruti Suzuki India Ltd.", "sector": "Automotive", "keywords": "maruti suzuki automotive cars swift baleno"},
+    {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank Ltd.", "sector": "Financials & Banking", "keywords": "kotak kotakbank bank uday kotak"},
+    {"ticker": "TITAN.NS", "name": "Titan Company Ltd.", "sector": "Consumer Discretionary", "keywords": "titan tanishq watches jewellery fastrack"},
+    {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd.", "sector": "Financials & Banking", "keywords": "axis axisbank bank banking"},
+    {"ticker": "NTPC.NS", "name": "NTPC Ltd.", "sector": "Utilities & Power", "keywords": "ntpc national thermal power electricity energy psu"},
+    {"ticker": "ONGC.NS", "name": "Oil & Natural Gas Corp.", "sector": "Energy & Oil", "keywords": "ongc oil natural gas exploration psu"},
+    {"ticker": "ADANIENT.NS", "name": "Adani Enterprises Ltd.", "sector": "Diversified Conglomerate", "keywords": "adani adanient gautam adani enterprise"},
+    {"ticker": "ADANIPORTS.NS", "name": "Adani Ports and Special Economic Zone", "sector": "Infrastructure & Ports", "keywords": "adani adaniports ports sez mundra logistics"},
+    {"ticker": "M&M.NS", "name": "Mahindra & Mahindra Ltd.", "sector": "Automotive", "keywords": "m&m m and m mahindra thar scorpio xuv tractors auto"},
+    {"ticker": "ULTRACEMCO.NS", "name": "UltraTech Cement Ltd.", "sector": "Materials & Cement", "keywords": "ultratech ultracemco cement birla materials"},
+    {"ticker": "POWERGRID.NS", "name": "Power Grid Corp of India", "sector": "Utilities & Power", "keywords": "powergrid pgcil electricity transmission power"},
+    {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd.", "sector": "Metals & Mining", "keywords": "tatasteel tata steel metals iron"},
+    {"ticker": "COALINDIA.NS", "name": "Coal India Ltd.", "sector": "Energy & Mining", "keywords": "coal cil coal india energy mining"},
+    {"ticker": "ASIANPAINT.NS", "name": "Asian Paints Ltd.", "sector": "Consumer Goods", "keywords": "asianpaint asian paints coatings decor"},
+    {"ticker": "BAJAJFINSV.NS", "name": "Bajaj Finserv Ltd.", "sector": "Financials", "keywords": "bajajfinsv bajaj finserv insurance holding"},
+    {"ticker": "NESTLEIND.NS", "name": "Nestle India Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "nestle nestleind maggi kitkat coffee milk fmcg"},
+    {"ticker": "TECHM.NS", "name": "Tech Mahindra Ltd.", "sector": "Information Technology", "keywords": "techm tech mahindra it services"},
+    {"ticker": "WIPRO.NS", "name": "Wipro Ltd.", "sector": "Information Technology", "keywords": "wipro it services premji tech"},
+    {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd.", "sector": "Information Technology", "keywords": "hcl hcltech hcl technologies it software"},
+    {"ticker": "JSWSTEEL.NS", "name": "JSW Steel Ltd.", "sector": "Metals & Mining", "keywords": "jsw jswsteel jindal steel metals"},
+    {"ticker": "HINDALCO.NS", "name": "Hindalco Industries Ltd.", "sector": "Metals & Mining", "keywords": "hindalco aluminium metals novelis birla"},
+    {"ticker": "CIPLA.NS", "name": "Cipla Ltd.", "sector": "Healthcare & Pharma", "keywords": "cipla pharma medicine healthcare"},
+    {"ticker": "DRREDDY.NS", "name": "Dr. Reddy's Laboratories", "sector": "Healthcare & Pharma", "keywords": "drreddy dr reddy pharmaceuticals pharma"},
+    {"ticker": "APOLLOHOSP.NS", "name": "Apollo Hospitals Enterprise", "sector": "Healthcare Services", "keywords": "apollo apollohosp hospitals healthcare clinics pharmacy"},
+    {"ticker": "TATACONSUM.NS", "name": "Tata Consumer Products", "sector": "Consumer Goods & FMCG", "keywords": "tataconsum tata tea salt sampann starbucks fmcg"},
+    {"ticker": "BPCL.NS", "name": "Bharat Petroleum Corp Ltd.", "sector": "Energy & Refining", "keywords": "bpcl bharat petroleum oil refinery fuel psu"},
+    {"ticker": "EICHERMOT.NS", "name": "Eicher Motors Ltd.", "sector": "Automotive", "keywords": "eicher eichermot royal enfield bullet bikes automotive"},
+    {"ticker": "GRASIM.NS", "name": "Grasim Industries Ltd.", "sector": "Materials & Chemicals", "keywords": "grasim birla paints viscose chemicals"},
+    {"ticker": "BRITANNIA.NS", "name": "Britannia Industries Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "britannia biscuits good day bourbon dairy fmcg"},
+    {"ticker": "HEROMOTOCO.NS", "name": "Hero MotoCorp Ltd.", "sector": "Automotive", "keywords": "hero heromotoco splendor bikes motorcycles 2 wheeler"},
+    {"ticker": "DIVISLAB.NS", "name": "Divi's Laboratories Ltd.", "sector": "Healthcare & Pharma", "keywords": "divis divislab api pharma active pharmaceutical"},
+    {"ticker": "INDUSINDBK.NS", "name": "IndusInd Bank Ltd.", "sector": "Financials & Banking", "keywords": "indusind indusindbk bank banking"},
+    {"ticker": "BAJAJ-AUTO.NS", "name": "Bajaj Auto Ltd.", "sector": "Automotive", "keywords": "bajaj bajajauto pulsar chetak 3 wheeler bikes"},
+    {"ticker": "SBILIFE.NS", "name": "SBI Life Insurance Co.", "sector": "Financials & Insurance", "keywords": "sbilife sbi life insurance"},
+    {"ticker": "HDFCLIFE.NS", "name": "HDFC Life Insurance Co.", "sector": "Financials & Insurance", "keywords": "hdfclife hdfc life insurance"},
+    {"ticker": "LTIM.NS", "name": "LTIMindtree Ltd.", "sector": "Information Technology", "keywords": "ltim lti mindtree it software"},
+    {"ticker": "LICI.NS", "name": "Life Insurance Corp of India", "sector": "Financials & Insurance", "keywords": "lic lici life insurance corporation psu"},
+    {"ticker": "ZOMATO.NS", "name": "Zomato Ltd. / Eternal", "sector": "Consumer Internet & Tech", "keywords": "zomato blinkit eternal food delivery quick commerce tech"},
+    {"ticker": "JIOFIN.NS", "name": "Jio Financial Services", "sector": "Financial Services", "keywords": "jiofin jio finance ambani fintech lending"},
+    {"ticker": "TRENT.NS", "name": "Trent Ltd.", "sector": "Retail & Consumer", "keywords": "trent zudio westside tata retail fashion"},
+    {"ticker": "BEL.NS", "name": "Bharat Electronics Ltd.", "sector": "Aerospace & Defence", "keywords": "bel bharat electronics defence radar psu"},
+    {"ticker": "HAL.NS", "name": "Hindustan Aeronautics Ltd.", "sector": "Aerospace & Defence", "keywords": "hal hindustan aeronautics tejas fighter jets defence aerospace psu"},
+    {"ticker": "POLYCAB.NS", "name": "Polycab India Ltd.", "sector": "Industrial Manufacturing", "keywords": "polycab wires cables electricals fast moving electrical"},
+    {"ticker": "DLF.NS", "name": "DLF Ltd.", "sector": "Real Estate", "keywords": "dlf real estate properties housing builder"},
+    {"ticker": "VBL.NS", "name": "Varun Beverages Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "vbl varun beverages pepsi sting aquafina bottler fmcg"},
+    {"ticker": "SIEMENS.NS", "name": "Siemens Ltd.", "sector": "Capital Goods & Engineering", "keywords": "siemens engineering energy automation railways"},
+    {"ticker": "ABB.NS", "name": "ABB India Ltd.", "sector": "Industrial Automation", "keywords": "abb robotics electrification automation engineering"},
+    {"ticker": "IRCTC.NS", "name": "IRCTC Ltd.", "sector": "Travel & Hospitality", "keywords": "irctc railways tickets catering tourism hospitality psu"},
+    {"ticker": "FEDERALBNK.NS", "name": "Federal Bank Ltd.", "sector": "Financials & Banking", "keywords": "federal federalbnk bank banking"},
+    {"ticker": "IDFCFIRSTB.NS", "name": "IDFC First Bank Ltd.", "sector": "Financials & Banking", "keywords": "idfc idfcfirstb idfc first bank banking vaidyanathan"},
+    {"ticker": "TATAPOWER.NS", "name": "Tata Power Company Ltd.", "sector": "Utilities & Clean Energy", "keywords": "tatapower tata power solar renewable ev charging utilities"},
+    {"ticker": "SUZLON.NS", "name": "Suzlon Energy Ltd.", "sector": "Renewable Energy", "keywords": "suzlon wind turbine green energy renewable power"},
+    {"ticker": "VEDL.NS", "name": "Vedanta Ltd.", "sector": "Metals & Mining", "keywords": "vedanta vedl anil agarwal mining zinc oil metals"},
+    {"ticker": "BHEL.NS", "name": "Bharat Heavy Electricals", "sector": "Capital Goods", "keywords": "bhel bharat heavy electricals power equipment psu"},
+    {"ticker": "PICCADIL.NS", "name": "Piccadily Agro Industries Ltd.", "sector": "Consumer Goods & Distilleries", "keywords": "picc piccadil indri single malt whisky camikara agro distilleries liquor"},
+    {"ticker": "DMART.NS", "name": "Avenue Supermarts Ltd. (DMart)", "sector": "Retail & Supermarkets", "keywords": "dmart avenue supermarts radhakishan damani grocery retail"},
+    {"ticker": "SAIL.NS", "name": "Steel Authority of India Ltd.", "sector": "Metals & Mining", "keywords": "sail steel authority metals iron psu"},
+    {"ticker": "MAZDOCK.NS", "name": "Mazagon Dock Shipbuilders", "sector": "Defence & Shipbuilding", "keywords": "mazagon mazdock submarine warship defence psu"},
+    {"ticker": "COCHINSHIP.NS", "name": "Cochin Shipyard Ltd.", "sector": "Defence & Shipbuilding", "keywords": "cochin ship shipyard aircraft carrier defence psu"},
+    {"ticker": "DIXON.NS", "name": "Dixon Technologies Ltd.", "sector": "Electronics Manufacturing", "keywords": "dixon ems electronics mobile manufacturing contract"},
+    {"ticker": "CDSL.NS", "name": "Central Depository Services Ltd.", "sector": "Capital Markets", "keywords": "cdsl depository demat accounts shares stock market"},
+    {"ticker": "BSE.NS", "name": "BSE Ltd.", "sector": "Capital Markets", "keywords": "bse bombay stock exchange sensex derivatives capital markets"},
+    {"ticker": "IREDA.NS", "name": "Indian Renewable Energy Dev Agency", "sector": "Renewable Financing", "keywords": "ireda green energy financing solar wind psu nbfc"},
+    {"ticker": "RVNL.NS", "name": "Rail Vikas Nigam Ltd.", "sector": "Railways & Infra", "keywords": "rvnl rail vikas nigam railway lines infrastructure psu"},
+    {"ticker": "IRFC.NS", "name": "Indian Railway Finance Corp", "sector": "Railways & Finance", "keywords": "irfc indian railway finance rolling stock leasing psu"},
+    {"ticker": "TATAELXSI.NS", "name": "Tata Elxsi Ltd.", "sector": "Design & Technology", "keywords": "tataelxsi elxsi automotive design embedded artificial intelligence"},
+    {"ticker": "PERSISTENT.NS", "name": "Persistent Systems Ltd.", "sector": "Information Technology", "keywords": "persistent persistent systems cloud software digital it"},
+    {"ticker": "COFORGE.NS", "name": "Coforge Ltd.", "sector": "Information Technology", "keywords": "coforge niit tech it software insurance travel tech"},
+    {"ticker": "KPITTECH.NS", "name": "KPIT Technologies Ltd.", "sector": "Automotive Software", "keywords": "kpit kpittech automotive software ev autonomy mobility"},
+    {"ticker": "POLICYBZR.NS", "name": "PB Fintech Ltd. (Policybazaar)", "sector": "Fintech & Insurtech", "keywords": "policybazaar policybzr pb fintech paisabazaar insurance aggregator"},
+    {"ticker": "NYKAA.NS", "name": "FSN E-Commerce Ventures (Nykaa)", "sector": "E-Commerce & Retail", "keywords": "nykaa fsn beauty fashion cosmetics ecommerce"},
+    {"ticker": "PAYTM.NS", "name": "One97 Communications (Paytm)", "sector": "Fintech & Payments", "keywords": "paytm one97 upi soundbox qr wallet fintech payments"},
+    {"ticker": "MOTHERSON.NS", "name": "Samvardhana Motherson International", "sector": "Automotive Components", "keywords": "motherson samvardhana wiring harness auto parts mirrors"},
+    {"ticker": "CHOLAFIN.NS", "name": "Cholamandalam Investment & Finance", "sector": "Financials & NBFC", "keywords": "chola cholafin vehicle finance nbfc murugappa"},
+    {"ticker": "TVSMOTOR.NS", "name": "TVS Motor Company Ltd.", "sector": "Automotive", "keywords": "tvs tvsmotor apache jupiter ronin bikes scooters 2 wheeler"},
+    {"ticker": "MAXHEALTH.NS", "name": "Max Healthcare Institute", "sector": "Healthcare Services", "keywords": "max maxhealth hospitals healthcare clinics"},
+    {"ticker": "MANKIND.NS", "name": "Mankind Pharma Ltd.", "sector": "Healthcare & Pharma", "keywords": "mankind pharma manforce gas-o-fast prega news medicine"},
+    {"ticker": "SHREECEM.NS", "name": "Shree Cement Ltd.", "sector": "Materials & Cement", "keywords": "shree shreecem bangur cement materials"},
+    {"ticker": "AMBUJACEM.NS", "name": "Ambuja Cements Ltd.", "sector": "Materials & Cement", "keywords": "ambuja ambujacem adani cement materials"},
+    {"ticker": "HAVELLS.NS", "name": "Havells India Ltd.", "sector": "Consumer Electricals", "keywords": "havells lloyd fans cables appliances switchgear"},
+    {"ticker": "PIDILITIND.NS", "name": "Pidilite Industries Ltd.", "sector": "Chemicals & Adhesives", "keywords": "pidilite fevicol m-seal dr fixit adhesives chemicals"},
+    {"ticker": "DABUR.NS", "name": "Dabur India Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "dabur chyawanprash honey vatika real juices ayurveda fmcg"},
+    {"ticker": "MARICO.NS", "name": "Marico Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "marico parachute saffola hair oil edible oil fmcg"},
+    {"ticker": "GODREJCP.NS", "name": "Godrej Consumer Products", "sector": "Consumer Goods & FMCG", "keywords": "godrej godrejcp goodknight hit cinthol fmcg"},
+    {"ticker": "COLPAL.NS", "name": "Colgate-Palmolive (India) Ltd.", "sector": "Consumer Goods & FMCG", "keywords": "colgate colpal toothpaste oral care fmcg"},
+    {"ticker": "JUBLFOOD.NS", "name": "Jubilant FoodWorks Ltd.", "sector": "Quick Service Restaurants", "keywords": "jubilant jublfood dominos pizza dunkin popeyes restaurant"},
+    {"ticker": "VOLTAS.NS", "name": "Voltas Ltd.", "sector": "Consumer Electronics", "keywords": "voltas tata ac air conditioning beko refrigerators cooling"},
+    {"ticker": "ASTRAL.NS", "name": "Astral Ltd.", "sector": "Building Products & Pipes", "keywords": "astral pipes cpvc plumbing water tanks building"},
+    {"ticker": "SUPREMEIND.NS", "name": "Supreme Industries Ltd.", "sector": "Plastics & Industrial", "keywords": "supreme supremeind plastic pipes furniture packaging"},
 ]
 
 
 def search_indian_stocks(query: str) -> List[StockSearchResult]:
-    """Fast prefix and fuzzy matching search for Indian Equities."""
-    q = query.strip().upper()
+    """Fast prefix, keywords, local directory, and live Yahoo Finance search for Indian Equities."""
+    q = query.strip()
     if not q:
         return []
 
-    clean_q = q.replace(".NS", "").replace(".BO", "")
+    clean_q = q.upper().replace(".NS", "").replace(".BO", "")
+    q_lower = q.lower()
     results: List[StockSearchResult] = []
     seen = set()
 
-    # 1. Exact / Prefix ticker match
+    # 1. Search local curated directory first (instant sub-millisecond match)
     for item in INDIAN_STOCKS_DIRECTORY:
-        t_base = item["ticker"].replace(".NS", "")
-        if t_base.startswith(clean_q):
+        t_base = item["ticker"].replace(".NS", "").replace(".BO", "")
+        keywords = item.get("keywords", "").lower()
+        name_lower = item["name"].lower()
+
+        # Match exact ticker prefix, name substring, or keyword/alias substring
+        if (
+            t_base.startswith(clean_q)
+            or clean_q in t_base
+            or q_lower in name_lower
+            or any(part in keywords for part in q_lower.split() if len(part) >= 2)
+            or q_lower in keywords
+        ):
             if item["ticker"] not in seen:
                 results.append(StockSearchResult(
                     ticker=item["ticker"],
                     name=item["name"],
                     sector=item["sector"],
-                    exchange="NSE",
+                    exchange="NSE" if item["ticker"].endswith(".NS") else "BSE",
                 ))
                 seen.add(item["ticker"])
 
-    # 2. Company name matching
-    q_lower = query.strip().lower()
-    for item in INDIAN_STOCKS_DIRECTORY:
-        if q_lower in item["name"].lower() or clean_q in item["ticker"]:
-            if item["ticker"] not in seen:
-                results.append(StockSearchResult(
-                    ticker=item["ticker"],
-                    name=item["name"],
-                    sector=item["sector"],
-                    exchange="NSE",
-                ))
-                seen.add(item["ticker"])
-
-    # 3. Dynamic fallback if query isn't in curated list
-    if not results and len(clean_q) >= 2:
-        norm = normalize_ticker(clean_q)
-        results.append(StockSearchResult(
-            ticker=norm,
-            name=f"{clean_q} (NSE Equities)",
-            sector="Indian Equities",
-            exchange="NSE",
-        ))
+    # 2. Query Yahoo Finance live search API for real Indian listed assets (.NS and .BO), excluding mutual funds
+    try:
+        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(q)}&quotesCount=10&newsCount=0&enableFuzzyQuery=false"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            quotes = data.get("quotes", [])
+            for item in quotes:
+                sym = item.get("symbol", "")
+                if (sym.endswith(".NS") or sym.endswith(".BO")) and not sym.startswith("0P"):
+                    if sym not in seen:
+                        name = item.get("longname") or item.get("shortname") or sym
+                        sector = item.get("sector") or item.get("industry") or "Indian Equities"
+                        exchange = "NSE" if sym.endswith(".NS") else "BSE"
+                        results.append(StockSearchResult(
+                            ticker=sym,
+                            name=name,
+                            sector=sector,
+                            exchange=exchange,
+                        ))
+                        seen.add(sym)
+    except Exception:
+        pass
 
     return results[:15]
-

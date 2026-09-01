@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InvestDeskPro | Powered by rupeemap.in | By Sandesh Rathi",
+  title: "InvestDeskPro | Rupeemap.in Ecosystem | By Sandesh Rathi",
   description:
-    "Institutional Indian Equities & Mutual Funds Intelligence Engine. Powered by rupeemap.in, Created & Engineered by Sandesh Rathi.",
+    "Institutional Indian Equities & Mutual Funds Intelligence Engine. Part of the Rupeemap suite (rupeemap.in, InvestDeskPro, SwingTradeDeskPro). Created & Engineered by Sandesh Rathi.",
 };
 
 export default function RootLayout({

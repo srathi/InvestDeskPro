@@ -60,6 +60,37 @@ class StockFundamentals(BaseModel):
     currency: str = "INR"
 
 
+class AnnualFinancialYear(BaseModel):
+    year: str = Field(..., description="Fiscal Year, e.g. FY23, FY24, FY25, FY26")
+    revenue_cr: Optional[float] = Field(None, description="Total Revenue in ₹ Cr")
+    operating_profit_cr: Optional[float] = Field(None, description="Operating Profit / EBITDA in ₹ Cr")
+    opm_pct: Optional[float] = Field(None, description="Operating Profit Margin (%)")
+    net_profit_cr: Optional[float] = Field(None, description="Net Profit in ₹ Cr")
+    npm_pct: Optional[float] = Field(None, description="Net Profit Margin (%)")
+    eps: Optional[float] = Field(None, description="Basic/Diluted EPS in ₹")
+    yoy_revenue_growth_pct: Optional[float] = Field(None, description="YoY Revenue Growth (%)")
+    yoy_profit_growth_pct: Optional[float] = Field(None, description="YoY Net Profit Growth (%)")
+
+
+class ShareholdingPattern(BaseModel):
+    promoters_pct: float = Field(..., description="Promoter Holding (%)")
+    institutions_pct: float = Field(..., description="Institutional Holding (%)")
+    fii_pct: Optional[float] = Field(None, description="FII / Foreign Institutional Holding (%)")
+    dii_pct: Optional[float] = Field(None, description="DII / Domestic Mutual Funds Holding (%)")
+    public_retail_pct: float = Field(..., description="Public / Retail Holding (%)")
+    pledged_pct: float = Field(0.0, description="Pledged Promoter Shares (%)")
+
+
+class StockClassification(BaseModel):
+    stock_type: str = Field(..., description="e.g. High-Growth Compounder, Quality Defensive, Value Opportunity, High Dividend")
+    is_growth_stock: bool = Field(..., description="True if company exhibits robust growth characteristics")
+    category_tag: str = Field(..., description="Growth, Value, Quality, Dividend, Cyclical, Turnaround")
+    cagr_3y_revenue: Optional[float] = Field(None, description="3-Year Revenue CAGR (%)")
+    cagr_3y_profit: Optional[float] = Field(None, description="3-Year Net Profit CAGR (%)")
+    growth_score: float = Field(..., description="0-100 Growth Factor Score")
+    rationale: str = Field(..., description="Comprehensive explanation of classification based on fundamentals")
+
+
 class StockPricePoint(BaseModel):
     date: str
     close: float
@@ -74,12 +105,15 @@ class StockScorecardResponse(BaseModel):
     total_score: float = Field(..., ge=0, le=100, description="Overall institutional rating out of 100")
     verdict: str = Field(..., description="Institutional verdict")
     dvm: DVMScorecard
+    classification: StockClassification
     radar_axes: List[RadarAxis] = Field(default_factory=list)
     flags: StockFlags
     quality: FactorScoreDetail
     value: FactorScoreDetail
     momentum_low_vol: FactorScoreDetail
     fundamentals: StockFundamentals
+    financials_annual: List[AnnualFinancialYear] = Field(default_factory=list)
+    shareholding: Optional[ShareholdingPattern] = None
     price_history: List[StockPricePoint] = Field(default_factory=list)
 
 
@@ -187,3 +221,175 @@ class PortfolioOptimizeResponse(BaseModel):
     correlation_matrix: Dict[str, Dict[str, float]] = Field(default_factory=dict)
     backtest_series: List[PortfolioBacktestPoint] = Field(default_factory=list)
     effective_number_of_assets: float = Field(..., description="Diversification ratio / ENB metric")
+
+
+# ---------------------------------------------------------------------------
+# Finology & Tijori Finance Inspired Company 360, Screener & Bundles Models
+# ---------------------------------------------------------------------------
+
+class RevenueSegment(BaseModel):
+    name: str
+    percentage: float
+    revenue_cr: Optional[float] = None
+    yoy_growth_pct: Optional[float] = None
+    color: Optional[str] = None
+
+
+class GeographicSegment(BaseModel):
+    region: str
+    percentage: float
+
+
+class ForensicProbe(BaseModel):
+    title: str
+    status: str = Field(..., description="'pass', 'warning', or 'flag'")
+    value_str: str
+    benchmark_str: str
+    description: str
+
+
+class ReverseDCFModel(BaseModel):
+    current_price: float
+    current_eps: float
+    discount_rate_pct: float = 12.0
+    terminal_growth_pct: float = 4.0
+    implied_5y_cagr: float
+    implied_10y_cagr: float
+    fair_value_at_15pct_growth: float
+    interpretation: str
+
+
+class FinancialStatementRow(BaseModel):
+    metric_name: str
+    values: Dict[str, Optional[float]] = Field(default_factory=dict)
+    is_bold: bool = False
+
+
+class FinancialStatementTable(BaseModel):
+    years: List[str]
+    rows: List[FinancialStatementRow]
+
+
+class CompanyFinancials(BaseModel):
+    income_statement: FinancialStatementTable
+    balance_sheet: FinancialStatementTable
+    cash_flows: FinancialStatementTable
+
+
+class ShareholdingQuarter(BaseModel):
+    quarter: str
+    promoter_pct: float
+    fii_pct: float
+    dii_pct: float
+    public_pct: float
+    pledged_pct: float = 0.0
+
+
+class PeerComparisonStock(BaseModel):
+    ticker: str
+    name: str
+    cmp: float
+    market_cap_cr: float
+    pe: Optional[float] = None
+    pb: Optional[float] = None
+    roe: Optional[float] = None
+    roce: Optional[float] = None
+    opm_pct: Optional[float] = None
+    return_1y: Optional[float] = None
+
+
+class CompanyEssentials(BaseModel):
+    market_cap_cr: float
+    current_price: float
+    day_change: float
+    day_change_pct: float
+    high_52w: float
+    low_52w: float
+    pe: Optional[float] = None
+    industry_pe: Optional[float] = None
+    pb: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    roce: Optional[float] = None
+    roe: Optional[float] = None
+    face_value: Optional[float] = None
+    debt_to_equity: Optional[float] = None
+    eps_ttm: Optional[float] = None
+    fcf_cr: Optional[float] = None
+    promoter_holding_pct: Optional[float] = None
+    volume: Optional[float] = None
+
+
+class Company360Response(BaseModel):
+    ticker: str
+    company_name: str
+    exchange: str = "NSE"
+    sector: str
+    industry: str
+    market_cap_category: str = Field(..., description="Large Cap, Mid Cap, Small Cap, Micro Cap")
+    about: str
+    website: Optional[str] = None
+    essentials: CompanyEssentials
+    swot_strengths: List[str] = Field(default_factory=list)
+    swot_weaknesses: List[str] = Field(default_factory=list)
+    segments: List[RevenueSegment] = Field(default_factory=list)
+    geography: List[GeographicSegment] = Field(default_factory=list)
+    forensics: List[ForensicProbe] = Field(default_factory=list)
+    reverse_dcf: ReverseDCFModel
+    financials: CompanyFinancials
+    shareholding: List[ShareholdingQuarter] = Field(default_factory=list)
+    peers: List[PeerComparisonStock] = Field(default_factory=list)
+    price_history: List[StockPricePoint] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Screener & Thematic Bundle Models
+# ---------------------------------------------------------------------------
+
+class ScreenerFilterRequest(BaseModel):
+    min_market_cap_cr: Optional[float] = None
+    max_market_cap_cr: Optional[float] = None
+    min_pe: Optional[float] = None
+    max_pe: Optional[float] = None
+    min_roe: Optional[float] = None
+    min_roce: Optional[float] = None
+    max_debt_to_equity: Optional[float] = None
+    min_return_1y: Optional[float] = None
+    min_div_yield: Optional[float] = None
+    sector: Optional[str] = None
+    sort_by: str = "market_cap_cr"
+    sort_order: str = "desc"
+
+
+class ScreenerStockItem(BaseModel):
+    ticker: str
+    company_name: str
+    sector: str
+    market_cap_cr: float
+    price: float
+    pe: Optional[float] = None
+    pb: Optional[float] = None
+    roe: Optional[float] = None
+    roce: Optional[float] = None
+    debt_to_equity: Optional[float] = None
+    return_1y: Optional[float] = None
+    div_yield: Optional[float] = None
+    quality_score: float = 75.0
+
+
+class ScreenerResponse(BaseModel):
+    total_matches: int
+    stocks: List[ScreenerStockItem]
+
+
+class InvestmentBundleItem(BaseModel):
+    id: str
+    name: str
+    tagline: str
+    icon: str
+    risk_level: str
+    avg_pe: float
+    avg_roe: float
+    avg_1y_return: float
+    description: str
+    tickers: List[str]
+    sample_stocks: List[ScreenerStockItem] = Field(default_factory=list)

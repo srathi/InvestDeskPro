@@ -5,6 +5,7 @@ from app.core.factors import (
     compute_momentum_score,
     compute_quality_score,
     compute_value_score,
+    generate_stock_scorecard,
     normalize_ticker,
     safe_float,
     search_indian_stocks,
@@ -114,8 +115,14 @@ def test_search_indian_stocks():
     assert len(res2) > 0
     assert res2[0].ticker == "RELIANCE.NS"
 
-    # Search non-curated ticker
-    res3 = search_indian_stocks("INFY")
+    # Search for PICC matches PICCADIL.NS
+    res3 = search_indian_stocks("PICC")
     assert len(res3) > 0
-    assert any("INFY.NS" in r.ticker for r in res3)
+    assert any("PICCADIL.NS" in r.ticker for r in res3)
 
+
+def test_invalid_stock_ticker_validation():
+    # An invalid ticker should raise ValueError and NOT return dummy data
+    with pytest.raises(ValueError) as excinfo:
+        generate_stock_scorecard("INVALID_NONEXISTENT_TICKER_9999")
+    assert "not a recognized listed equity" in str(excinfo.value)

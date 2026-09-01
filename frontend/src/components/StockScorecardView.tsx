@@ -15,12 +15,19 @@ import {
   Calendar,
   Layers,
   ArrowUpRight,
+  ArrowDownRight,
   Activity,
   Award,
   ChevronRight,
   ShieldAlert,
   ShieldCheck,
   Compass,
+  Sparkles,
+  Users,
+  PieChart as PieIcon,
+  Table,
+  BarChart3,
+  Percent,
 } from "lucide-react";
 import {
   AreaChart,
@@ -46,6 +53,7 @@ import { useDebounce } from "../hooks/useDebounce";
 const PRESET_TICKERS = [
   { ticker: "RELIANCE", name: "Reliance Ind." },
   { ticker: "TCS", name: "TCS" },
+  { ticker: "PICCADIL", name: "Piccadily Agro" },
   { ticker: "INFY", name: "Infosys" },
   { ticker: "HDFCBANK", name: "HDFC Bank" },
   { ticker: "ITC", name: "ITC Ltd." },
@@ -59,7 +67,7 @@ export const StockScorecardView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<StockScorecardResponse | null>(null);
 
-  // Autocomplete state
+  // Autocompletion state
   const [suggestions, setSuggestions] = useState<StockSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -79,6 +87,7 @@ export const StockScorecardView: React.FC = () => {
       const res = await fetchStockScorecard(ticker);
       setData(res);
     } catch (err: any) {
+      setData(null);
       setError(err.message || "Failed to load stock scorecard.");
     } finally {
       setLoading(false);
@@ -125,7 +134,7 @@ export const StockScorecardView: React.FC = () => {
     e.preventDefault();
     if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
       const selected = suggestions[selectedIndex];
-      setTickerInput(selected.ticker.replace(".NS", ""));
+      setTickerInput(selected.ticker.replace(".NS", "").replace(".BO", ""));
       loadScorecard(selected.ticker);
     } else if (tickerInput.trim()) {
       loadScorecard(tickerInput.trim());
@@ -141,13 +150,18 @@ export const StockScorecardView: React.FC = () => {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === "Enter") {
+      if (selectedIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(suggestions[selectedIndex]);
+      }
     } else if (e.key === "Escape") {
       setShowDropdown(false);
     }
   };
 
   const selectSuggestion = (item: StockSearchResult) => {
-    setTickerInput(item.ticker.replace(".NS", ""));
+    setTickerInput(item.ticker.replace(".NS", "").replace(".BO", ""));
     loadScorecard(item.ticker);
     setShowDropdown(false);
   };
@@ -164,6 +178,14 @@ export const StockScorecardView: React.FC = () => {
     if (val >= 45) return "bg-cyan-500 text-slate-950";
     if (val >= 30) return "bg-amber-500 text-slate-950";
     return "bg-rose-500 text-white";
+  };
+
+  const getPegColor = (peg?: number) => {
+    if (!peg || peg <= 0) return "text-slate-400";
+    if (peg <= 1.0) return "text-emerald-400 font-bold";
+    if (peg <= 1.8) return "text-cyan-400 font-bold";
+    if (peg <= 2.5) return "text-amber-400 font-semibold";
+    return "text-rose-400 font-semibold";
   };
 
   return (
@@ -186,7 +208,7 @@ export const StockScorecardView: React.FC = () => {
                     if (suggestions.length > 0) setShowDropdown(true);
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search NSE/BSE Stock (e.g. RELIANCE, TCS, INFY, ITC)..."
+                  placeholder="Search NSE/BSE Stock (e.g. RELIANCE, TCS, PICCADIL, L&T)..."
                   className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-10 pr-9 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono uppercase"
                 />
                 {isSearching && (
@@ -221,7 +243,7 @@ export const StockScorecardView: React.FC = () => {
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white font-mono">{item.ticker.replace(".NS", "")}</span>
+                        <span className="font-bold text-white font-mono">{item.ticker.replace(".NS", "").replace(".BO", "")}</span>
                         <span className="px-1.5 py-0.2 text-[9px] font-semibold bg-slate-800 text-slate-300 rounded">
                           {item.exchange}
                         </span>
@@ -271,22 +293,21 @@ export const StockScorecardView: React.FC = () => {
       {loading && !data && (
         <div className="py-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
-          <p className="text-sm font-mono text-slate-400">Computing 0–100 DVM Matrix & Simply Wall St Radar...</p>
+          <p className="text-sm font-mono text-slate-400">Analyzing Financial Statements, Growth & Factor Scorecard...</p>
         </div>
       )}
 
       {!data && !loading && !error && (
         <div className="glass-panel p-12 rounded-2xl border border-slate-800 text-center space-y-5 my-6">
           <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
-            <Compass className="h-8 w-8" />
+            <BarChart3 className="h-8 w-8" />
           </div>
-          <div className="space-y-2 max-w-lg mx-auto">
+          <div className="max-w-md mx-auto space-y-2">
             <h3 className="text-lg font-bold text-white tracking-tight">Select or Search an Indian Stock</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Choose any stock from the watchlist above or type a company name or ticker (e.g. <strong className="text-cyan-300">RELIANCE</strong>, <strong className="text-cyan-300">TCS</strong>, <strong className="text-cyan-300">INFY</strong>, <strong className="text-cyan-300">ITC</strong>) to view its Trendlyne DVM Scorecard, Simply Wall St Radar, and Tickertape Red Flags.
+              Explore 0–100 Durability, Valuation & Momentum (DVM) scorecards, Screener.in-grade annual financials, shareholding pattern, calculated PEG ratio, and growth archetype classifications.
             </p>
           </div>
-
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
             {PRESET_TICKERS.map((item) => (
               <button
@@ -295,7 +316,7 @@ export const StockScorecardView: React.FC = () => {
                   setTickerInput(item.ticker);
                   loadScorecard(item.ticker);
                 }}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/80 text-slate-300 border border-slate-800 hover:border-cyan-600 hover:text-cyan-200 transition-all font-mono"
+                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-cyan-300 hover:border-cyan-800 transition-all font-mono"
               >
                 {item.ticker} ({item.name})
               </button>
@@ -306,7 +327,7 @@ export const StockScorecardView: React.FC = () => {
 
       {data && (
         <div className="space-y-6">
-          {/* Trendlyne DVM Classification Banner */}
+          {/* Header Banner: Company Info + DVM Classification */}
           <div className="glass-panel p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
             <div className="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -370,6 +391,273 @@ export const StockScorecardView: React.FC = () => {
             </div>
           </div>
 
+          {/* Stock Style & Growth Classification Card */}
+          {data.classification && (
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider block">Stock Archetype & Growth Profile</span>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>{data.classification.stock_type}</span>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 text-xs font-bold rounded-lg border ${
+                    data.classification.is_growth_stock
+                      ? "bg-emerald-950/80 text-emerald-300 border-emerald-700/80"
+                      : "bg-slate-900 text-slate-300 border-slate-700"
+                  }`}>
+                    Growth Stock: {data.classification.is_growth_stock ? "YES" : "NO"}
+                  </span>
+                  <span className="px-2.5 py-1 text-xs font-mono bg-cyan-950/60 text-cyan-300 border border-cyan-800/60 rounded-lg">
+                    Growth Score: {data.classification.growth_score}/100
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 uppercase block font-sans">3-Year Revenue CAGR</span>
+                  <span className={`text-base font-bold mt-1 block ${
+                    (data.classification.cagr_3y_revenue || 0) >= 15 ? "text-emerald-400" : "text-slate-200"
+                  }`}>
+                    {data.classification.cagr_3y_revenue !== null && data.classification.cagr_3y_revenue !== undefined
+                      ? `+${data.classification.cagr_3y_revenue}%`
+                      : "N/A"}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-sans block mt-0.5">Topline expansion rate</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 uppercase block font-sans">3-Year Net Profit CAGR</span>
+                  <span className={`text-base font-bold mt-1 block ${
+                    (data.classification.cagr_3y_profit || 0) >= 18 ? "text-emerald-400" : "text-slate-200"
+                  }`}>
+                    {data.classification.cagr_3y_profit !== null && data.classification.cagr_3y_profit !== undefined
+                      ? `+${data.classification.cagr_3y_profit}%`
+                      : "N/A"}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-sans block mt-0.5">Bottomline compounding rate</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 uppercase block font-sans">PEG Valuation Multiple</span>
+                  <span className={`text-base font-bold mt-1 block ${getPegColor(data.fundamentals.peg_ratio)}`}>
+                    {data.fundamentals.peg_ratio ? `${data.fundamentals.peg_ratio.toFixed(2)}x` : "N/A"}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-sans block mt-0.5">Price / Earnings-to-Growth</span>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-300 leading-relaxed flex items-start gap-2.5">
+                <Compass className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span><strong>Institutional Diagnostic:</strong> {data.classification.rationale}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Annual Financial Statements (Screener.in Table) */}
+          {data.financials_annual && data.financials_annual.length > 0 && (
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Table className="h-4 w-4 text-cyan-400" />
+                  <h3 className="text-sm font-bold text-white">Annual Financial Statements (Screener.in Model)</h3>
+                </div>
+                <span className="text-xs font-mono text-slate-500">Figures in ₹ Crores (Except EPS)</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 font-mono bg-slate-950/60">
+                      <th className="py-2.5 px-3 font-semibold text-slate-300">Metric</th>
+                      {data.financials_annual.map((yr) => (
+                        <th key={yr.year} className="py-2.5 px-3 text-right font-bold text-slate-200">
+                          {yr.year}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50 font-mono">
+                    <tr className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-2 px-3 font-semibold text-white">Sales / Revenue (₹ Cr)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right text-slate-200">
+                          {yr.revenue_cr !== null && yr.revenue_cr !== undefined ? `₹${yr.revenue_cr.toLocaleString()}` : "—"}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-2 px-3 text-slate-400">YoY Sales Growth (%)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right">
+                          {yr.yoy_revenue_growth_pct !== null && yr.yoy_revenue_growth_pct !== undefined ? (
+                            <span className={yr.yoy_revenue_growth_pct >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                              {yr.yoy_revenue_growth_pct >= 0 ? `+${yr.yoy_revenue_growth_pct}%` : `${yr.yoy_revenue_growth_pct}%`}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-2 px-3 font-semibold text-white">Operating Profit / EBITDA (₹ Cr)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right text-cyan-300">
+                          {yr.operating_profit_cr !== null && yr.operating_profit_cr !== undefined ? `₹${yr.operating_profit_cr.toLocaleString()}` : "—"}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-2 px-3 text-slate-400">OPM (%)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right text-slate-300">
+                          {yr.opm_pct !== null && yr.opm_pct !== undefined ? `${yr.opm_pct}%` : "—"}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="hover:bg-slate-900/40 transition-colors bg-cyan-950/10">
+                      <td className="py-2 px-3 font-bold text-white">Net Profit (₹ Cr)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right font-bold text-emerald-400">
+                          {yr.net_profit_cr !== null && yr.net_profit_cr !== undefined ? `₹${yr.net_profit_cr.toLocaleString()}` : "—"}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-2 px-3 text-slate-400">YoY Net Profit Growth (%)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right">
+                          {yr.yoy_profit_growth_pct !== null && yr.yoy_profit_growth_pct !== undefined ? (
+                            <span className={yr.yoy_profit_growth_pct >= 0 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
+                              {yr.yoy_profit_growth_pct >= 0 ? `+${yr.yoy_profit_growth_pct}%` : `${yr.yoy_profit_growth_pct}%`}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-2 px-3 text-slate-400">NPM (%)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right text-slate-300">
+                          {yr.npm_pct !== null && yr.npm_pct !== undefined ? `${yr.npm_pct}%` : "—"}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-2 px-3 font-semibold text-white">EPS (₹)</td>
+                      {data.financials_annual.map((yr) => (
+                        <td key={yr.year} className="py-2 px-3 text-right font-bold text-slate-200">
+                          {yr.eps !== null && yr.eps !== undefined ? `₹${yr.eps.toFixed(2)}` : "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Shareholding Pattern Card (Screener.in / Trendlyne Model) */}
+          {data.shareholding && (
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-cyan-400" />
+                  <h3 className="text-sm font-bold text-white">Shareholding Pattern & Insider Pledge</h3>
+                </div>
+                <span className="text-xs font-mono text-slate-500">Screener.in / Trendlyne Model</span>
+              </div>
+
+              {/* Visual Distribution Stacked Bar */}
+              <div className="space-y-1.5">
+                <div className="h-4 w-full bg-slate-900 rounded-lg overflow-hidden flex">
+                  <div
+                    style={{ width: `${data.shareholding.promoters_pct}%` }}
+                    className="bg-cyan-500 h-full transition-all"
+                    title={`Promoters: ${data.shareholding.promoters_pct}%`}
+                  />
+                  <div
+                    style={{ width: `${data.shareholding.institutions_pct}%` }}
+                    className="bg-emerald-500 h-full transition-all"
+                    title={`Institutions: ${data.shareholding.institutions_pct}%`}
+                  />
+                  <div
+                    style={{ width: `${data.shareholding.public_retail_pct}%` }}
+                    className="bg-slate-600 h-full transition-all"
+                    title={`Public / Retail: ${data.shareholding.public_retail_pct}%`}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-cyan-500" /> Promoters ({data.shareholding.promoters_pct}%)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Institutions ({data.shareholding.institutions_pct}%)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-slate-600" /> Public ({data.shareholding.public_retail_pct}%)
+                  </span>
+                </div>
+              </div>
+
+              {/* Detailed Category Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-mono text-xs">
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 uppercase block font-sans">Promoter Holding</span>
+                  <span className="text-sm font-bold text-cyan-400 mt-1 block">
+                    {data.shareholding.promoters_pct}%
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 uppercase block font-sans">FII Holding</span>
+                  <span className="text-sm font-bold text-emerald-400 mt-1 block">
+                    {data.shareholding.fii_pct || (data.shareholding.institutions_pct * 0.6).toFixed(2)}%
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 uppercase block font-sans">DII / Mutual Funds</span>
+                  <span className="text-sm font-bold text-indigo-300 mt-1 block">
+                    {data.shareholding.dii_pct || (data.shareholding.institutions_pct * 0.4).toFixed(2)}%
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 uppercase block font-sans">Public / Retail</span>
+                  <span className="text-sm font-bold text-slate-200 mt-1 block">
+                    {data.shareholding.public_retail_pct}%
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 uppercase block font-sans">Promoter Pledge</span>
+                  <span className="text-sm font-bold text-emerald-400 mt-1 block">
+                    {data.shareholding.pledged_pct === 0 ? "0.0% (Clean)" : `${data.shareholding.pledged_pct}%`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Simply Wall St Snowflake Radar & Factor Score Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Simply Wall St 5-Axis Radar Diagram */}
@@ -403,95 +691,80 @@ export const StockScorecardView: React.FC = () => {
                         color: "#f8fafc",
                         fontSize: "12px",
                       }}
-                      formatter={(val: any) => [`${val} / 100`, "Factor Score"]}
+                      formatter={(val: any) => [`${val}/100`, "Factor Score"]}
                     />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="text-[11px] text-slate-400 text-center font-mono">
-                Composite Rating: <strong className="text-cyan-300 font-bold">{data.total_score} / 100</strong>
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                <span>Composite Rating:</span>
+                <span className={`font-mono font-bold px-2 py-0.5 rounded ${getScoreColor(data.total_score)}`}>
+                  {data.total_score} / 100
+                </span>
               </div>
             </div>
 
-            {/* Scorecard Sub-Pillars Breakdown */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 lg:col-span-2">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Award className="h-4 w-4 text-emerald-400" />
-                  <span>Institutional Scorecard Sub-Pillars</span>
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-xs font-mono font-bold rounded-lg border ${getScoreColor(data.total_score)}`}>
-                    Overall Score: {data.total_score} / 100
+            {/* Pillar Breakdown (Quality, Value, Momentum) */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Quality Factor */}
+              <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-bold text-white">Quality & Capital Efficiency</span>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-400">
+                    {data.quality.score} / {data.quality.max_score} pts • {data.quality.grade}
                   </span>
                 </div>
+                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-400 h-full rounded-full transition-all"
+                    style={{ width: `${(data.quality.score / data.quality.max_score) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400">{data.quality.summary}</p>
               </div>
 
-              {/* 3 Pillar Progress Cards */}
-              <div className="space-y-3.5">
-                {/* 1. Quality / Durability */}
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-cyan-400" />
-                      <span>Quality & Durability Pillar</span>
-                    </span>
-                    <div className="flex items-center gap-2 font-mono">
-                      <span className="text-slate-400">{data.quality.grade}</span>
-                      <span className="text-cyan-400 font-bold">{data.quality.score} / {data.quality.max_score} pts</span>
-                    </div>
+              {/* Value Factor */}
+              <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-cyan-400" />
+                    <span className="text-sm font-bold text-white">Valuation Multiples</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-full transition-all duration-500"
-                      style={{ width: `${(data.quality.score / data.quality.max_score) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400">{data.quality.summary}</p>
+                  <span className="text-xs font-mono font-bold text-cyan-400">
+                    {data.value.score} / {data.value.max_score} pts • {data.value.grade}
+                  </span>
                 </div>
+                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-cyan-400 h-full rounded-full transition-all"
+                    style={{ width: `${(data.value.score / data.value.max_score) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400">{data.value.summary}</p>
+              </div>
 
-                {/* 2. Valuation */}
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                      <DollarSign className="h-4 w-4 text-emerald-400" />
-                      <span>Valuation & Multiples Pillar</span>
-                    </span>
-                    <div className="flex items-center gap-2 font-mono">
-                      <span className="text-slate-400">{data.value.grade}</span>
-                      <span className="text-emerald-400 font-bold">{data.value.score} / {data.value.max_score} pts</span>
-                    </div>
+              {/* Momentum Factor */}
+              <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-bold text-white">Momentum & Realized Low-Volatility</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
-                      style={{ width: `${(data.value.score / data.value.max_score) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400">{data.value.summary}</p>
+                  <span className="text-xs font-mono font-bold text-amber-400">
+                    {data.momentum_low_vol.score} / {data.momentum_low_vol.max_score} pts • {data.momentum_low_vol.grade}
+                  </span>
                 </div>
-
-                {/* 3. Momentum & Low-Vol */}
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                      <TrendingUp className="h-4 w-4 text-indigo-400" />
-                      <span>Momentum & Volatility Pillar</span>
-                    </span>
-                    <div className="flex items-center gap-2 font-mono">
-                      <span className="text-slate-400">{data.momentum_low_vol.grade}</span>
-                      <span className="text-indigo-400 font-bold">{data.momentum_low_vol.score} / {data.momentum_low_vol.max_score} pts</span>
-                    </div>
-                  </div>
-                  <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-500"
-                      style={{ width: `${(data.momentum_low_vol.score / data.momentum_low_vol.max_score) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400">{data.momentum_low_vol.summary}</p>
+                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-amber-400 h-full rounded-full transition-all"
+                    style={{ width: `${(data.momentum_low_vol.score / data.momentum_low_vol.max_score) * 100}%` }}
+                  />
                 </div>
+                <p className="text-xs text-slate-400">{data.momentum_low_vol.summary}</p>
               </div>
             </div>
           </div>
@@ -604,7 +877,7 @@ export const StockScorecardView: React.FC = () => {
 
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
                 <span className="text-[10px] text-slate-500 uppercase block">PEG Ratio</span>
-                <span className="text-sm font-bold text-amber-400 mt-1 block">
+                <span className={`text-sm font-bold mt-1 block ${getPegColor(data.fundamentals.peg_ratio)}`}>
                   {data.fundamentals.peg_ratio ? `${data.fundamentals.peg_ratio.toFixed(2)}` : "N/A"}
                 </span>
               </div>

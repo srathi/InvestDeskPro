@@ -27,6 +27,11 @@ def get_stock_diagnostic(ticker: str):
     try:
         scorecard = generate_stock_scorecard(ticker)
         return scorecard
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=404,
+            detail=str(val_err),
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=500,
