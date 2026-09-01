@@ -10,8 +10,7 @@ __pycache__
 .pytest_cache
 .coverage
 htmlcov
-frontend
-node_modules
-.next
+frontend/node_modules
+frontend/.next
+frontend/out
 *.md
-render.yaml

@@ -20,8 +20,7 @@ def test_health_check():
 def test_root_endpoint():
     response = client.get("/")
     assert response.status_code == 200
-    data = response.json()
-    assert "endpoints" in data
+    assert ("<!DOCTYPE html>" in response.text) or ("service" in response.text)
 
 
 @pytest.mark.asyncio

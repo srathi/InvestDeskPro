@@ -1,36 +1,8 @@
-# Render Blueprint Specification for InvestDeskPro Full-Stack Platform
 services:
-  # -------------------------------------------------------------------------
-  # Backend: Python FastAPI Microservice (Docker)
-  # -------------------------------------------------------------------------
   - type: web
-    name: investdeskpro-api
+    name: investdeskpro
     runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    plan: standard
+    plan: free
     region: oregon
+    autoDeploy: true
     healthCheckPath: /health
-    envVars:
-      - key: PORT
-        value: 8000
-      - key: PYTHONUNBUFFERED
-        value: "1"
-
-  # -------------------------------------------------------------------------
-  # Frontend: Next.js Web App
-  # -------------------------------------------------------------------------
-  - type: web
-    name: investdeskpro-dashboard
-    runtime: node
-    plan: standard
-    region: oregon
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: investdeskpro-api
-          property: host

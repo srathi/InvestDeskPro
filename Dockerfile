@@ -1,24 +1,19 @@
-# Multi-Stage Dockerfile for InvestDeskPro FastAPI Backend (Root Context)
-# Stage 1: Build & Dependency Wheel Cache
-FROM python:3.11-slim as builder
+# =========================================================================
+# Stage 1: Build Next.js Static Export Frontend
+# =========================================================================
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
 
-WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+COPY frontend/ ./
+RUN npm run build
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY backend/requirements.txt .
-RUN pip install --upgrade pip && \
-    pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
-
-
-# Stage 2: Minimal Final Runtime Image
-FROM python:3.11-slim as runtime
+# =========================================================================
+# Stage 2: Minimal Python FastAPI Runtime
+# =========================================================================
+FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
@@ -32,11 +27,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home appuser
 
-COPY --from=builder /app/wheels /wheels
-COPY --from=builder /app/requirements.txt .
-RUN pip install --no-cache /wheels/*
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy Backend Code
 COPY backend/app/ ./app
+
+# Copy Built Static Frontend from Stage 1
+COPY --from=frontend-builder /app/frontend/out ./frontend/out
 
 USER appuser
 
