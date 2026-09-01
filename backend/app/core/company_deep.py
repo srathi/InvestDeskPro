@@ -331,16 +331,118 @@ def generate_forensic_probes(
     return probes
 
 
-def build_company_financial_statements(info: Dict[str, Any], current_price: float) -> CompanyFinancials:
-    """Construct 5-year structured financial tables (P&L, Balance Sheet, Cash Flow)."""
+def build_real_or_fallback_financials(t: yf.Ticker, info: Dict[str, Any], current_price: float) -> CompanyFinancials:
+    """Extract real audited 5-year financials from company filings with synthetic fallback."""
+    fin = getattr(t, "financials", pd.DataFrame())
+    bs = getattr(t, "balance_sheet", pd.DataFrame())
+    cf = getattr(t, "cashflow", pd.DataFrame())
+
+    if isinstance(fin, pd.DataFrame) and not fin.empty and len(fin.columns) >= 2:
+        cols = list(fin.columns)
+        cols_sorted = sorted(cols)
+        years = [c.strftime("FY%y") if hasattr(c, "strftime") else str(c)[:4] for c in cols_sorted]
+
+        def get_series(df, keys, scale=10000000.0):
+            if not isinstance(df, pd.DataFrame) or df.empty:
+                return [None] * len(cols_sorted)
+            for k in keys:
+                if k in df.index:
+                    s = df.loc[k]
+                    vals = []
+                    for c in cols_sorted:
+                        if c in s:
+                            v = s[c]
+                            vals.append(round(float(v) / scale, 1) if pd.notnull(v) else None)
+                        else:
+                            vals.append(None)
+                    return vals
+            return [None] * len(cols_sorted)
+
+        # Real P&L
+        rev = get_series(fin, ["Total Revenue", "Operating Revenue"])
+        ebitda = get_series(fin, ["EBITDA", "Normalized EBITDA", "Operating Income"])
+        ebit = get_series(fin, ["EBIT", "Operating Income"])
+        pat = get_series(fin, ["Net Income Common Stockholders", "Net Income", "Net Income Continuous Operations"])
+        interest = get_series(fin, ["Interest Expense", "Interest Expense Non Operating", "Total Other Finance Cost"])
+        deprec = get_series(fin, ["Reconciled Depreciation", "Depreciation And Amortization In Income Statement", "Depreciation Income Statement"])
+        pbt = get_series(fin, ["Pretax Income"])
+        eps = get_series(fin, ["Diluted EPS", "Basic EPS"], scale=1.0)
+
+        op_exp = []
+        opm = []
+        for r, e in zip(rev, ebit):
+            if r is not None and e is not None:
+                op_exp.append(round(r - e, 1))
+                opm.append(round((e / r) * 100.0, 1) if r > 0 else None)
+            else:
+                op_exp.append(None)
+                opm.append(None)
+
+        income_rows = [
+            FinancialStatementRow(metric_name="Total Revenue (₹ Cr)", values=dict(zip(years, rev)), is_bold=True),
+            FinancialStatementRow(metric_name="Total Operating Expenses (₹ Cr)", values=dict(zip(years, op_exp))),
+            FinancialStatementRow(metric_name="Operating Profit (EBITDA) (₹ Cr)", values=dict(zip(years, ebitda)), is_bold=True),
+            FinancialStatementRow(metric_name="Operating Profit Margin (OPM %)", values=dict(zip(years, opm))),
+            FinancialStatementRow(metric_name="Depreciation & Amortization (₹ Cr)", values=dict(zip(years, deprec))),
+            FinancialStatementRow(metric_name="Finance / Interest Costs (₹ Cr)", values=dict(zip(years, interest))),
+            FinancialStatementRow(metric_name="Profit Before Tax (PBT) (₹ Cr)", values=dict(zip(years, pbt))),
+            FinancialStatementRow(metric_name="Net Profit (PAT) (₹ Cr)", values=dict(zip(years, pat)), is_bold=True),
+            FinancialStatementRow(metric_name="Earnings Per Share (EPS ₹)", values=dict(zip(years, eps)), is_bold=True),
+        ]
+
+        # Real Balance Sheet
+        networth = get_series(bs, ["Stockholders Equity", "Common Stock Equity", "Total Equity Gross Minority Interest"])
+        debt = get_series(bs, ["Total Debt", "Long Term Debt And Capital Lease Obligation", "Long Term Debt"])
+        tot_assets = get_series(bs, ["Total Assets"])
+        net_ppe = get_series(bs, ["Net PPE", "Gross PPE"])
+        cwip = get_series(bs, ["Construction In Progress", "Capital Work In Progress"])
+        investments = get_series(bs, ["Investments And Advances", "Other Investments"])
+        share_cap = get_series(bs, ["Share Capital", "Common Stock"])
+
+        balance_rows = [
+            FinancialStatementRow(metric_name="Equity Share Capital (₹ Cr)", values=dict(zip(years, share_cap))),
+            FinancialStatementRow(metric_name="Total Net Worth / Equity (₹ Cr)", values=dict(zip(years, networth)), is_bold=True),
+            FinancialStatementRow(metric_name="Borrowings & Long-Term Debt (₹ Cr)", values=dict(zip(years, debt))),
+            FinancialStatementRow(metric_name="Total Liabilities & Equity (₹ Cr)", values=dict(zip(years, tot_assets)), is_bold=True),
+            FinancialStatementRow(metric_name="Net Fixed Assets & PPE (₹ Cr)", values=dict(zip(years, net_ppe))),
+            FinancialStatementRow(metric_name="Capital Work in Progress (CWIP) (₹ Cr)", values=dict(zip(years, cwip))),
+            FinancialStatementRow(metric_name="Investments (₹ Cr)", values=dict(zip(years, investments))),
+            FinancialStatementRow(metric_name="Total Assets (₹ Cr)", values=dict(zip(years, tot_assets)), is_bold=True),
+        ]
+
+        # Real Cash Flows
+        cfo = get_series(cf, ["Operating Cash Flow", "Cash Flow From Continuing Operating Activities"])
+        cfi = get_series(cf, ["Investing Cash Flow", "Cash Flow From Continuing Investing Activities"])
+        cff = get_series(cf, ["Financing Cash Flow", "Cash Flow From Continuing Financing Activities"])
+        fcf = get_series(cf, ["Free Cash Flow"])
+
+        net_cf = []
+        for o, i, f in zip(cfo, cfi, cff):
+            if o is not None and i is not None and f is not None:
+                net_cf.append(round(o + i + f, 1))
+            else:
+                net_cf.append(None)
+
+        cash_rows = [
+            FinancialStatementRow(metric_name="Cash from Operating Activities (CFO) (₹ Cr)", values=dict(zip(years, cfo)), is_bold=True),
+            FinancialStatementRow(metric_name="Cash from Investing Activities (CFI) (₹ Cr)", values=dict(zip(years, cfi))),
+            FinancialStatementRow(metric_name="Cash from Financing Activities (CFF) (₹ Cr)", values=dict(zip(years, cff))),
+            FinancialStatementRow(metric_name="Net Cash Flow (₹ Cr)", values=dict(zip(years, net_cf))),
+            FinancialStatementRow(metric_name="Free Cash Flow (FCF) (₹ Cr)", values=dict(zip(years, fcf)), is_bold=True),
+        ]
+
+        return CompanyFinancials(
+            income_statement=FinancialStatementTable(years=years, rows=income_rows),
+            balance_sheet=FinancialStatementTable(years=years, rows=balance_rows),
+            cash_flows=FinancialStatementTable(years=years, rows=cash_rows),
+        )
+
+    # Fallback to structured estimates if financial statements are not returned
     years = ["FY21", "FY22", "FY23", "FY24", "FY25 (TTM)"]
     mcap_cr = round((safe_float(info.get("marketCap"), 50000000000.0) or 50000000000.0) / 10000000.0, 1)
-
-    # Estimated scaling base from market cap
     base_rev = max(500.0, round(mcap_cr * 0.45, 1))
     base_pat = max(50.0, round(mcap_cr * 0.055, 1))
 
-    # P&L Rows
     rev_row = [round(base_rev * f, 1) for f in [0.65, 0.78, 0.88, 0.96, 1.05]]
     exp_row = [round(r * 0.82, 1) for r in rev_row]
     op_row = [round(r - e, 1) for r, e in zip(rev_row, exp_row)]
@@ -364,7 +466,6 @@ def build_company_financial_statements(info: Dict[str, Any], current_price: floa
         FinancialStatementRow(metric_name="Earnings Per Share (EPS ₹)", values=dict(zip(years, eps_row)), is_bold=True),
     ]
 
-    # Balance Sheet Rows
     eq_cap = round(shares_cr * 2.0, 1)
     reserves = [round(base_pat * 3.5 * f, 1) for f in [0.7, 0.8, 0.9, 1.0, 1.15]]
     networth = [round(eq_cap + r, 1) for r in reserves]
@@ -377,18 +478,15 @@ def build_company_financial_statements(info: Dict[str, Any], current_price: floa
 
     balance_rows = [
         FinancialStatementRow(metric_name="Equity Share Capital (₹ Cr)", values=dict(zip(years, [eq_cap] * 5))),
-        FinancialStatementRow(metric_name="Reserves & Surplus (₹ Cr)", values=dict(zip(years, reserves))),
         FinancialStatementRow(metric_name="Total Net Worth / Equity (₹ Cr)", values=dict(zip(years, networth)), is_bold=True),
         FinancialStatementRow(metric_name="Borrowings & Long-Term Debt (₹ Cr)", values=dict(zip(years, borrowings))),
         FinancialStatementRow(metric_name="Total Liabilities & Equity (₹ Cr)", values=dict(zip(years, tot_liab)), is_bold=True),
         FinancialStatementRow(metric_name="Net Fixed Assets & PPE (₹ Cr)", values=dict(zip(years, fixed_assets))),
         FinancialStatementRow(metric_name="Capital Work in Progress (CWIP) (₹ Cr)", values=dict(zip(years, cwip))),
         FinancialStatementRow(metric_name="Investments (₹ Cr)", values=dict(zip(years, investments))),
-        FinancialStatementRow(metric_name="Other Current & Non-Current Assets (₹ Cr)", values=dict(zip(years, other_assets))),
         FinancialStatementRow(metric_name="Total Assets (₹ Cr)", values=dict(zip(years, tot_liab)), is_bold=True),
     ]
 
-    # Cash Flow Rows
     cfo = [round(pat * 1.12, 1) for pat in pat_row]
     cfi = [round(-c * 0.65, 1) for c in cfo]
     cff = [round(-c * 0.25, 1) for c in cfo]
@@ -588,8 +686,8 @@ def fetch_company_360(ticker: str) -> Company360Response:
     # Reverse DCF Model
     reverse_dcf = calculate_reverse_dcf(price=current_price, eps=eps_val)
 
-    # 5-Year Financial Statements
-    financials = build_company_financial_statements(info, current_price)
+    # 5-Year Financial Statements (Audited filings from yfinance with fallback)
+    financials = build_real_or_fallback_financials(t, info, current_price)
 
     # Shareholding Evolution (4 Quarters)
     p_pct = promoter_holding
@@ -606,7 +704,9 @@ def fetch_company_360(ticker: str) -> Company360Response:
 
     # Sector Peers
     peer_tickers = ["TCS.NS", "INFY.NS", "HDFCBANK.NS", "RELIANCE.NS", "ITC.NS"]
-    if clean_sym in ["TCS", "INFY", "WIPRO", "HCLTECH", "TECHM"]:
+    if clean_sym in ["PICCADILY", "PICCADIL"]:
+        peer_tickers = ["RADICO.NS", "UNITDSPR.NS", "TI.NS", "GLOBUSSPR.NS", "SULA.NS"]
+    elif clean_sym in ["TCS", "INFY", "WIPRO", "HCLTECH", "TECHM"]:
         peer_tickers = ["TCS.NS", "INFY.NS", "HCLTECH.NS", "WIPRO.NS", "TECHM.NS"]
     elif clean_sym in ["HDFCBANK", "ICICIBANK", "SBIN", "KOTAKBANK", "AXISBANK"]:
         peer_tickers = ["HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "KOTAKBANK.NS", "AXISBANK.NS"]
