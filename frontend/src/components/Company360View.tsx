@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   Building2,
@@ -37,8 +35,11 @@ import {
 } from "recharts";
 import {
   fetchCompany360,
+  searchStocks,
   Company360Response,
+  StockSearchResult,
 } from "../lib/api";
+import { useDebounce } from "../hooks/useDebounce";
 
 const PRESET_COMPANIES = [
   { ticker: "TATAMOTORS", name: "Tata Motors" },
@@ -66,6 +67,14 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Company360Response | null>(null);
 
+  // Autocompletion state
+  const [suggestions, setSuggestions] = useState<StockSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const debouncedQuery = useDebounce(tickerInput, 200);
+
   // Sub-tabs for financial statements and charts
   const [financialTab, setFinancialTab] = useState<"pl" | "bs" | "cf">("pl");
   const [chartView, setChartView] = useState<"price" | "pe" | "pb">("price");
@@ -78,6 +87,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     if (!symbol.trim()) return;
     setLoading(true);
     setError(null);
+    setShowDropdown(false);
     try {
       const res = await fetchCompany360(symbol);
       setData(res);
@@ -87,6 +97,41 @@ export const Company360View: React.FC<Company360ViewProps> = ({
       setLoading(false);
     }
   };
+
+  // Live autocomplete search
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      const clean = debouncedQuery.trim();
+      if (clean.length >= 1) {
+        setIsSearching(true);
+        try {
+          const results = await searchStocks(clean);
+          setSuggestions(results);
+          setShowDropdown(results.length > 0);
+          setSelectedIndex(-1);
+        } catch {
+          setSuggestions([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSuggestions([]);
+        setShowDropdown(false);
+      }
+    };
+    fetchSuggestions();
+  }, [debouncedQuery]);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (initialTicker && initialTicker.trim()) {
@@ -99,9 +144,37 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (tickerInput.trim()) {
-      loadCompanyData(tickerInput);
+    if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+      selectSuggestion(suggestions[selectedIndex]);
+    } else if (tickerInput.trim()) {
+      loadCompanyData(tickerInput.trim());
     }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown || suggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === "Enter") {
+      if (selectedIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(suggestions[selectedIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  };
+
+  const selectSuggestion = (item: StockSearchResult) => {
+    const cleanSym = item.ticker.replace(".NS", "").replace(".BO", "");
+    setTickerInput(cleanSym);
+    loadCompanyData(item.ticker);
+    setShowDropdown(false);
   };
 
   // 52-Week Progress Pin Calculation
@@ -154,16 +227,55 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     <div className="space-y-6">
       {/* Search & Quick Chips Bar */}
       <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 max-w-md">
+        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 max-w-md relative" ref={searchContainerRef}>
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={tickerInput}
               onChange={(e) => setTickerInput(e.target.value)}
-              placeholder="Search NSE/BSE Stock (e.g. PICCADILY, TATAMOTORS, INFY)..."
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
+              onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
+              onKeyDown={handleKeyDown}
+              placeholder="Search NSE/BSE Stock (e.g. TATAMOTORS, PICCADILY, INFY)..."
+              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-9 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
             />
+            {isSearching && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-cyan-400 animate-spin" />
+            )}
+
+            {/* Live Autocompletion Dropdown */}
+            {showDropdown && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/95 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-800/60">
+                {suggestions.map((item, idx) => (
+                  <button
+                    key={item.ticker}
+                    type="button"
+                    onClick={() => selectSuggestion(item)}
+                    className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between transition-colors ${
+                      selectedIndex === idx
+                        ? "bg-cyan-950/80 text-cyan-300"
+                        : "hover:bg-slate-900/90 text-slate-200"
+                    }`}
+                  >
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-white tracking-wide">
+                          {item.ticker.replace(".NS", "").replace(".BO", "")}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                          {item.exchange}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-400 truncate mt-0.5">{item.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 text-[10px] text-slate-500">
+                      <span className="hidden sm:inline">{item.sector}</span>
+                      <ChevronRight className="h-3 w-3 text-slate-600" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <button
             type="submit"

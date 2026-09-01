@@ -61,43 +61,56 @@ def get_bundles():
     return get_investment_bundles()
 
 
+from app.core.factors import search_indian_stocks
+
+
 @router.get("/search/omni", response_model=List[OmniSearchResult])
 async def omni_search(q: str = Query(..., min_length=1)):
     """Unified search for Indian equities (NSE/BSE) and AMFI Mutual Funds."""
-    query_clean = q.strip().lower()
+    query_clean = q.strip()
+    if not query_clean:
+        return []
+
     results: List[OmniSearchResult] = []
+    seen = set()
 
-    # 1. Search Stocks in Master Universe
-    for s in MASTER_STOCK_UNIVERSE:
-        ticker_clean = s.ticker.replace(".NS", "").replace(".BO", "").lower()
-        name_clean = s.company_name.lower()
-        if query_clean in ticker_clean or query_clean in name_clean:
-            results.append(
-                OmniSearchResult(
-                    id=s.ticker,
-                    name=s.company_name,
-                    symbol_or_code=s.ticker.replace(".NS", ""),
-                    type="stock",
-                    sector_or_category=s.sector,
-                    price_or_nav=s.price,
-                )
-            )
-
-    # 2. Search AMFI Mutual Funds
+    # 1. Full Indian Equities Search (Directory + Live Exchange Search)
     try:
-        mf_results = await search_mutual_funds(query_clean)
-        for mf in mf_results[:5]:
-            results.append(
-                OmniSearchResult(
-                    id=mf.scheme_code,
-                    name=mf.scheme_name,
-                    symbol_or_code=f"AMFI #{mf.scheme_code}",
-                    type="fund",
-                    sector_or_category="Mutual Fund",
-                    price_or_nav=None,
+        stock_matches = search_indian_stocks(query_clean)
+        for s in stock_matches[:8]:
+            if s.ticker not in seen:
+                results.append(
+                    OmniSearchResult(
+                        id=s.ticker,
+                        name=s.name,
+                        symbol_or_code=s.ticker.replace(".NS", "").replace(".BO", ""),
+                        type="stock",
+                        sector_or_category=s.sector,
+                        price_or_nav=None,
+                    )
                 )
-            )
+                seen.add(s.ticker)
     except Exception:
         pass
 
-    return results[:10]
+    # 2. Search AMFI Mutual Funds
+    try:
+        mf_results = await search_mutual_funds(query_clean.lower())
+        for mf in mf_results[:5]:
+            code = str(mf.scheme_code)
+            if code not in seen:
+                results.append(
+                    OmniSearchResult(
+                        id=code,
+                        name=mf.scheme_name,
+                        symbol_or_code=f"AMFI #{code}",
+                        type="fund",
+                        sector_or_category="Mutual Fund",
+                        price_or_nav=None,
+                    )
+                )
+                seen.add(code)
+    except Exception:
+        pass
+
+    return results[:12]
