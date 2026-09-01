@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Activity, BarChart3, LineChart, PieChart, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, BarChart3, LineChart, PieChart, ShieldCheck, Sparkles, ExternalLink } from "lucide-react";
 
 interface HeaderProps {
   activeTab: "stocks" | "funds" | "portfolio";
@@ -38,6 +38,21 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, apiOnli
         </div>
 
         <div className="flex items-center gap-3">
+          {/* rupeemap.in & Sandesh Rathi Header Pill */}
+          <a
+            href="https://rupeemap.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/70 border border-emerald-700/60 text-emerald-300 text-[10px] font-medium hover:bg-emerald-900/80 transition-colors"
+          >
+            <span className="font-bold">rupeemap.in</span>
+            <span className="text-emerald-500">•</span>
+            <span className="text-emerald-200">By Sandesh Rathi</span>
+            <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+          </a>
+
+          <span className="text-slate-700">|</span>
+
           <span className="flex items-center gap-1.5 text-xs">
             <span
               className={`w-2 h-2 rounded-full ${
@@ -48,8 +63,6 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, apiOnli
               {apiOnline ? "FastAPI Live" : "Connecting..."}
             </span>
           </span>
-          <span className="text-slate-600">|</span>
-          <span className="text-slate-400">AMFI / NSE-BSE Live Feed</span>
         </div>
       </div>
 
@@ -68,8 +81,18 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, apiOnli
               <span className="px-2 py-0.5 text-[10px] font-semibold bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 rounded-full">
                 INSTITUTIONAL QUANT
               </span>
+              <a
+                href="https://rupeemap.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 rounded-full hover:bg-emerald-900 transition-colors"
+              >
+                <span>rupeemap.in</span>
+              </a>
             </div>
-            <p className="text-xs text-slate-400">Indian Equities & Mutual Funds Intelligence Engine</p>
+            <p className="text-xs text-slate-400">
+              Indian Equities & Mutual Funds Intelligence Engine • <span className="text-slate-300 font-medium">By Sandesh Rathi</span>
+            </p>
           </div>
         </div>
 

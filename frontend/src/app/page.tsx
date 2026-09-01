@@ -6,7 +6,7 @@ import { StockScorecardView } from "../components/StockScorecardView";
 import { FundAnalyzerView } from "../components/FundAnalyzerView";
 import { PortfolioOptimizerView } from "../components/PortfolioOptimizerView";
 import { checkApiHealth } from "../lib/api";
-import { Activity, ShieldAlert, Cpu } from "lucide-react";
+import { Activity, ShieldAlert, Cpu, ExternalLink, Heart } from "lucide-react";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"stocks" | "funds" | "portfolio">("stocks");
@@ -35,22 +35,37 @@ export default function DashboardPage() {
       </main>
 
       {/* Institutional Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/60 py-6 mt-12 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-cyan-500" />
-            <span className="font-semibold text-slate-300">InvestDeskPro Engine v1.0.0</span>
-            <span>•</span>
-            <span>FastAPI + Next.js 15 Quant Core</span>
-          </div>
+      <footer className="border-t border-slate-800/80 bg-slate-950/80 py-8 mt-12 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Left Brand info */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-cyan-400" />
+                <span className="font-bold text-slate-200">InvestDeskPro</span>
+                <span className="px-1.5 py-0.5 text-[9px] bg-slate-800 text-slate-300 rounded font-mono">v1.0.0</span>
+              </div>
+              <span className="text-slate-600">•</span>
+              <a
+                href="https://rupeemap.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-700 text-emerald-300 font-semibold hover:bg-emerald-900 transition-colors"
+              >
+                <span>rupeemap.in</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <span className="text-slate-600">•</span>
+              <span className="text-slate-300">
+                Created & Engineered by <strong className="text-white font-bold">Sandesh Rathi</strong>
+              </span>
+            </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
-            <span>Data Sources: AMFI India & NSE/BSE</span>
-            <span>•</span>
-            <span className="flex items-center gap-1 text-slate-400">
-              <ShieldAlert className="h-3 w-3 text-amber-400" />
-              <span>For institutional analytical purposes only</span>
-            </span>
+            {/* Right Disclaimer */}
+            <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <span>AMFI & NSE/BSE Quantitative Analytics • Institutional Research Only</span>
+            </div>
           </div>
         </div>
       </footer>

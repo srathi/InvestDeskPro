@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InvestDeskPro | Institutional Indian Equities & Mutual Funds Intelligence",
+  title: "InvestDeskPro | Powered by rupeemap.in | By Sandesh Rathi",
   description:
-    "Institutional factor scorecard (Quality, Value, Momentum), AMFI 3-Year Rolling Alpha, and Inverse-Volatility Risk-Parity Optimizer for Indian Equities & Mutual Funds.",
+    "Institutional Indian Equities & Mutual Funds Intelligence Engine. Powered by rupeemap.in, Created & Engineered by Sandesh Rathi.",
 };
 
 export default function RootLayout({
