@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Search,
   Building2,
@@ -32,6 +32,7 @@ import {
   ResponsiveContainer,
   Legend,
   Cell,
+  ReferenceLine,
 } from "recharts";
 import {
   fetchCompany360,
@@ -222,6 +223,34 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     }
     return Math.round(implied * 1000) / 10.0;
   };
+
+  // Computed chart data with safe PE and 1Y median
+  const { chartData, medianPe } = useMemo(() => {
+    if (!data?.price_history || data.price_history.length === 0) {
+      return { chartData: [], medianPe: 20.0 };
+    }
+    const eps = (data.essentials?.eps_ttm && data.essentials.eps_ttm > 0)
+      ? data.essentials.eps_ttm
+      : (data.essentials?.current_price && data.essentials?.pe)
+        ? (data.essentials.current_price / data.essentials.pe)
+        : 25.0;
+
+    const peValues = data.price_history.map((p) => {
+      if (p.pe && p.pe > 0) return p.pe;
+      if (eps > 0 && p.close > 0) return Number((p.close / eps).toFixed(2));
+      return Number(data.essentials?.pe || 20.0);
+    });
+
+    const sorted = [...peValues].sort((a, b) => a - b);
+    const median = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : (data.essentials?.pe || 20.0);
+
+    const formatted = data.price_history.map((p, idx) => ({
+      ...p,
+      pe: peValues[idx],
+      median_pe: median,
+    }));
+    return { chartData: formatted, medianPe: median };
+  }, [data]);
 
   return (
     <div className="space-y-6">
@@ -676,7 +705,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
             </div>
           </div>
 
-          {/* Interactive Charting Suite (Price, Volume, PE, PB) */}
+          {/* Interactive Charting Suite (Price, Volume, PE Multiple) */}
           <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
               <div>
@@ -684,11 +713,21 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   <BarChart3 className="h-4 w-4 text-cyan-400" />
                   <span>Historical Price & Valuation Performance</span>
                 </h3>
-                <p className="text-[11px] text-slate-400">Daily closes on National Stock Exchange of India (NSE)</p>
+                {chartView === "pe" ? (
+                  <p className="text-[11px] text-amber-400/90 font-mono flex flex-wrap items-center gap-2 mt-0.5">
+                    <span>1-Year Trailing P/E Multiple Series</span>
+                    <span>•</span>
+                    <span>1Y Median P/E: <strong className="text-white">{medianPe}x</strong></span>
+                    <span>•</span>
+                    <span>Current P/E: <strong className="text-white">{data.essentials.pe || "N/A"}x</strong></span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-400 mt-0.5">Daily closes on National Stock Exchange of India (NSE) / BSE</p>
+                )}
               </div>
 
               {/* Chart Mode Switcher */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
                 <button
                   onClick={() => setChartView("price")}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
@@ -703,7 +742,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   onClick={() => setChartView("pe")}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                     chartView === "pe"
-                      ? "bg-cyan-950 text-cyan-300 border border-cyan-800 shadow"
+                      ? "bg-amber-950 text-amber-300 border border-amber-800 shadow"
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
@@ -713,13 +752,17 @@ export const Company360View: React.FC<Company360ViewProps> = ({
             </div>
 
             <div className="h-64 w-full pt-2">
-              {data.price_history && data.price_history.length > 0 ? (
+              {chartData && chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.price_history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="companyPriceGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
                         <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                      </linearGradient>
+                      <linearGradient id="companyPeGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <XAxis
@@ -734,7 +777,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       fontSize={10}
                       tickLine={false}
                       domain={["auto", "auto"]}
-                      tickFormatter={(v) => `₹${v}`}
+                      tickFormatter={(v) => (chartView === "pe" ? `${v}x` : `₹${v}`)}
                     />
                     <Tooltip
                       contentStyle={{
@@ -744,22 +787,40 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                         color: "#f8fafc",
                         fontSize: "12px",
                       }}
-                      formatter={(val: any) => [`₹${Number(val).toFixed(2)}`, "Closing Price"]}
+                      formatter={(val: any) => {
+                        if (chartView === "pe") {
+                          return [`${Number(val).toFixed(2)}x`, "P/E Multiple"];
+                        }
+                        return [`₹${Number(val).toFixed(2)}`, "Closing Price"];
+                      }}
                       labelFormatter={(label) => `Date: ${label}`}
                     />
+                    {chartView === "pe" && medianPe > 0 && (
+                      <ReferenceLine
+                        y={medianPe}
+                        stroke="#94a3b8"
+                        strokeDasharray="4 4"
+                        label={{
+                          value: `Median: ${medianPe}x`,
+                          fill: "#94a3b8",
+                          fontSize: 10,
+                          position: "insideTopRight",
+                        }}
+                      />
+                    )}
                     <Area
                       type="monotone"
-                      dataKey="close"
-                      stroke="#06b6d4"
+                      dataKey={chartView === "pe" ? "pe" : "close"}
+                      stroke={chartView === "pe" ? "#f59e0b" : "#06b6d4"}
                       strokeWidth={2}
                       fillOpacity={1}
-                      fill="url(#companyPriceGrad)"
+                      fill={chartView === "pe" ? "url(#companyPeGrad)" : "url(#companyPriceGrad)"}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="h-full flex items-center justify-center text-slate-500 text-xs font-mono">
-                  Price trend data currently unavailable
+                  Price & valuation trend data currently unavailable
                 </div>
               )}
             </div>

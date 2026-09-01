@@ -586,7 +586,6 @@ def fetch_company_360(ticker: str) -> Company360Response:
     except Exception:
         hist = pd.DataFrame()
 
-    price_history: List[StockPricePoint] = []
     current_price = safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))
     day_change = safe_float(info.get("regularMarketChange"), 0.0) or 0.0
     day_change_pct = safe_float(info.get("regularMarketChangePercent"), 0.0) or 0.0
@@ -601,23 +600,35 @@ def fetch_company_360(ticker: str) -> Company360Response:
                 day_change = round(current_price - prev_close, 2)
                 day_change_pct = round((day_change / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
 
-            # Sample ~60 points for chart
-            step = max(1, len(hist) // 60)
-            for dt, row in hist.iloc[::step].iterrows():
-                date_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)[:10]
-                price_history.append(
-                    StockPricePoint(
-                        date=date_str,
-                        close=safe_float(row.get("Close"), current_price or 100.0) or 100.0,
-                        volume=safe_float(row.get("Volume"), 0.0),
-                    )
-                )
-
     current_price = current_price or 500.0
     high_52w = safe_float(info.get("fiftyTwoWeekHigh"), current_price * 1.25) or current_price * 1.25
     low_52w = safe_float(info.get("fiftyTwoWeekLow"), current_price * 0.75) or current_price * 0.75
     mcap_val = safe_float(info.get("marketCap"), current_price * 100000000.0) or (current_price * 100000000.0)
     mcap_cr = round(mcap_val / 10000000.0, 1)
+
+    pe_val = safe_float(info.get("trailingPE") or info.get("forwardPE"), 24.5)
+    pb_val = safe_float(info.get("priceToBook"), 3.2)
+    eps_val = safe_float(info.get("trailingEps"), round(current_price / (pe_val or 20.0), 2)) or max(1.0, current_price / 24.5)
+    eps_base = max(0.1, eps_val)
+    bv_base = max(0.1, current_price / (pb_val or 3.2))
+
+    price_history: List[StockPricePoint] = []
+    if not hist.empty and "Close" in hist.columns:
+        step = max(1, len(hist) // 60)
+        for dt, row in hist.iloc[::step].iterrows():
+            date_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)[:10]
+            close_val = safe_float(row.get("Close"), current_price or 100.0) or 100.0
+            point_pe = round(close_val / eps_base, 2)
+            point_pb = round(close_val / bv_base, 2)
+            price_history.append(
+                StockPricePoint(
+                    date=date_str,
+                    close=close_val,
+                    volume=safe_float(row.get("Volume"), 0.0),
+                    pe=point_pe,
+                    pb=point_pb,
+                )
+            )
 
     # Market Cap Category
     if mcap_cr >= 50000:
@@ -639,11 +650,8 @@ def fetch_company_360(ticker: str) -> Company360Response:
     if de_val is not None and de_val > 10.0:
         de_val = round(de_val / 100.0, 2)
 
-    pe_val = safe_float(info.get("trailingPE") or info.get("forwardPE"), 24.5)
-    pb_val = safe_float(info.get("priceToBook"), 3.2)
     div_yield = safe_float(info.get("dividendYield"))
     div_yield_pct = round(div_yield * 100.0, 2) if div_yield is not None else 1.2
-    eps_val = safe_float(info.get("trailingEps"), round(current_price / (pe_val or 20.0), 2)) or 25.0
     fcf_val = safe_float(info.get("freeCashflow"))
     fcf_cr = round(fcf_val / 10000000.0, 1) if fcf_val is not None else round(mcap_cr * 0.04, 1)
     promoter_pct = safe_float(info.get("heldPercentInsiders"))

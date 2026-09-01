@@ -95,6 +95,8 @@ class StockPricePoint(BaseModel):
     date: str
     close: float
     volume: Optional[float] = None
+    pe: Optional[float] = None
+    pb: Optional[float] = None
 
 
 class StockScorecardResponse(BaseModel):
