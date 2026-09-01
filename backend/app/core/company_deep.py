@@ -39,6 +39,17 @@ KNOWN_SEGMENTS: Dict[str, Dict[str, Any]] = {
             {"region": "Global Exports (US, Europe, Duty-Free)", "percentage": 22.0},
         ],
     },
+    "PICCADIL": {
+        "segments": [
+            {"name": "Single Malt & Premium Spirits (Indri / Camikara)", "percentage": 52.0, "color": "#06b6d4"},
+            {"name": "Sugar & Commercial Ethanol", "percentage": 34.0, "color": "#10b981"},
+            {"name": "Power & Distillery By-Products", "percentage": 14.0, "color": "#f59e0b"},
+        ],
+        "geography": [
+            {"region": "India (Domestic)", "percentage": 78.0},
+            {"region": "Global Exports (US, Europe, Duty-Free)", "percentage": 22.0},
+        ],
+    },
     "TATAMOTORS": {
         "segments": [
             {"name": "Jaguar Land Rover (JLR)", "percentage": 68.0, "color": "#06b6d4"},

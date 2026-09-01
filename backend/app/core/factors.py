@@ -28,9 +28,29 @@ from app.schemas import (
 )
 
 
+TICKER_ALIASES: Dict[str, str] = {
+    "PICCADILY": "PICCADIL.BO",
+    "PICCADILY.NS": "PICCADIL.BO",
+    "PICCADILY.BO": "PICCADIL.BO",
+    "PICCADIL": "PICCADIL.BO",
+    "M&M": "M&M.NS",
+    "MM": "M&M.NS",
+    "L&T": "LT.NS",
+    "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
+    "BAJAJAUTO": "BAJAJ-AUTO.NS",
+    "MCDOWELL-N": "UNITDSPR.NS",
+    "CDSL": "CDSL.NS",
+}
+
+
 def normalize_ticker(ticker: str) -> str:
-    """Ensure Indian ticker has exchange suffix (.NS or .BO)."""
+    """Ensure Indian ticker has exchange suffix (.NS or .BO) with alias resolution."""
     t = ticker.strip().upper()
+    if t in TICKER_ALIASES:
+        return TICKER_ALIASES[t]
+    t_no_suffix = t.replace(".NS", "").replace(".BO", "")
+    if t_no_suffix in TICKER_ALIASES:
+        return TICKER_ALIASES[t_no_suffix]
     if not (t.endswith(".NS") or t.endswith(".BO")):
         return f"{t}.NS"
     return t
