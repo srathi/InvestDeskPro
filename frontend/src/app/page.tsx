@@ -11,7 +11,7 @@ import { ExternalLink, ShieldAlert, Sparkles, Cpu, Layers } from "lucide-react";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"company" | "screener" | "bundles" | "quant">("company");
-  const [selectedStockTicker, setSelectedStockTicker] = useState("TATAMOTORS");
+  const [selectedStockTicker, setSelectedStockTicker] = useState<string>("");
   const [selectedFundCode, setSelectedFundCode] = useState<string | undefined>(undefined);
   const [apiOnline, setApiOnline] = useState(false);
 

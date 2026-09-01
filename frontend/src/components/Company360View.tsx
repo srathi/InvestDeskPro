@@ -58,10 +58,10 @@ interface Company360ViewProps {
 }
 
 export const Company360View: React.FC<Company360ViewProps> = ({
-  initialTicker = "TATAMOTORS",
+  initialTicker = "",
   onNavigateToQuant,
 }) => {
-  const [tickerInput, setTickerInput] = useState(initialTicker);
+  const [tickerInput, setTickerInput] = useState(initialTicker || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Company360Response | null>(null);
@@ -75,6 +75,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const [terminalGrowth, setTerminalGrowth] = useState(4.0);
 
   const loadCompanyData = async (symbol: string) => {
+    if (!symbol.trim()) return;
     setLoading(true);
     setError(null);
     try {
@@ -88,9 +89,11 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   };
 
   useEffect(() => {
-    if (initialTicker) {
+    if (initialTicker && initialTicker.trim()) {
       setTickerInput(initialTicker);
       loadCompanyData(initialTicker);
+    } else {
+      setData(null);
     }
   }, [initialTicker]);
 
@@ -209,6 +212,63 @@ export const Company360View: React.FC<Company360ViewProps> = ({
           <p className="text-xs font-mono text-slate-400">
             Fetching Finology 360 Essentials, Tijori Segment Mix & Forensic Probes for {tickerInput}...
           </p>
+        </div>
+      )}
+
+      {!data && !loading && !error && (
+        <div className="glass-panel p-12 rounded-2xl border border-slate-800 text-center space-y-6 my-6">
+          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400 shadow-lg shadow-cyan-950/40">
+            <Building2 className="h-8 w-8" />
+          </div>
+          <div className="max-w-xl mx-auto space-y-2">
+            <h3 className="text-xl font-bold text-white tracking-tight">
+              Search any Indian Company for 360° Financial Dossier
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Explore 12-factor fundamental essentials, Tijori-grade revenue segment mix, forensic red-flag probes, 5-year audited financial statements, reverse DCF implied growth models, and institutional shareholding patterns.
+            </p>
+          </div>
+
+          {/* Feature Highlights Badges */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto text-left pt-2">
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+              <span className="text-[10px] text-cyan-400 font-bold uppercase block">Tijori Mix</span>
+              <span className="text-xs font-semibold text-slate-200">Segment Breakdown</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+              <span className="text-[10px] text-emerald-400 font-bold uppercase block">Forensics</span>
+              <span className="text-xs font-semibold text-slate-200">5 Red-Flag Checks</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+              <span className="text-[10px] text-amber-400 font-bold uppercase block">Valuation</span>
+              <span className="text-xs font-semibold text-slate-200">Reverse DCF Model</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+              <span className="text-[10px] text-purple-400 font-bold uppercase block">Audited Filings</span>
+              <span className="text-xs font-semibold text-slate-200">5Y P&L, BS & CF</span>
+            </div>
+          </div>
+
+          {/* Quick Preset Buttons */}
+          <div className="pt-4 border-t border-slate-800/80 max-w-2xl mx-auto">
+            <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold block mb-3">
+              Popular Indian Companies (Click to Analyze):
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {PRESET_COMPANIES.map((item) => (
+                <button
+                  key={item.ticker}
+                  onClick={() => {
+                    setTickerInput(item.ticker);
+                    loadCompanyData(item.ticker);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 hover:text-cyan-300 hover:border-cyan-700 transition-all font-mono"
+                >
+                  {item.name} ({item.ticker})
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
