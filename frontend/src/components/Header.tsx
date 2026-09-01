@@ -158,9 +158,14 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
-              InvestDeskPro
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
+                InvestDeskPro
+              </h1>
+              <span className="px-2 py-0.5 text-[9px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/80 rounded-full tracking-wide">
+                by rupeemap.in
+              </span>
+            </div>
             <p className="text-[11px] text-slate-400">
               Indian Equities & AMFI Mutual Funds Research Terminal
             </p>
