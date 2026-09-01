@@ -63,6 +63,30 @@ KNOWN_SEGMENTS: Dict[str, Dict[str, Any]] = {
             {"region": "China & Rest of World", "percentage": 12.0},
         ],
     },
+    "TMCV": {
+        "segments": [
+            {"name": "Commercial Vehicles (CV India)", "percentage": 58.0, "color": "#06b6d4"},
+            {"name": "Light Commercial Vehicles & Pickups", "percentage": 28.0, "color": "#10b981"},
+            {"name": "Spares, Fleet Edge Telematics & Allied Services", "percentage": 14.0, "color": "#f59e0b"},
+        ],
+        "geography": [
+            {"region": "India (Domestic Operations)", "percentage": 86.0},
+            {"region": "Global Exports (Middle East, Africa, SAARC)", "percentage": 14.0},
+        ],
+    },
+    "TMPV": {
+        "segments": [
+            {"name": "Jaguar Land Rover (JLR Luxury)", "percentage": 72.0, "color": "#06b6d4"},
+            {"name": "Electric Vehicles (Tata.ev)", "percentage": 16.0, "color": "#10b981"},
+            {"name": "Passenger ICE Vehicles (Nexon, Harrier, Safari)", "percentage": 12.0, "color": "#f59e0b"},
+        ],
+        "geography": [
+            {"region": "United Kingdom & Europe", "percentage": 42.0},
+            {"region": "North America", "percentage": 22.0},
+            {"region": "India (Domestic)", "percentage": 20.0},
+            {"region": "China & Rest of World", "percentage": 16.0},
+        ],
+    },
     "RELIANCE": {
         "segments": [
             {"name": "Oil to Chemicals (Refining & Petrochem)", "percentage": 52.0, "color": "#f59e0b"},
@@ -520,15 +544,38 @@ def fetch_company_360(ticker: str) -> Company360Response:
     except Exception:
         info = {}
 
-    if (not info or "shortName" not in info) and norm_ticker.endswith(".NS"):
-        alt_ticker = norm_ticker.replace(".NS", ".BO")
+    if not info or "shortName" not in info or (info.get("currentPrice") is None and info.get("regularMarketPrice") is None):
+        alt_ticker = norm_ticker.replace(".NS", ".BO") if norm_ticker.endswith(".NS") else norm_ticker.replace(".BO", ".NS")
         try:
             alt_t = yf.Ticker(alt_ticker)
             alt_info = alt_t.info or {}
-            if alt_info and "shortName" in alt_info:
+            if alt_info and (alt_info.get("shortName") or alt_info.get("currentPrice") or alt_info.get("regularMarketPrice")):
                 t = alt_t
                 norm_ticker = alt_ticker
                 info = alt_info
+        except Exception:
+            pass
+
+    # If still not resolved, query Yahoo Finance dynamic search API
+    if not info or not info.get("shortName"):
+        try:
+            import json, ssl, urllib.parse, urllib.request
+            ctx = ssl._create_unverified_context()
+            search_query = clean_sym.replace("-", " ")
+            url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(search_query)}&quotesCount=5"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"})
+            with urllib.request.urlopen(req, context=ctx, timeout=4) as resp:
+                data = json.loads(resp.read().decode())
+                for q in data.get("quotes", []):
+                    sym = q.get("symbol", "")
+                    if sym.endswith(".NS") or sym.endswith(".BO"):
+                        search_t = yf.Ticker(sym)
+                        search_info = search_t.info or {}
+                        if search_info and search_info.get("shortName"):
+                            t = search_t
+                            norm_ticker = sym
+                            info = search_info
+                            break
         except Exception:
             pass
 

@@ -14,7 +14,8 @@ from app.schemas import StockFundamentals
 
 
 def test_ticker_normalization():
-    assert normalize_ticker("TATAMOTORS") == "TATAMOTORS.NS"
+    assert normalize_ticker("TATAMOTORS") == "TMCV.NS"
+    assert normalize_ticker("PICCADILY") == "PICCADIL.BO"
     assert normalize_ticker("reliance.ns") == "RELIANCE.NS"
     assert normalize_ticker("TCS.BO") == "TCS.BO"
     assert normalize_ticker("  infy  ") == "INFY.NS"

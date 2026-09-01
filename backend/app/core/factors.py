@@ -29,6 +29,13 @@ from app.schemas import (
 
 
 TICKER_ALIASES: Dict[str, str] = {
+    "TATAMOTORS": "TMCV.NS",
+    "TATAMOTORS.NS": "TMCV.NS",
+    "TATAMOTORS.BO": "TMCV.BO",
+    "TATAMOTOR": "TMCV.NS",
+    "TATA MOTORS": "TMCV.NS",
+    "TMCV": "TMCV.NS",
+    "TMPV": "TMPV.NS",
     "PICCADILY": "PICCADIL.BO",
     "PICCADILY.NS": "PICCADIL.BO",
     "PICCADILY.BO": "PICCADIL.BO",
@@ -36,6 +43,7 @@ TICKER_ALIASES: Dict[str, str] = {
     "M&M": "M&M.NS",
     "MM": "M&M.NS",
     "L&T": "LT.NS",
+    "LT": "LT.NS",
     "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
     "BAJAJAUTO": "BAJAJ-AUTO.NS",
     "MCDOWELL-N": "UNITDSPR.NS",
