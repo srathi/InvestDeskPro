@@ -107,6 +107,8 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
 
   // Fetch live autocomplete suggestions as user types
   useEffect(() => {
+    let isCancelled = false;
+
     if (isSelectingRef.current) {
       isSelectingRef.current = false;
       setShowDropdown(false);
@@ -120,21 +122,29 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
         setIsSearching(true);
         try {
           const results = await searchStocks(clean);
-          setSuggestions(results);
-          setShowDropdown(results.length > 0);
-          setSelectedIndex(-1);
+          if (!isCancelled && !isSelectingRef.current) {
+            setSuggestions(results);
+            setShowDropdown(results.length > 0);
+            setSelectedIndex(-1);
+          }
         } catch {
-          setSuggestions([]);
+          if (!isCancelled) setSuggestions([]);
         } finally {
-          setIsSearching(false);
+          if (!isCancelled) setIsSearching(false);
         }
       } else {
-        setSuggestions([]);
-        setShowDropdown(false);
+        if (!isCancelled) {
+          setSuggestions([]);
+          setShowDropdown(false);
+        }
       }
     };
 
     fetchSuggestions();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [debouncedQuery]);
 
   // Click outside listener
@@ -308,6 +318,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
               <button
                 key={item.ticker}
                 onClick={() => {
+                  isSelectingRef.current = true;
+                  setShowDropdown(false);
+                  setSuggestions([]);
                   setTickerInput(item.ticker);
                   loadScorecard(item.ticker);
                 }}

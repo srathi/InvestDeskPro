@@ -116,6 +116,8 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
   // Debounced auto-search for matching AMFI schemes
   useEffect(() => {
+    let isCancelled = false;
+
     if (isSelectingRef.current) {
       isSelectingRef.current = false;
       setShowDropdown(false);
@@ -129,21 +131,29 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
         setIsSearching(true);
         try {
           const results = await searchFunds(clean);
-          setSearchResults(results);
-          setShowDropdown(results.length > 0);
-          setSelectedIndex(-1);
+          if (!isCancelled && !isSelectingRef.current) {
+            setSearchResults(results);
+            setShowDropdown(results.length > 0);
+            setSelectedIndex(-1);
+          }
         } catch {
-          setSearchResults([]);
+          if (!isCancelled) setSearchResults([]);
         } finally {
-          setIsSearching(false);
+          if (!isCancelled) setIsSearching(false);
         }
       } else {
-        setSearchResults([]);
-        setShowDropdown(false);
+        if (!isCancelled) {
+          setSearchResults([]);
+          setShowDropdown(false);
+        }
       }
     };
 
     fetchMatchingFunds();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [debouncedQuery]);
 
   // Click outside listener to close dropdown
@@ -323,6 +333,9 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
               <button
                 key={item.code}
                 onClick={() => {
+                  isSelectingRef.current = true;
+                  setShowDropdown(false);
+                  setSearchResults([]);
                   setSchemeCode(item.code);
                   loadFund(item.code);
                   setSearchQuery("");
