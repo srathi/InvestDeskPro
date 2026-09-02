@@ -231,7 +231,7 @@ class PortfolioOptimizeResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Finology & Tijori Finance Inspired Company 360, Screener & Bundles Models
+# Institutional Company 360, Screener & Bundles Models
 # ---------------------------------------------------------------------------
 
 class RevenueSegment(BaseModel):

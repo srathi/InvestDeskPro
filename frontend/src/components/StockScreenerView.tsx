@@ -173,7 +173,7 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-emerald-400" />
-            <h3 className="text-sm font-bold text-white">Curated Screener Presets (Finology Ticker Style)</h3>
+            <h3 className="text-sm font-bold text-white">Curated Institutional Screener Presets</h3>
           </div>
           <button
             onClick={handleReset}

@@ -34,7 +34,7 @@ class OmniSearchResult(BaseModel):
 @router.get("/company/{ticker}", response_model=Company360Response)
 @router.get("/stocks/{ticker}/deep", response_model=Company360Response)
 def get_company_deep(ticker: str):
-    """Retrieve full Finology + Tijori style 360 fundamental overview, segments, forensics, and DCF."""
+    """Retrieve full institutional 360° fundamental dossier, segments, forensics, and DCF."""
     try:
         return fetch_company_360(ticker)
     except Exception as e:

@@ -381,7 +381,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
         <div className="py-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
           <p className="text-xs font-mono text-slate-400">
-            Fetching Finology 360 Essentials, Tijori Segment Mix & Forensic Probes for {tickerInput}...
+            Fetching 12-Factor Fundamental Essentials, Segment Mix & Forensic Probes for {tickerInput}...
           </p>
         </div>
       )}
@@ -396,7 +396,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
               Search any Indian Company for 360° Financial Dossier
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Explore 12-factor fundamental essentials, Tijori-grade revenue segment mix, forensic red-flag probes, 5-year audited financial statements, reverse DCF implied growth models, and institutional shareholding patterns.
+              Explore 12-factor fundamental essentials, institutional revenue segment mix, forensic red-flag probes, 5-year audited financial statements, reverse DCF implied growth models, and institutional shareholding patterns.
             </p>
           </div>
 
@@ -421,7 +421,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
           {/* Feature Highlights Badges */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto text-left pt-2">
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-              <span className="text-[10px] text-cyan-400 font-bold uppercase block">Tijori Mix</span>
+              <span className="text-[10px] text-cyan-400 font-bold uppercase block">Segment Mix</span>
               <span className="text-xs font-semibold text-slate-200">Segment Breakdown</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
@@ -636,7 +636,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
                 </div>
 
-                {/* 12-Ratio Essentials Grid (Finology Ticker Style) */}
+                {/* 12-Factor Fundamental Essentials Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                   <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
                     <span className="text-[10px] text-slate-500 uppercase font-semibold block">Market Cap</span>
@@ -1322,14 +1322,14 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                 </div>
               </div>
 
-              {/* Section 4: Tijori-Style Revenue Mix & Forensic Health Probes */}
+              {/* Section 4: Revenue Mix & Forensic Health Probes */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 1. Revenue Segment Mix (Tijori Style) */}
+                {/* 1. Revenue Segment Mix */}
                 <div id="sec-segments" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <PieChartIcon className="h-4 w-4 text-cyan-400" />
-                      <span>Revenue & Product Segment Breakdown (Tijori Style)</span>
+                      <span>Revenue & Product Segment Breakdown</span>
                     </h3>
                     <span className="text-[10px] text-slate-500 font-mono">Segment Mix</span>
                   </div>
@@ -1375,14 +1375,14 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
                 </div>
 
-                {/* 2. Forensic Health Checks (Tijori Style) */}
+                {/* 2. Forensic Health Checks */}
                 <div id="sec-forensics" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-emerald-400" />
                       <span>Forensic Health Probes (5 Red-Flag Checks)</span>
                     </h3>
-                    <span className="text-[10px] text-slate-500 font-mono">Tijori Forensics</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Forensic Probes</span>
                   </div>
 
                   <div className="space-y-2.5">

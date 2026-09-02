@@ -1,4 +1,4 @@
-"""Company 360 Deep Fundamental & Forensic Engine (Finology + Tijori Finance Hybrid).
+"""Company 360 Deep Fundamental & Forensic Engine.
 
 Provides complete essentials, revenue segment mix, forensic health probes,
 5-year financial statements, Reverse DCF implied growth, shareholding evolution, and peer benchmarking.
@@ -33,7 +33,7 @@ from app.schemas import (
     StockPricePoint,
 )
 
-# Known company revenue segment profiles (Tijori style)
+# Known company revenue segment profiles
 KNOWN_SEGMENTS: Dict[str, Dict[str, Any]] = {
     "PICCADILY": {
         "segments": [
@@ -523,7 +523,7 @@ def generate_forensic_probes(
     fcf: Optional[float],
     net_income: Optional[float],
 ) -> List[ForensicProbe]:
-    """Generate Tijori-style forensic health check probes."""
+    """Generate institutional forensic health check probes."""
     probes = []
 
     # 1. Promoter Pledging
@@ -1056,7 +1056,7 @@ def extract_historical_price_and_valuation(
 
 
 def fetch_company_360(ticker: str) -> Company360Response:
-    """Fetch complete institutional 360 overview for Indian stock (Finology + Tijori Hybrid)."""
+    """Fetch complete institutional 360 overview for Indian stock."""
     clean_sym = ticker.strip().upper().replace(".NS", "").replace(".BO", "")
     norm_ticker = normalize_ticker(clean_sym)
 
@@ -1229,7 +1229,7 @@ def fetch_company_360(ticker: str) -> Company360Response:
     if not swot_weaknesses:
         swot_weaknesses.append("Cyclical industry dynamics and raw material inflation sensitivities.")
 
-    # Revenue Segment Mix (Tijori Style)
+    # Revenue Segment Mix
     segment_info = KNOWN_SEGMENTS.get(clean_sym)
     if segment_info:
         segments = [
@@ -1258,7 +1258,7 @@ def fetch_company_360(ticker: str) -> Company360Response:
             GeographicSegment(region="International & Exports", percentage=24.0),
         ]
 
-    # Forensics (Tijori Style)
+    # Forensic Health Probes
     net_income_val = safe_float(info.get("netIncomeToCommon"), mcap_val * 0.055)
     forensics = generate_forensic_probes(info, de_val, roe_pct, fcf_val, net_income_val)
 

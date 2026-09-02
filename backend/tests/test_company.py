@@ -1,4 +1,4 @@
-"""Tests for Finology + Tijori Company 360, Screener, Bundles, and Omni-Search."""
+"""Tests for Company 360, Screener, Bundles, and Omni-Search."""
 
 from fastapi.testclient import TestClient
 from app.main import app
