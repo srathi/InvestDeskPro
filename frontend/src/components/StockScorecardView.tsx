@@ -61,8 +61,12 @@ const PRESET_TICKERS = [
   { ticker: "BAJFINANCE", name: "Bajaj Finance" },
 ];
 
-export const StockScorecardView: React.FC = () => {
-  const [tickerInput, setTickerInput] = useState("");
+interface StockScorecardViewProps {
+  initialTicker?: string;
+}
+
+export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialTicker = "" }) => {
+  const [tickerInput, setTickerInput] = useState(initialTicker || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<StockScorecardResponse | null>(null);
@@ -129,6 +133,14 @@ export const StockScorecardView: React.FC = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // React to initialTicker prop changes
+  useEffect(() => {
+    if (initialTicker && initialTicker.trim()) {
+      setTickerInput(initialTicker);
+      loadScorecard(initialTicker);
+    }
+  }, [initialTicker]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

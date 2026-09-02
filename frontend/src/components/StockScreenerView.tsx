@@ -13,6 +13,7 @@ import {
   Loader2,
   ArrowUpRight,
   TrendingUp,
+  Download,
 } from "lucide-react";
 import {
   runScreener,
@@ -138,6 +139,22 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
     setMin1YReturn(-50);
     setSectorSearch("");
     executeScreen({});
+  };
+
+  const handleExportCSV = () => {
+    if (stocks.length === 0) return;
+    let csv = "Ticker,Company Name,Sector,Market Cap (Cr),Price (Rs),P/E,ROE (%),ROCE (%),Debt to Equity,1Y Return (%)\n";
+    stocks.forEach((s) => {
+      csv += `"${s.ticker}","${s.company_name}","${s.sector}",${s.market_cap_cr},${s.price},${s.pe ?? ""},${s.roe ?? ""},${s.roce ?? ""},${s.debt_to_equity ?? ""},${s.return_1y ?? ""}\n`;
+    });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `InvestDeskPro_Screened_Stocks.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSort = (field: keyof ScreenerStockItem) => {
@@ -302,7 +319,18 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
               {stocks.length} Companies
             </span>
           </div>
-          {loading && <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />}
+          <div className="flex items-center gap-3">
+            {loading && <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />}
+            <button
+              onClick={handleExportCSV}
+              disabled={stocks.length === 0}
+              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-cyan-300 hover:border-cyan-800 transition-all flex items-center gap-1.5 disabled:opacity-40"
+              title="Export Screened Results to CSV"
+            >
+              <Download className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Export CSV</span>
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">

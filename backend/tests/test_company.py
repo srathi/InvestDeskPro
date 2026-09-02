@@ -2,6 +2,8 @@
 
 from fastapi.testclient import TestClient
 from app.main import app
+from app.core.company_deep import calculate_dcf_sensitivity_matrix, calculate_institutional_delta
+from app.schemas import ShareholdingQuarter
 
 client = TestClient(app)
 
@@ -18,9 +20,56 @@ def test_company_deep_endpoint():
     assert "reverse_dcf" in data
     assert "financials" in data
     assert "shareholding" in data
+    assert "quarterly_financials" in data
+    assert "dcf_sensitivity_matrix" in data
+    assert "institutional_delta" in data
     assert len(data["segments"]) >= 1
     assert len(data["forensics"]) >= 1
     assert data["reverse_dcf"]["implied_5y_cagr"] is not None
+    if data["quarterly_financials"]:
+        assert len(data["quarterly_financials"]["quarters"]) >= 4
+        assert len(data["quarterly_financials"]["rows"]) >= 5
+    if data["dcf_sensitivity_matrix"]:
+        assert len(data["dcf_sensitivity_matrix"]["grid"]) == 5
+        assert len(data["dcf_sensitivity_matrix"]["grid"][0]) == 5
+        assert data["dcf_sensitivity_matrix"]["base_fair_value"] > 0
+    if data["institutional_delta"]:
+        assert data["institutional_delta"]["net_institutional_sentiment"] is not None
+
+
+def test_dcf_sensitivity_matrix_computation():
+    """Direct unit test for 2-stage DCF intrinsic valuation and 5x5 sensitivity grid."""
+    matrix = calculate_dcf_sensitivity_matrix(
+        current_price=500.0,
+        eps=25.0,
+        base_wacc=12.0,
+        base_growth=15.0,
+        base_terminal_growth=4.0,
+    )
+    assert matrix.current_market_price == 500.0
+    assert matrix.base_fair_value > 0
+    assert len(matrix.wacc_rates) == 5
+    assert len(matrix.terminal_growth_rates) == 5
+    assert len(matrix.grid) == 5
+    assert len(matrix.grid[0]) == 5
+    # Base case cell should be marked
+    base_cells = [cell for row in matrix.grid for cell in row if cell.is_base_case]
+    assert len(base_cells) == 1
+    assert base_cells[0].wacc_pct == 12.0
+    assert base_cells[0].terminal_growth_pct == 4.0
+
+
+def test_institutional_delta_computation():
+    """Direct unit test for institutional ownership delta tracking."""
+    shareholding = [
+        ShareholdingQuarter(quarter="Q1", promoter_pct=50.0, fii_pct=15.0, dii_pct=10.0, public_pct=25.0, pledged_pct=0.0),
+        ShareholdingQuarter(quarter="Q2", promoter_pct=50.5, fii_pct=16.0, dii_pct=10.5, public_pct=23.0, pledged_pct=0.0),
+    ]
+    delta = calculate_institutional_delta(shareholding)
+    assert delta.promoter_qoq_delta == 0.5
+    assert delta.fii_qoq_delta == 1.0
+    assert delta.dii_qoq_delta == 0.5
+    assert "Inflows" in delta.net_institutional_sentiment or "Accumulation" in delta.net_institutional_sentiment
 
 
 def test_screener_filter_endpoint():
@@ -60,3 +109,4 @@ def test_omni_search_endpoint():
     results = response.json()
     assert len(results) >= 1
     assert any(r["type"] == "stock" for r in results)
+
