@@ -684,35 +684,35 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase block font-sans">Promoter Holding</span>
                   <span className="text-sm font-bold text-cyan-400 mt-1 block">
-                    {data.shareholding.promoters_pct}%
+                    {data.shareholding?.promoters_pct ?? 0}%
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase block font-sans">FII Holding</span>
                   <span className="text-sm font-bold text-emerald-400 mt-1 block">
-                    {data.shareholding.fii_pct || (data.shareholding.institutions_pct * 0.6).toFixed(2)}%
+                    {data.shareholding?.fii_pct ?? (data.shareholding?.institutions_pct ? (data.shareholding.institutions_pct * 0.6).toFixed(2) : "0.00")}%
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase block font-sans">DII / Mutual Funds</span>
                   <span className="text-sm font-bold text-indigo-300 mt-1 block">
-                    {data.shareholding.dii_pct || (data.shareholding.institutions_pct * 0.4).toFixed(2)}%
+                    {data.shareholding?.dii_pct ?? (data.shareholding?.institutions_pct ? (data.shareholding.institutions_pct * 0.4).toFixed(2) : "0.00")}%
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase block font-sans">Public / Retail</span>
                   <span className="text-sm font-bold text-slate-200 mt-1 block">
-                    {data.shareholding.public_retail_pct}%
+                    {data.shareholding?.public_retail_pct ?? 0}%
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase block font-sans">Promoter Pledge</span>
                   <span className="text-sm font-bold text-emerald-400 mt-1 block">
-                    {data.shareholding.pledged_pct === 0 ? "0.0% (Clean)" : `${data.shareholding.pledged_pct}%`}
+                    {(data.shareholding?.pledged_pct ?? 0) === 0 ? "0.0% (Clean)" : `${data.shareholding?.pledged_pct}%`}
                   </span>
                 </div>
               </div>
