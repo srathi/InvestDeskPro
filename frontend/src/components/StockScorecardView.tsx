@@ -51,14 +51,18 @@ import {
 import { useDebounce } from "../hooks/useDebounce";
 
 const PRESET_TICKERS = [
-  { ticker: "RELIANCE", name: "Reliance Ind." },
-  { ticker: "TCS", name: "TCS" },
-  { ticker: "PICCADIL", name: "Piccadily Agro" },
-  { ticker: "INFY", name: "Infosys" },
-  { ticker: "HDFCBANK", name: "HDFC Bank" },
-  { ticker: "ITC", name: "ITC Ltd." },
-  { ticker: "LT", name: "Larsen & Toubro" },
-  { ticker: "BAJFINANCE", name: "Bajaj Finance" },
+  { ticker: "RELIANCE", name: "Reliance Ind.", sector: "Oil & Gas / Retail", tag: "Large Cap 🏢" },
+  { ticker: "TCS", name: "TCS", sector: "IT Services", tag: "High ROCE 💎" },
+  { ticker: "PICCADIL", name: "Piccadily Agro", sector: "Distilleries", tag: "Compounder 🚀" },
+  { ticker: "INFY", name: "Infosys", sector: "IT & Cloud", tag: "Tech Bluechip 💻" },
+  { ticker: "HDFCBANK", name: "HDFC Bank", sector: "Banking", tag: "Core Bank 🏦" },
+  { ticker: "ITC", name: "ITC Ltd.", sector: "FMCG / Cigarettes", tag: "High Dividend 💰" },
+  { ticker: "TATAMOTORS", name: "Tata Motors", sector: "Automotive", tag: "EV Leader 🚗" },
+  { ticker: "CONFIPET", name: "Confidence Pet.", sector: "LPG Infrastructure", tag: "Small Cap ⚡" },
+  { ticker: "LT", name: "Larsen & Toubro", sector: "Capital Goods", tag: "Infra Giant 🏗️" },
+  { ticker: "BAJFINANCE", name: "Bajaj Finance", sector: "NBFC / Lending", tag: "Retail Credit 💳" },
+  { ticker: "SUNPHARMA", name: "Sun Pharma", sector: "Pharma / Healthcare", tag: "Pharma Leader 💊" },
+  { ticker: "TATASTEEL", name: "Tata Steel", sector: "Metals & Mining", tag: "Materials ⚙️" },
 ];
 
 interface StockScorecardViewProps {
@@ -202,79 +206,85 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
 
   return (
     <div className="space-y-6">
-      {/* Top Search & Presets Bar */}
-      <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3 relative z-30">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div ref={searchContainerRef} className="relative flex-1 max-w-lg">
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={tickerInput}
-                  onChange={(e) => {
-                    setTickerInput(e.target.value);
-                    setShowDropdown(true);
-                  }}
-                  onFocus={() => {
-                    if (suggestions.length > 0) setShowDropdown(true);
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search NSE/BSE Stock (e.g. RELIANCE, TCS, PICCADIL, L&T)..."
-                  className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-10 pr-9 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono uppercase"
-                />
-                {isSearching && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-cyan-400 animate-spin" />
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-cyan-950 flex items-center gap-1.5 disabled:opacity-50 shrink-0"
-              >
-                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-                <span>Analyze</span>
-              </button>
-            </form>
-
-            {/* Debounced Autocomplete Dropdown */}
-            {showDropdown && suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-xl max-h-72 overflow-y-auto divide-y divide-slate-800/60 z-50">
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/60 flex items-center justify-between">
-                  <span>Matching Indian Equities</span>
-                  <span className="text-[9px] font-mono lowercase">↑↓ navigate • ↵ select</span>
-                </div>
-                {suggestions.map((item, idx) => (
-                  <button
-                    key={item.ticker}
-                    type="button"
-                    onClick={() => selectSuggestion(item)}
-                    className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between text-xs transition-colors ${
-                      idx === selectedIndex ? "bg-cyan-950/60 text-cyan-200" : "hover:bg-slate-900/80 text-slate-200"
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white font-mono">{item.ticker.replace(".NS", "").replace(".BO", "")}</span>
-                        <span className="px-1.5 py-0.2 text-[9px] font-semibold bg-slate-800 text-slate-300 rounded">
-                          {item.exchange}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400">{item.name}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[10px] text-slate-500 hidden sm:inline">{item.sector}</span>
-                      <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
-                    </div>
-                  </button>
-                ))}
-              </div>
+      {/* 🌟 Top Hero Search & Multiline Suggestions Panel */}
+      <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-4 relative z-30 shadow-2xl backdrop-blur-xl">
+        {/* Full-Width Search Input Bar */}
+        <div ref={searchContainerRef} className="relative w-full">
+          <form onSubmit={handleSearchSubmit} className="relative w-full flex items-center">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-cyan-400 pointer-events-none" />
+            <input
+              type="text"
+              value={tickerInput}
+              onChange={(e) => {
+                setTickerInput(e.target.value);
+                setShowDropdown(true);
+              }}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowDropdown(true);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Search any Indian Stock by Symbol or Company Name (e.g. RELIANCE, TCS, PICCADIL, TATAMOTORS, HDFCBANK)..."
+              className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-cyan-500 rounded-2xl pl-12 pr-36 py-3.5 text-sm md:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all shadow-inner font-mono uppercase"
+            />
+            {isSearching && (
+              <Loader2 className="absolute right-32 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400 animate-spin" />
             )}
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs md:text-sm font-semibold rounded-xl transition-all shadow-md shadow-cyan-950 flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              <span>Analyze Stock</span>
+            </button>
+          </form>
 
-          {/* Quick Preset Stock Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-            <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mr-1">Watchlist:</span>
+          {/* Debounced Autocomplete Dropdown */}
+          {showDropdown && suggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl max-h-80 overflow-y-auto divide-y divide-slate-800/60 z-50">
+              <div className="px-4 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
+                <span>Matching Indian Equities ({suggestions.length})</span>
+                <span className="text-[9px] font-mono lowercase">↑↓ navigate • ↵ select • esc close</span>
+              </div>
+              {suggestions.map((item, idx) => (
+                <button
+                  key={item.ticker}
+                  type="button"
+                  onClick={() => selectSuggestion(item)}
+                  className={`w-full text-left px-4 py-3 flex items-center justify-between text-xs md:text-sm transition-colors ${
+                    idx === selectedIndex ? "bg-cyan-950/70 text-cyan-200" : "hover:bg-slate-900/80 text-slate-200"
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white font-mono text-sm">{item.ticker.replace(".NS", "").replace(".BO", "")}</span>
+                      <span className="px-2 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-300 rounded">
+                        {item.exchange}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 font-medium">{item.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-slate-500 font-mono hidden sm:inline">{item.sector}</span>
+                    <ChevronRight className="h-4 w-4 text-slate-600" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Multi-line Quick Presets Panel Below Input */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-2">
+          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+              <span>High-Conviction Watchlist (Instant 0-100 Factor Audit):</span>
+            </span>
+            <span className="text-[10px] text-slate-500 font-normal lowercase hidden sm:inline">click to audit stock</span>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             {PRESET_TICKERS.map((item) => (
               <button
                 key={item.ticker}
@@ -282,13 +292,20 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   setTickerInput(item.ticker);
                   loadScorecard(item.ticker);
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
                   data?.ticker.includes(item.ticker)
-                    ? "bg-cyan-950 text-cyan-300 border border-cyan-700 font-semibold"
-                    : "bg-slate-900/60 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-700"
+                    ? "bg-cyan-950 text-cyan-300 border border-cyan-600 shadow-md shadow-cyan-950 font-semibold"
+                    : "bg-slate-900/70 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 hover:bg-slate-900"
                 }`}
               >
-                {item.name}
+                <span className="font-mono font-bold text-white">{item.ticker}</span>
+                <span className="text-slate-400">({item.name})</span>
+                <span className="text-[10px] font-mono text-slate-500 bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-800/80">
+                  {item.sector}
+                </span>
+                <span className="text-[10px] text-cyan-400 font-semibold">
+                  {item.tag}
+                </span>
               </button>
             ))}
           </div>
@@ -320,7 +337,7 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
               Explore 0–100 Durability, Valuation & Momentum (DVM) scorecards, Screener.in-grade annual financials, shareholding pattern, calculated PEG ratio, and growth archetype classifications.
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2 max-w-3xl mx-auto">
             {PRESET_TICKERS.map((item) => (
               <button
                 key={item.ticker}
@@ -328,9 +345,11 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   setTickerInput(item.ticker);
                   loadScorecard(item.ticker);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-cyan-300 hover:border-cyan-800 transition-all font-mono"
+                className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 hover:text-cyan-300 hover:border-cyan-700 transition-all font-mono flex items-center gap-1.5"
               >
-                {item.ticker} ({item.name})
+                <span className="font-bold text-white">{item.ticker}</span>
+                <span className="text-slate-400">({item.name})</span>
+                <span className="text-[10px] text-cyan-400">{item.tag}</span>
               </button>
             ))}
           </div>
