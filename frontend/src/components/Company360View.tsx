@@ -531,21 +531,21 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const forecastChartData = useMemo(() => {
     if (!data?.financials?.income_statement || !activeForecastScenario) return [];
     const years = data.financials.income_statement.years || [];
-    const revRow = data.financials.income_statement.rows.find(
+    const revRow = (data.financials.income_statement.rows || []).find(
       (r) =>
-        r.metric_name.toLowerCase().includes("revenue") ||
-        r.metric_name.toLowerCase().includes("sales")
+        r.metric_name?.toLowerCase().includes("revenue") ||
+        r.metric_name?.toLowerCase().includes("sales")
     );
-    const patRow = data.financials.income_statement.rows.find(
+    const patRow = (data.financials.income_statement.rows || []).find(
       (r) =>
-        r.metric_name.toLowerCase().includes("net profit") ||
-        r.metric_name.toLowerCase().includes("pat")
+        r.metric_name?.toLowerCase().includes("net profit") ||
+        r.metric_name?.toLowerCase().includes("pat")
     );
 
     const histPoints = years.map((y) => ({
       year: y,
-      revenue_hist: revRow?.values[y] ?? null,
-      pat_hist: patRow?.values[y] ?? null,
+      revenue_hist: revRow?.values?.[y] ?? null,
+      pat_hist: patRow?.values?.[y] ?? null,
       revenue_proj: null as number | null,
       pat_proj: null as number | null,
       is_projection: false,
@@ -558,8 +558,8 @@ export const Company360View: React.FC<Company360ViewProps> = ({
       lastPoint.pat_proj = lastPoint.pat_hist;
     }
 
-    const projPoints = activeForecastScenario.projections.map((p) => ({
-      year: p.year_label.split(" ")[0],
+    const projPoints = (activeForecastScenario.projections || []).map((p) => ({
+      year: p.year_label?.split(" ")[0] || "FY26",
       revenue_hist: null as number | null,
       pat_hist: null as number | null,
       revenue_proj: p.revenue_cr,
@@ -812,7 +812,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   loadCompanyData(item.ticker);
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                  data?.ticker === item.ticker || tickerInput.toUpperCase().includes(item.ticker)
+                  data?.ticker === item.ticker || (tickerInput ? tickerInput.toUpperCase().includes(item.ticker) : false)
                     ? "bg-cyan-950 text-cyan-300 border border-cyan-600 shadow-md shadow-cyan-950 font-semibold"
                     : "bg-slate-900/70 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 hover:bg-slate-900"
                 }`}
@@ -1567,14 +1567,14 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       <div className="flex items-center gap-2 text-xs font-mono">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                            valSummary.valuation_verdict.toLowerCase().includes("undervalued")
+                            valSummary.valuation_verdict?.toLowerCase().includes("undervalued")
                               ? "bg-emerald-950 text-emerald-300 border-emerald-800"
-                              : valSummary.valuation_verdict.toLowerCase().includes("fair")
+                              : valSummary.valuation_verdict?.toLowerCase().includes("fair")
                               ? "bg-cyan-950 text-cyan-300 border-cyan-800"
                               : "bg-amber-950 text-amber-300 border-amber-800"
                           }`}
                         >
-                          {valSummary.valuation_verdict}
+                          {valSummary.valuation_verdict || "Valuation Analysis"}
                         </span>
                         {valSummary.period_return_pct !== undefined && valSummary.period_return_pct !== null && (
                           <span
@@ -1595,7 +1595,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono bg-slate-900/30 p-2.5 rounded-xl border border-slate-800/80">
                       <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
                         <span className="text-[10px] text-slate-500 uppercase block font-semibold">Current P/E</span>
-                        <span className="font-bold text-amber-300 text-sm">{valSummary.current_pe || data.essentials.pe || "N/A"}x</span>
+                        <span className="font-bold text-amber-300 text-sm">{valSummary.current_pe || data.essentials?.pe || "N/A"}x</span>
                       </div>
                       <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
                         <span className="text-[10px] text-cyan-400 uppercase block font-semibold">{selectedTimeframe.toUpperCase()} Median P/E</span>
@@ -2079,11 +2079,11 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                         <div className="pt-3 space-y-2.5 text-xs font-mono">
                           <div className="flex justify-between items-center">
                             <span className="text-slate-400">Projected Revenue:</span>
-                            <span className="font-bold text-slate-100">₹{proj.revenue_cr.toLocaleString("en-IN")} Cr</span>
+                            <span className="font-bold text-slate-100">₹{proj.revenue_cr?.toLocaleString("en-IN") ?? "-"} Cr</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-400">Projected PAT:</span>
-                            <span className="font-bold text-emerald-400">₹{proj.pat_cr.toLocaleString("en-IN")} Cr</span>
+                            <span className="font-bold text-emerald-400">₹{proj.pat_cr?.toLocaleString("en-IN") ?? "-"} Cr</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-400">Projected EPS:</span>
@@ -2091,7 +2091,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                           </div>
                           <div className="pt-2 border-t border-slate-800/80 flex justify-between items-center">
                             <span className="text-slate-300 font-semibold">Implied Target Price:</span>
-                            <span className="font-extrabold text-cyan-300 text-sm">₹{proj.target_price.toLocaleString("en-IN")}</span>
+                            <span className="font-extrabold text-cyan-300 text-sm">₹{proj.target_price?.toLocaleString("en-IN") ?? "-"}</span>
                           </div>
                           <div className="flex justify-between items-center text-[11px]">
                             <span className="text-slate-500">Annualized Expected CAGR:</span>
@@ -2431,7 +2431,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
                   {/* Segment Bars */}
                   <div className="space-y-3">
-                    {data.segments.map((seg) => (
+                    {(data.segments || []).map((seg) => (
                       <div key={seg.name} className="space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="font-semibold text-slate-200">{seg.name}</span>
@@ -2460,7 +2460,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       <span>Geographic Distribution</span>
                     </span>
                     <div className="grid grid-cols-2 gap-2">
-                      {data.geography.map((geo) => (
+                      {(data.geography || []).map((geo) => (
                         <div key={geo.region} className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex justify-between items-center text-xs">
                           <span className="text-slate-300 font-medium">{geo.region}</span>
                           <span className="font-bold text-slate-100 font-mono">{geo.percentage}%</span>
@@ -2481,7 +2481,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
 
                   <div className="space-y-2.5">
-                    {data.forensics.map((f) => (
+                    {(data.forensics || []).map((f) => (
                       <div
                         key={f.title}
                         className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-1 hover:border-slate-700 transition-colors"
@@ -2621,13 +2621,14 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   <div className="text-xs text-slate-300">
                     Custom Scenario Intrinsic Value:{" "}
                     <strong className="text-white text-sm font-mono">
-                      ₹{calculateDynamic2StageFairValue(data.essentials.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth)}
+                      ₹{calculateDynamic2StageFairValue(data.essentials?.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth)}
                     </strong>
                   </div>
                   <div className="text-xs font-mono">
                     {(() => {
-                      const fv = calculateDynamic2StageFairValue(data.essentials.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth);
-                      const mos = Math.round(((fv - data.essentials.current_price) / Math.max(1, fv)) * 1000) / 10;
+                      const fv = calculateDynamic2StageFairValue(data.essentials?.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth);
+                      const cmp = data.essentials?.current_price ?? 0;
+                      const mos = Math.round(((fv - cmp) / Math.max(1, fv)) * 1000) / 10;
                       return (
                         <span className={mos >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
                           Margin of Safety: {mos > 0 ? "+" : ""}{mos}%
@@ -2700,11 +2701,11 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-300 font-semibold">Reverse DCF Implied 5Y Growth:</span>
                     <span className="text-lg font-black text-amber-400 font-mono">
-                      {calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}% CAGR
+                      {calculateDynamicImpliedGrowth(data.essentials?.current_price ?? 0, data.essentials?.eps_ttm || 20.0, discountRate, terminalGrowth)}% CAGR
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    At the current price of ₹{data.essentials.current_price}, the market assumes the company will compound earnings at <strong>{calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}% per year</strong> over the next 5 years (at {discountRate}% discount rate and {terminalGrowth}% terminal growth).
+                    At the current price of ₹{data.essentials?.current_price ?? 0}, the market assumes the company will compound earnings at <strong>{calculateDynamicImpliedGrowth(data.essentials?.current_price ?? 0, data.essentials?.eps_ttm || 20.0, discountRate, terminalGrowth)}% per year</strong> over the next 5 years (at {discountRate}% discount rate and {terminalGrowth}% terminal growth).
                   </p>
                 </div>
               </div>
