@@ -95,7 +95,8 @@ export const Header: React.FC<HeaderProps> = ({
     setShowDropdown(false);
     setSearchQuery("");
     if (onSelectEntity) {
-      onSelectEntity(item.symbol_or_code || item.id, item.type);
+      const targetId = item.type === "fund" ? item.id : (item.symbol_or_code || item.id);
+      onSelectEntity(targetId, item.type);
     }
   };
 

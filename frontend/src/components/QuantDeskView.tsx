@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Cpu, Activity, TrendingUp, PieChart } from "lucide-react";
 import { StockScorecardView } from "./StockScorecardView";
 import { FundAnalyzerView } from "./FundAnalyzerView";
@@ -18,6 +18,18 @@ export const QuantDeskView: React.FC<QuantDeskViewProps> = ({
   const [quantSubTab, setQuantSubTab] = useState<"stocks" | "funds" | "portfolio">(
     initialFundCode ? "funds" : "stocks"
   );
+
+  useEffect(() => {
+    if (initialFundCode) {
+      setQuantSubTab("funds");
+    }
+  }, [initialFundCode]);
+
+  useEffect(() => {
+    if (initialStockTicker && !initialFundCode) {
+      setQuantSubTab("stocks");
+    }
+  }, [initialStockTicker]);
 
   return (
     <div className="space-y-6">

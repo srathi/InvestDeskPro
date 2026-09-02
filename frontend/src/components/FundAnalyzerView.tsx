@@ -47,8 +47,14 @@ const POPULAR_FUNDS = [
   { code: "120828", name: "Kotak Emerging Equity" },
 ];
 
-export const FundAnalyzerView: React.FC = () => {
-  const [schemeCode, setSchemeCode] = useState("");
+interface FundAnalyzerViewProps {
+  initialSchemeCode?: string;
+}
+
+export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
+  initialSchemeCode = "",
+}) => {
+  const [schemeCode, setSchemeCode] = useState(initialSchemeCode || "");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FundSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -61,6 +67,14 @@ export const FundAnalyzerView: React.FC = () => {
 
   // Debounce search query by 300ms
   const debouncedQuery = useDebounce(searchQuery, 300);
+
+  useEffect(() => {
+    if (initialSchemeCode && initialSchemeCode.trim()) {
+      const cleanCode = initialSchemeCode.replace("AMFI #", "").trim();
+      setSchemeCode(cleanCode);
+      loadFund(cleanCode);
+    }
+  }, [initialSchemeCode]);
 
   const loadFund = async (code: string) => {
     if (!code.trim()) return;
