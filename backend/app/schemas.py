@@ -162,6 +162,81 @@ class FundRollingDataPoint(BaseModel):
     rolling_alpha: float
 
 
+class FundDrawdownPoint(BaseModel):
+    date: str
+    fund_drawdown_pct: float
+    benchmark_drawdown_pct: float
+
+
+class RollingHorizonDistribution(BaseModel):
+    horizon_label: str = Field(..., description="e.g. 1-Year, 3-Year, 5-Year")
+    periods_count: int
+    median_cagr: float
+    percentile_25: float
+    percentile_75: float
+    min_cagr: float
+    max_cagr: float
+    prob_negative_pct: float = Field(..., description="Probability of negative return over horizon (%)")
+    hit_rate_vs_bench_pct: float = Field(..., description="Percentage of periods outperforming Nifty 50 TRI (%)")
+
+
+class FundFormRating(BaseModel):
+    status: str = Field(..., description="in_form, on_track, off_track, out_of_form")
+    status_title: str = Field(..., description="e.g. In-Form (Top Tier Compounder)")
+    badge_color: str = Field(..., description="emerald, cyan, amber, rose")
+    action_recommendation: str = Field(..., description="e.g. Keep Investing / Add SIP, Pause Inflows, Switch to Better Peer")
+    summary_rationale: List[str] = Field(default_factory=list)
+
+
+class DrawdownRecoveryEvent(BaseModel):
+    event_name: str
+    period_label: str
+    fund_max_drawdown_pct: float
+    benchmark_max_drawdown_pct: float
+    recovery_days_fund: int
+    recovery_days_benchmark: int
+    downside_cushion_pct: float
+
+
+class CategoryAlternativeFund(BaseModel):
+    scheme_code: str
+    scheme_name: str
+    category: str
+    form_status: str
+    alpha_3y: float
+    alpha_delta_pct: float
+    downside_capture: float
+    dcr_improvement_pct: float
+    consistency_pct: float
+    direct_ter: float
+
+
+class FundPillarScore(BaseModel):
+    pillar_name: str
+    score: float
+    max_score: float
+    grade: str
+    key_driver: str
+
+
+class FundHolisticScorecard(BaseModel):
+    total_score: float = Field(..., ge=0, le=100)
+    grade: str = Field(..., description="Institutional Grade (e.g. AAA, AA, A, B, C)")
+    verdict: str
+    pillars: List[FundPillarScore] = Field(default_factory=list)
+    positive_badges: List[str] = Field(default_factory=list)
+    warning_flags: List[str] = Field(default_factory=list)
+
+
+class InvestorHorizonPlaybook(BaseModel):
+    min_recommended_horizon_years: int
+    horizon_title: str
+    horizon_rationale: str
+    sip_suitability: str
+    sip_suitability_rationale: str
+    direct_vs_regular_10y_drag_lakhs: float
+
+
 class FundRiskStats(BaseModel):
     mean_3y_rolling_alpha: float = Field(..., description="Average 3-Year rolling alpha (%)")
     current_3y_alpha: float = Field(..., description="Latest 3-Year rolling alpha (%)")
@@ -169,9 +244,11 @@ class FundRiskStats(BaseModel):
     information_ratio: float = Field(..., description="Active return over tracking error")
     downside_capture_ratio: float = Field(..., description="Downside capture ratio vs Nifty 50 TRI (%)")
     upside_capture_ratio: float = Field(..., description="Upside capture ratio vs Nifty 50 TRI (%)")
+    asymmetric_capture_spread: float = Field(0.0, description="UCR - DCR capture advantage (%)")
     sharpe_ratio: float = Field(..., description="Annualized Sharpe Ratio")
     sortino_ratio: float = Field(..., description="Annualized Sortino Ratio")
     max_drawdown_pct: float = Field(..., description="Maximum drawdown percentage over historical period")
+    recovery_days_avg: int = Field(0, description="Average recovery duration in days")
     cagr_1y: Optional[float] = None
     cagr_3y: Optional[float] = None
     cagr_5y: Optional[float] = None
@@ -183,8 +260,15 @@ class FundAnalysisResponse(BaseModel):
     meta: FundMeta
     benchmark_name: str = "Nifty 50 TRI (^NSEI)"
     style_box: FundStyleBox
+    form_rating: FundFormRating
+    scorecard: FundHolisticScorecard
+    rolling_distributions: List[RollingHorizonDistribution] = Field(default_factory=list)
     rolling_summary: FundRollingSummary
     stats: FundRiskStats
+    drawdown_events: List[DrawdownRecoveryEvent] = Field(default_factory=list)
+    drawdown_series: List[FundDrawdownPoint] = Field(default_factory=list)
+    suggested_alternatives: List[CategoryAlternativeFund] = Field(default_factory=list)
+    playbook: InvestorHorizonPlaybook
     rolling_series: List[FundRollingDataPoint] = Field(default_factory=list)
     latest_nav: float
     latest_nav_date: str
