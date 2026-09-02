@@ -26,15 +26,61 @@ from app.schemas import (
 MFAPI_BASE_URL = "https://api.mfapi.in/mf"
 
 
+POPULAR_AMFI_FUNDS = [
+    ("122639", "Parag Parikh Flexi Cap Fund - Direct Plan - Growth"),
+    ("118834", "Mirae Asset Large Cap Fund - Direct Plan - Growth"),
+    ("118989", "HDFC Top 100 Fund - Direct Plan - Growth Option"),
+    ("100377", "Quant Active Fund - Growth Option"),
+    ("120503", "Axis Bluechip Fund - Direct Plan - Growth"),
+    ("120716", "SBI Small Cap Fund - Direct Plan - Growth"),
+    ("120828", "Kotak Emerging Equity Fund - Direct Plan - Growth"),
+    ("125354", "Nippon India Small Cap Fund - Direct Plan - Growth Plan"),
+    ("119598", "ICICI Prudential Bluechip Fund - Direct Plan - Growth"),
+    ("119775", "DSP Flexi Cap Fund - Direct Plan - Growth"),
+    ("120505", "Axis Midcap Fund - Direct Plan - Growth"),
+    ("118778", "Motilal Oswal Midcap Fund - Direct Plan - Growth"),
+    ("120847", "UTI Nifty 50 Index Fund - Direct Plan - Growth"),
+    ("120717", "SBI Focused Equity Fund - Direct Plan - Growth"),
+    ("119062", "HDFC Balanced Advantage Fund - Direct Plan - Growth"),
+]
+
+
 async def search_mutual_funds(query: str) -> List[FundSearchResult]:
-    """Search mutual funds by scheme name or code via AMFI / mfapi."""
+    """Search mutual funds by scheme name or numeric code via AMFI / mfapi."""
     q = query.strip()
     if not q:
         return []
-    
-    url = f"{MFAPI_BASE_URL}/search?q={q}"
+
+    # Clean query for digits if prefixed with AMFI # or similar
+    clean_digits = "".join(ch for ch in q if ch.isdigit())
     results: List[FundSearchResult] = []
+    seen_codes = set()
+
+    # 1. Direct scheme code lookup if numeric code is provided
+    if clean_digits and (q.isdigit() or q.upper().startswith("AMFI") or q.startswith("#")):
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                resp = await client.get(f"{MFAPI_BASE_URL}/{clean_digits}")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    meta = data.get("meta", {})
+                    name = meta.get("scheme_name") or f"AMFI Scheme #{clean_digits}"
+                    results.append(FundSearchResult(scheme_code=clean_digits, scheme_name=name))
+                    seen_codes.add(clean_digits)
+        except Exception:
+            pass
+
+    # 2. Match against curated popular AMFI funds
+    q_lower = q.lower()
+    for code, name in POPULAR_AMFI_FUNDS:
+        if code not in seen_codes:
+            if (clean_digits and code == clean_digits) or (q_lower in name.lower()) or (q_lower in code):
+                results.append(FundSearchResult(scheme_code=code, scheme_name=name))
+                seen_codes.add(code)
+
+    # 3. Query mfapi.in search API
     try:
+        url = f"{MFAPI_BASE_URL}/search?q={q}"
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url)
             if resp.status_code == 200:
@@ -42,42 +88,26 @@ async def search_mutual_funds(query: str) -> List[FundSearchResult]:
                 for item in data[:20]:
                     code = str(item.get("schemeCode") or item.get("scheme_code"))
                     name = str(item.get("schemeName") or item.get("scheme_name"))
-                    results.append(FundSearchResult(scheme_code=code, scheme_name=name))
+                    if code not in seen_codes:
+                        results.append(FundSearchResult(scheme_code=code, scheme_name=name))
+                        seen_codes.add(code)
     except Exception:
         pass
 
-    # Provide curated fallback list if search fails or returns empty for popular terms
-    if not results:
-        popular = [
-            ("122639", "Parag Parikh Flexi Cap Fund - Direct Plan - Growth"),
-            ("118834", "Mirae Asset Large Cap Fund - Direct Plan - Growth"),
-            ("118989", "HDFC Top 100 Fund - Direct Plan - Growth Option"),
-            ("100377", "Quant Active Fund - Growth Option"),
-            ("120503", "Axis Bluechip Fund - Direct Plan - Growth"),
-            ("120716", "SBI Small Cap Fund - Direct Plan - Growth"),
-            ("120828", "Kotak Emerging Equity Fund - Direct Plan - Growth"),
-            ("125354", "Nippon India Small Cap Fund - Direct Plan - Growth Plan"),
-            ("119598", "ICICI Prudential Bluechip Fund - Direct Plan - Growth"),
-            ("119775", "DSP Flexi Cap Fund - Direct Plan - Growth"),
-        ]
-        q_lower = q.lower()
-        for code, name in popular:
-            if q_lower in name.lower() or q_lower in code:
-                results.append(FundSearchResult(scheme_code=code, scheme_name=name))
-                
-    return results
+    return results[:15]
 
 
 async def fetch_amfi_nav_history(scheme_code: str) -> Dict[str, Any]:
     """Fetch complete historical NAV for an Indian Mutual Fund scheme from AMFI."""
-    url = f"{MFAPI_BASE_URL}/{scheme_code}"
+    clean_code = "".join(ch for ch in scheme_code if ch.isdigit()) or scheme_code.strip()
+    url = f"{MFAPI_BASE_URL}/{clean_code}"
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(url)
         if resp.status_code != 200:
-            raise ValueError(f"Failed to fetch AMFI scheme {scheme_code} (Status {resp.status_code})")
+            raise ValueError(f"Failed to fetch AMFI scheme {clean_code} (Status {resp.status_code})")
         data = resp.json()
         if not data or "data" not in data or len(data["data"]) == 0:
-            raise ValueError(f"No NAV data found for scheme code {scheme_code}")
+            raise ValueError(f"No NAV data found for scheme code {clean_code}")
         return data
 
 

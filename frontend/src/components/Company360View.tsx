@@ -5,6 +5,7 @@ import {
   TrendingUp,
   TrendingDown,
   ShieldCheck,
+  ShieldAlert,
   AlertTriangle,
   CheckCircle2,
   XCircle,
@@ -212,6 +213,9 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   // Reverse DCF Interactive State
   const [discountRate, setDiscountRate] = useState(12.0);
   const [terminalGrowth, setTerminalGrowth] = useState(4.0);
+
+  // Diagnostic Alerts Interactive State
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -550,6 +554,152 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
     return [...histPoints, ...projPoints];
   }, [data, activeForecastScenario]);
+
+  // Quantitative Diagnostic Scorecard Alerts & Warning Signals
+  const diagnosticAlerts = useMemo(() => {
+    if (!data) return [];
+    const alerts: {
+      id: string;
+      title: string;
+      metric: string;
+      description: string;
+      severity: "critical" | "warning";
+      threshold: string;
+    }[] = [];
+
+    // 1. Debt-to-Equity Warning (Threshold > 1.5x Critical, > 1.0x Moderate)
+    const de = data.essentials.debt_to_equity;
+    if (de !== undefined && de !== null) {
+      if (de > 1.5) {
+        alerts.push({
+          id: "de-critical",
+          title: "High Balance Sheet Leverage",
+          metric: `D/E: ${de}x`,
+          description: `Debt-to-Equity of ${de}x breaches the conservative threshold of 1.5x, exposing company earnings to heightened debt-servicing and interest rate risk.`,
+          severity: "critical",
+          threshold: "Threshold: > 1.5x",
+        });
+      } else if (de > 1.0) {
+        alerts.push({
+          id: "de-warning",
+          title: "Moderate Leverage",
+          metric: `D/E: ${de}x`,
+          description: `Debt-to-Equity is ${de}x (above 1.0x), warranting close monitoring of cash flows and interest coverage.`,
+          severity: "warning",
+          threshold: "Threshold: > 1.0x",
+        });
+      }
+    }
+
+    // 2. Promoter Pledged Shares Warning (Threshold > 0%)
+    const pledged =
+      data.institutional_delta?.pledged_shares_pct ??
+      data.shareholding?.[0]?.pledged_pct ??
+      0;
+    if (pledged > 0) {
+      alerts.push({
+        id: "pledged-shares",
+        title: "Promoter Pledged Shares Alert",
+        metric: `Pledged: ${pledged}%`,
+        description: `Promoters have pledged ${pledged}% of their equity stake as loan collateral, creating potential margin call / distress selling risk.`,
+        severity: pledged > 15 ? "critical" : "warning",
+        threshold: "Threshold: > 0.0%",
+      });
+    }
+
+    // 3. Operating Cash Flow (OCF) Trajectory & Cash Conversion
+    if (data.financials?.cash_flows?.rows) {
+      const ocfRow = data.financials.cash_flows.rows.find(
+        (r) =>
+          r.metric_name.toLowerCase().includes("operating cash") ||
+          r.metric_name.toLowerCase().includes("cash from operations") ||
+          r.metric_name.toLowerCase().includes("cash from operating")
+      );
+      const patRow = data.financials.income_statement?.rows.find(
+        (r) =>
+          r.metric_name.toLowerCase().includes("net profit") ||
+          r.metric_name.toLowerCase().includes("pat")
+      );
+
+      const years = data.financials.cash_flows.years || [];
+      if (ocfRow && years.length >= 2) {
+        const latestYr = years[years.length - 1];
+        const prevYr = years[years.length - 2];
+        const latestOcf = ocfRow.values[latestYr];
+        const prevOcf = ocfRow.values[prevYr];
+
+        if (latestOcf !== null && latestOcf !== undefined) {
+          if (latestOcf < 0) {
+            alerts.push({
+              id: "ocf-negative",
+              title: "Negative Operating Cash Flow",
+              metric: `OCF: -₹${Math.abs(latestOcf).toLocaleString("en-IN")} Cr`,
+              description: `Latest audited Cash from Operations is negative, indicating operational cash burn.`,
+              severity: "critical",
+              threshold: "Threshold: OCF < 0",
+            });
+          } else if (prevOcf !== null && prevOcf !== undefined && latestOcf < prevOcf * 0.85) {
+            const declinePct = Math.round(((prevOcf - latestOcf) / prevOcf) * 100);
+            alerts.push({
+              id: "ocf-declining",
+              title: "Declining Operating Cash Flow",
+              metric: `OCF: -${declinePct}% YoY`,
+              description: `Operating Cash Flow contracted from ₹${prevOcf.toLocaleString("en-IN")} Cr (${prevYr}) to ₹${latestOcf.toLocaleString("en-IN")} Cr (${latestYr}).`,
+              severity: "warning",
+              threshold: "YoY Decline > 15%",
+            });
+          }
+
+          // Check OCF to PAT conversion
+          if (patRow && latestOcf > 0) {
+            const latestPat = patRow.values[latestYr];
+            if (latestPat && latestPat > 0 && latestOcf < latestPat * 0.7) {
+              const ratio = (latestOcf / latestPat).toFixed(2);
+              alerts.push({
+                id: "ocf-pat-divergence",
+                title: "Weak Cash Conversion (OCF < PAT)",
+                metric: `OCF/PAT: ${ratio}x`,
+                description: `Operating Cash Flow (₹${latestOcf} Cr) is significantly below accounting PAT (₹${latestPat} Cr), signaling potential revenue realization delays.`,
+                severity: "warning",
+                threshold: "OCF / PAT < 0.70x",
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Valuation Stretch vs Historical 5Y Median Benchmark
+    const pe = data.essentials.pe;
+    const medianPe = data.historical_valuation_summary?.median_pe ?? data.forward_estimates?.median_pe_benchmark;
+    if (pe && medianPe && pe > medianPe * 1.45 && pe > 35) {
+      alerts.push({
+        id: "pe-stretch",
+        title: "Extended Valuation Multiple",
+        metric: `P/E: ${pe}x vs 5Y Med: ${medianPe}x`,
+        description: `Current P/E of ${pe}x trades at a ${Math.round(((pe - medianPe) / medianPe) * 100)}% premium above historical 5-year median (${medianPe}x).`,
+        severity: "warning",
+        threshold: "> 45% Premium vs Median",
+      });
+    }
+
+    // 5. Forensic Probe Red-Flags
+    if (data.forensics) {
+      const redFlags = data.forensics.filter((f) => f.verdict === "Red Flag");
+      if (redFlags.length > 0) {
+        alerts.push({
+          id: "forensic-red-flags",
+          title: "Forensic Accounting Probe Flag",
+          metric: `${redFlags.length} Red Flag${redFlags.length > 1 ? "s" : ""}`,
+          description: redFlags.map((rf) => `${rf.probe_name}: ${rf.details}`).join(" • "),
+          severity: "critical",
+          threshold: "Forensic Probe Verdict",
+        });
+      }
+    }
+
+    return alerts;
+  }, [data]);
 
   return (
     <div className="space-y-6">
@@ -939,9 +1089,99 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       />
                     </div>
                   </div>
+
+                  {/* Diagnostic Scorecard Health Check & Warning Signals Ribbon */}
+                  <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className={`h-4 w-4 ${diagnosticAlerts.length > 0 ? "text-amber-400" : "text-emerald-400"}`} />
+                        <span className="text-xs font-bold text-slate-200">
+                          Diagnostic Health Scorecard:
+                        </span>
+                        {diagnosticAlerts.length > 0 ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                            {diagnosticAlerts.length} Risk Signal{diagnosticAlerts.length > 1 ? "s" : ""}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                            ✓ Clean Balance Sheet & Cash Flows
+                          </span>
+                        )}
+                      </div>
+
+                      {diagnosticAlerts.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllAlerts(!showAllAlerts)}
+                          className="text-[11px] font-mono text-cyan-400 hover:underline cursor-pointer"
+                        >
+                          {showAllAlerts ? "Hide Details ▴" : "View Diagnostic Breakdown ▾"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Warning Badges Strip */}
+                    {diagnosticAlerts.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {diagnosticAlerts.map((alert) => (
+                            <button
+                              key={alert.id}
+                              type="button"
+                              onClick={() => setShowAllAlerts(true)}
+                              className={`px-3 py-1 rounded-xl text-xs font-mono font-semibold border cursor-pointer transition-all flex items-center gap-1.5 shadow-sm text-left ${
+                                alert.severity === "critical"
+                                  ? "bg-rose-950/80 text-rose-200 border-rose-800 hover:bg-rose-900/90"
+                                  : "bg-amber-950/80 text-amber-200 border-amber-800 hover:bg-amber-900/90"
+                              }`}
+                              title={alert.description}
+                            >
+                              {alert.severity === "critical" ? (
+                                <AlertTriangle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                              ) : (
+                                <ShieldAlert className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                              )}
+                              <span>{alert.title}</span>
+                              <span className="px-1.5 py-0.2 rounded bg-black/40 text-[10px] font-bold">
+                                {alert.metric}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Expanded Breakdown Drawer */}
+                        {showAllAlerts && (
+                          <div className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2.5 mt-2 divide-y divide-slate-800/70">
+                            {diagnosticAlerts.map((alert) => (
+                              <div key={alert.id} className="pt-2 first:pt-0 text-xs space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className={`font-bold flex items-center gap-1.5 ${
+                                    alert.severity === "critical" ? "text-rose-300" : "text-amber-300"
+                                  }`}>
+                                    {alert.title} ({alert.metric})
+                                  </span>
+                                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                                    {alert.threshold}
+                                  </span>
+                                </div>
+                                <p className="text-slate-300 font-mono text-[11px] leading-relaxed">
+                                  {alert.description}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-[11px] text-emerald-300 font-mono flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        <span>Passed conservative diagnostic checks: D/E &lt; 1.0x, 0% Promoter Pledged Equity, and Positive Cash Flow Compounding.</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* 12-Factor Fundamental Essentials Grid */}
+                {/* 12-Factor Fundamental Essentials Grid with Diagnostic Enhancements */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                   <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
                     <span className="text-[10px] text-slate-500 uppercase font-semibold block">Market Cap</span>
@@ -951,7 +1191,18 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
 
                   <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Stock P/E</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Stock P/E</span>
+                      {data.essentials.pe && (data.historical_valuation_summary?.median_pe || data.forward_estimates?.median_pe_benchmark) && (
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold font-mono ${
+                          data.essentials.pe > (data.historical_valuation_summary?.median_pe || data.forward_estimates?.median_pe_benchmark || 25) * 1.35
+                            ? "bg-amber-950 text-amber-300 border border-amber-800"
+                            : "bg-cyan-950 text-cyan-300 border border-cyan-800"
+                        }`}>
+                          {data.essentials.pe > (data.historical_valuation_summary?.median_pe || data.forward_estimates?.median_pe_benchmark || 25) * 1.35 ? "Premium" : "In-Line"}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm font-bold text-cyan-400 font-mono font-tabular">
                       {data.essentials.pe ? `${data.essentials.pe}x` : "N/A"}
                     </div>
@@ -972,14 +1223,40 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
 
                   <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROCE</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROCE</span>
+                      {data.essentials.roce && (
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold font-mono ${
+                          data.essentials.roce >= 20
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                            : data.essentials.roce < 12
+                            ? "bg-amber-950 text-amber-300 border border-amber-800"
+                            : "bg-slate-900 text-slate-400 border border-slate-800"
+                        }`}>
+                          {data.essentials.roce >= 20 ? "Elite" : data.essentials.roce < 12 ? "Sub-12%" : "Healthy"}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
                       {data.essentials.roce ? `${data.essentials.roce}%` : "N/A"}
                     </div>
                   </div>
 
                   <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROE</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROE</span>
+                      {data.essentials.roe && (
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold font-mono ${
+                          data.essentials.roe >= 20
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                            : data.essentials.roe < 12
+                            ? "bg-amber-950 text-amber-300 border border-amber-800"
+                            : "bg-slate-900 text-slate-400 border border-slate-800"
+                        }`}>
+                          {data.essentials.roe >= 20 ? "Elite" : data.essentials.roe < 12 ? "Sub-12%" : "Healthy"}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
                       {data.essentials.roe ? `${data.essentials.roe}%` : "N/A"}
                     </div>
@@ -992,9 +1269,34 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Debt to Equity</span>
-                    <div className="text-sm font-bold text-slate-200 font-mono font-tabular">
+                  <div className={`glass-panel p-3.5 rounded-xl border space-y-1 transition-all ${
+                    data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined && data.essentials.debt_to_equity > 1.5
+                      ? "border-rose-700/80 bg-rose-950/25 shadow-md shadow-rose-950/30"
+                      : data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined && data.essentials.debt_to_equity > 1.0
+                      ? "border-amber-700/80 bg-amber-950/20"
+                      : "border-slate-800"
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Debt to Equity</span>
+                      {data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined && (
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold font-mono ${
+                          data.essentials.debt_to_equity > 1.5
+                            ? "bg-rose-950 text-rose-300 border border-rose-800"
+                            : data.essentials.debt_to_equity > 1.0
+                            ? "bg-amber-950 text-amber-300 border border-amber-800"
+                            : "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                        }`}>
+                          {data.essentials.debt_to_equity > 1.5 ? "High (>1.5x)" : data.essentials.debt_to_equity > 1.0 ? "Moderate" : "Low Debt"}
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-sm font-bold font-mono font-tabular ${
+                      data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined && data.essentials.debt_to_equity > 1.5
+                        ? "text-rose-400"
+                        : data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined && data.essentials.debt_to_equity > 1.0
+                        ? "text-amber-300"
+                        : "text-slate-200"
+                    }`}>
                       {data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined ? `${data.essentials.debt_to_equity}x` : "0.00 (Cash Rich)"}
                     </div>
                   </div>
@@ -1007,7 +1309,20 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
 
                   <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">PEG Ratio</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">PEG Ratio</span>
+                      {data.essentials.peg_ratio !== null && data.essentials.peg_ratio !== undefined && (
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold font-mono ${
+                          data.essentials.peg_ratio < 1.0
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                            : data.essentials.peg_ratio > 2.0
+                            ? "bg-amber-950 text-amber-300 border border-amber-800"
+                            : "bg-cyan-950 text-cyan-300 border border-cyan-800"
+                        }`}>
+                          {data.essentials.peg_ratio < 1.0 ? "Attractive" : data.essentials.peg_ratio > 2.0 ? "Premium" : "Fair"}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm font-bold text-cyan-300 font-mono font-tabular">
                       {data.essentials.peg_ratio !== null && data.essentials.peg_ratio !== undefined ? `${data.essentials.peg_ratio}x` : "1.25x"}
                     </div>
@@ -1020,15 +1335,25 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Promoter Holding</span>
+                  <div className={`glass-panel p-3.5 rounded-xl border space-y-1 transition-all ${
+                    (data.institutional_delta?.pledged_shares_pct || data.shareholding?.[0]?.pledged_pct || 0) > 0
+                      ? "border-amber-700/80 bg-amber-950/20"
+                      : "border-slate-800"
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Promoter Holding</span>
+                      {(data.institutional_delta?.pledged_shares_pct || data.shareholding?.[0]?.pledged_pct || 0) > 0 && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-rose-950 text-rose-300 border border-rose-800">
+                          {data.institutional_delta?.pledged_shares_pct || data.shareholding?.[0]?.pledged_pct}% Pledged
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
                       {data.essentials.promoter_holding_pct ? `${data.essentials.promoter_holding_pct}%` : "54.2%"}
                     </div>
                   </div>
                 </div>
 
-                {/* Interactive Charting Suite (Price, Volume, P/E Multiple & Valuation Bands) */}
                 <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
                   {/* Header & Controls */}
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-slate-800">

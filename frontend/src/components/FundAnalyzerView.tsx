@@ -130,15 +130,25 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const clean = searchQuery.trim();
+    if (!clean) return;
+
     if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
       const selected = searchResults[selectedIndex];
       setSchemeCode(selected.scheme_code);
       loadFund(selected.scheme_code);
       setSearchQuery(selected.scheme_name);
-    } else if (searchQuery.trim().length >= 2 && searchResults.length > 0) {
+    } else if (searchResults.length > 0) {
       const first = searchResults[0];
       setSchemeCode(first.scheme_code);
       loadFund(first.scheme_code);
+    } else {
+      // Direct numeric code lookup
+      const digits = clean.replace(/[^0-9]/g, "");
+      if (digits) {
+        setSchemeCode(digits);
+        loadFund(digits);
+      }
     }
   };
 
@@ -183,7 +193,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                     if (searchResults.length > 0) setShowDropdown(true);
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type Scheme Name (e.g. Parag Parikh, Mirae, HDFC)..."
+                  placeholder="Type Scheme Name or AMFI Code (e.g. 122639, Parag Parikh, HDFC)..."
                   className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-10 pr-9 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 />
                 {isSearching && (
