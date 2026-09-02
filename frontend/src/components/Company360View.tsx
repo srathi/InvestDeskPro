@@ -76,14 +76,6 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const [data, setData] = useState<Company360Response | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Autocompletion state
-  const [suggestions, setSuggestions] = useState<StockSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-  const debouncedQuery = useDebounce(tickerInput, 200);
-
   // Sub-tabs for financial statements and charts
   const [financialTab, setFinancialTab] = useState<"pl" | "bs" | "cf">("pl");
   const [chartView, setChartView] = useState<"price" | "pe" | "pb">("price");
@@ -204,41 +196,6 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     }
   };
 
-  // Live autocomplete search
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      const clean = debouncedQuery.trim();
-      if (clean.length >= 1) {
-        setIsSearching(true);
-        try {
-          const results = await searchStocks(clean);
-          setSuggestions(results);
-          setShowDropdown(results.length > 0);
-          setSelectedIndex(-1);
-        } catch {
-          setSuggestions([]);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSuggestions([]);
-        setShowDropdown(false);
-      }
-    };
-    fetchSuggestions();
-  }, [debouncedQuery]);
-
-  // Click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   useEffect(() => {
     if (initialTicker && initialTicker.trim()) {
       setTickerInput(initialTicker);
@@ -247,41 +204,6 @@ export const Company360View: React.FC<Company360ViewProps> = ({
       setData(null);
     }
   }, [initialTicker]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-      selectSuggestion(suggestions[selectedIndex]);
-    } else if (tickerInput.trim()) {
-      loadCompanyData(tickerInput.trim());
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showDropdown || suggestions.length === 0) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
-    } else if (e.key === "Enter") {
-      if (selectedIndex >= 0) {
-        e.preventDefault();
-        selectSuggestion(suggestions[selectedIndex]);
-      }
-    } else if (e.key === "Escape") {
-      setShowDropdown(false);
-    }
-  };
-
-  const selectSuggestion = (item: StockSearchResult) => {
-    const cleanSym = item.ticker.replace(".NS", "").replace(".BO", "");
-    setTickerInput(cleanSym);
-    loadCompanyData(item.ticker);
-    setShowDropdown(false);
-  };
 
   // 52-Week Progress Pin Calculation
   const calculate52WPosition = (cmp: number, low: number, high: number) => {
@@ -359,72 +281,12 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Search & Quick Chips Bar */}
-      <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 max-w-md relative" ref={searchContainerRef}>
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              value={tickerInput}
-              onChange={(e) => setTickerInput(e.target.value)}
-              onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
-              onKeyDown={handleKeyDown}
-              placeholder="Search NSE/BSE Stock (e.g. TATAMOTORS, PICCADILY, INFY)..."
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-9 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
-            />
-            {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-cyan-400 animate-spin" />
-            )}
-
-            {/* Live Autocompletion Dropdown */}
-            {showDropdown && suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/95 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-800/60">
-                {suggestions.map((item, idx) => (
-                  <button
-                    key={item.ticker}
-                    type="button"
-                    onClick={() => selectSuggestion(item)}
-                    className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between transition-colors ${
-                      selectedIndex === idx
-                        ? "bg-cyan-950/80 text-cyan-300"
-                        : "hover:bg-slate-900/90 text-slate-200"
-                    }`}
-                  >
-                    <div className="flex flex-col min-w-0 pr-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-white tracking-wide">
-                          {item.ticker.replace(".NS", "").replace(".BO", "")}
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                          {item.exchange}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-slate-400 truncate mt-0.5">{item.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0 text-[10px] text-slate-500">
-                      <span className="hidden sm:inline">{item.sector}</span>
-                      <ChevronRight className="h-3 w-3 text-slate-600" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-cyan-950 flex items-center gap-1.5 disabled:opacity-50 shrink-0"
-          >
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Building2 className="h-3.5 w-3.5" />}
-            <span>Analyze</span>
-          </button>
-        </form>
-
-        {/* Quick Ticker Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-          <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mr-1 shrink-0">
-            Presets:
+      {/* Quick Presets & Global Search Navigation Ribbon */}
+      <div className="glass-panel p-3 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mr-1 shrink-0 flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+            <span>Presets:</span>
           </span>
           {PRESET_COMPANIES.map((item) => (
             <button
@@ -434,8 +296,8 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                 loadCompanyData(item.ticker);
               }}
               className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all whitespace-nowrap ${
-                tickerInput.toUpperCase().includes(item.ticker)
-                  ? "bg-cyan-950 text-cyan-300 border border-cyan-700"
+                data?.ticker === item.ticker || tickerInput.toUpperCase().includes(item.ticker)
+                  ? "bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm shadow-cyan-950"
                   : "bg-slate-900/60 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-700"
               }`}
             >
@@ -443,6 +305,24 @@ export const Company360View: React.FC<Company360ViewProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Global Search Trigger */}
+        <button
+          type="button"
+          onClick={() => {
+            const input = document.querySelector<HTMLInputElement>("header input");
+            input?.focus();
+            input?.select();
+          }}
+          className="text-xs text-slate-400 hover:text-cyan-300 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 hover:border-cyan-800 transition-all flex items-center gap-2 shrink-0 font-mono group"
+          title="Search any stock or fund with Cmd+K"
+        >
+          <Search className="h-3.5 w-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+          <span>Search any stock...</span>
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-slate-500 bg-slate-900 border border-slate-800 rounded font-mono">
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       {error && (
@@ -473,6 +353,24 @@ export const Company360View: React.FC<Company360ViewProps> = ({
             <p className="text-xs text-slate-400 leading-relaxed">
               Explore 12-factor fundamental essentials, Tijori-grade revenue segment mix, forensic red-flag probes, 5-year audited financial statements, reverse DCF implied growth models, and institutional shareholding patterns.
             </p>
+          </div>
+
+          {/* Quick Search CTA in Hero */}
+          <div className="pt-1 flex justify-center">
+            <button
+              onClick={() => {
+                const input = document.querySelector<HTMLInputElement>("header input");
+                input?.focus();
+                input?.select();
+              }}
+              className="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-cyan-950 flex items-center gap-2 group cursor-pointer"
+            >
+              <Search className="h-4 w-4 text-white group-hover:scale-110 transition-transform" />
+              <span>Search Any Indian Stock</span>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-cyan-200 bg-cyan-950/80 border border-cyan-700/80 rounded ml-1">
+                ⌘K
+              </kbd>
+            </button>
           </div>
 
           {/* Feature Highlights Badges */}

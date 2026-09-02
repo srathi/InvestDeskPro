@@ -37,7 +37,25 @@ export const Header: React.FC<HeaderProps> = ({
   const [searchResults, setSearchResults] = useState<OmniSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Global Cmd+K / Ctrl+K / '/' shortcut listener
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      } else if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
   useEffect(() => {
     const delayDebounce = setTimeout(async () => {
@@ -47,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
           const res = await fetchOmniSearch(searchQuery);
           setSearchResults(res);
           setShowDropdown(true);
+          setSelectedIndex(-1);
         } catch {
           setSearchResults([]);
         } finally {
@@ -56,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
         setSearchResults([]);
         setShowDropdown(false);
       }
-    }, 200);
+    }, 180);
 
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
@@ -77,6 +96,36 @@ export const Header: React.FC<HeaderProps> = ({
     setSearchQuery("");
     if (onSelectEntity) {
       onSelectEntity(item.symbol_or_code || item.id, item.type);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        setSelectedIndex((prev) => (prev < searchResults.length - 1 ? prev + 1 : 0));
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : searchResults.length - 1));
+      }
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
+        handleSelect(searchResults[selectedIndex]);
+      } else if (searchResults.length > 0) {
+        handleSelect(searchResults[0]);
+      } else if (searchQuery.trim()) {
+        setShowDropdown(false);
+        if (onSelectEntity) {
+          onSelectEntity(searchQuery.trim().toUpperCase(), "stock");
+        }
+        setSearchQuery("");
+      }
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+      inputRef.current?.blur();
     }
   };
 
@@ -177,26 +226,44 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
+              ref={inputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                if (searchResults.length > 0) setShowDropdown(true);
+              }}
+              onKeyDown={handleKeyDown}
               placeholder="Search Stocks or Mutual Funds (e.g. Tata Motors, Piccadily, 122639)..."
-              className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-10 pr-10 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
+              className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-10 pr-16 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
             />
-            {isSearching && (
-              <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-cyan-400 animate-spin" />
-            )}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+              {isSearching ? (
+                <Loader2 className="h-3.5 w-3.5 text-cyan-400 animate-spin" />
+              ) : (
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-800 border border-slate-700 rounded shadow-sm">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              )}
+            </div>
           </div>
 
           {/* Autocomplete Dropdown */}
           {showDropdown && searchResults.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 max-h-72 overflow-y-auto space-y-1 backdrop-blur-xl">
-              <div className="text-[10px] uppercase font-bold text-slate-500 px-3 py-1">Quick Results:</div>
-              {searchResults.map((item) => (
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/98 border border-slate-700/80 rounded-xl shadow-2xl p-1.5 z-50 max-h-72 overflow-y-auto divide-y divide-slate-800/60 backdrop-blur-xl">
+              <div className="text-[10px] uppercase font-bold text-slate-500 px-3 py-1.5 flex items-center justify-between">
+                <span>Quick Results ({searchResults.length})</span>
+                <span className="font-mono text-[9px] text-slate-600">Use ↑ ↓ ↵</span>
+              </div>
+              {searchResults.map((item, idx) => (
                 <button
                   key={`${item.type}-${item.id}`}
                   onClick={() => handleSelect(item)}
-                  className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-800 flex items-center justify-between transition-colors text-slate-200"
+                  className={`w-full text-left px-3 py-2.5 text-xs rounded-lg flex items-center justify-between transition-colors ${
+                    selectedIndex === idx
+                      ? "bg-cyan-950 text-cyan-300 border border-cyan-800"
+                      : "hover:bg-slate-900 text-slate-200"
+                  }`}
                 >
                   <div className="truncate pr-3">
                     <span className="font-semibold text-slate-100">{item.name}</span>
