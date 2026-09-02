@@ -3,6 +3,7 @@ import {
   Search,
   Building2,
   TrendingUp,
+  TrendingDown,
   ShieldCheck,
   AlertTriangle,
   CheckCircle2,
@@ -20,6 +21,12 @@ import {
   Loader2,
   ArrowUpRight,
   ArrowDownRight,
+  Download,
+  Copy,
+  Check,
+  FileSpreadsheet,
+  Sparkles,
+  Table,
 } from "lucide-react";
 import {
   AreaChart,
@@ -67,6 +74,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Company360Response | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Autocompletion state
   const [suggestions, setSuggestions] = useState<StockSearchResult[]>([]);
@@ -80,9 +88,106 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const [financialTab, setFinancialTab] = useState<"pl" | "bs" | "cf">("pl");
   const [chartView, setChartView] = useState<"price" | "pe" | "pb">("price");
 
+  // DCF Interactive State
+  const [dcfWacc, setDcfWacc] = useState(12.0);
+  const [dcfGrowth5y, setDcfGrowth5y] = useState(15.0);
+  const [dcfTerminalGrowth, setDcfTerminalGrowth] = useState(4.0);
+
   // Reverse DCF Interactive State
   const [discountRate, setDiscountRate] = useState(12.0);
   const [terminalGrowth, setTerminalGrowth] = useState(4.0);
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!data) return;
+    let csv = `Company 360 Financial Dossier: ${data.company_name} (${data.ticker})\n`;
+    csv += `Market Cap (Cr): ₹${data.essentials.market_cap_cr}, CMP: ₹${data.essentials.current_price}, P/E: ${data.essentials.pe || "N/A"}x\n\n`;
+
+    if (data.quarterly_financials) {
+      csv += `--- 8-QUARTER FINANCIAL TRENDS (₹ Cr) ---\n`;
+      csv += `Metric,` + data.quarterly_financials.quarters.join(",") + `\n`;
+      data.quarterly_financials.rows.forEach((r) => {
+        csv += `"${r.metric_name}",` + data.quarterly_financials!.quarters.map((q) => r.values[q] ?? "").join(",") + `\n`;
+      });
+      csv += `\n`;
+    }
+
+    csv += `--- 5-YEAR INCOME STATEMENT (₹ Cr) ---\n`;
+    csv += `Metric,` + data.financials.income_statement.years.join(",") + `\n`;
+    data.financials.income_statement.rows.forEach((r) => {
+      csv += `"${r.metric_name}",` + data.financials.income_statement.years.map((y) => r.values[y] ?? "").join(",") + `\n`;
+    });
+    csv += `\n`;
+
+    csv += `--- 5-YEAR BALANCE SHEET (₹ Cr) ---\n`;
+    csv += `Metric,` + data.financials.balance_sheet.years.join(",") + `\n`;
+    data.financials.balance_sheet.rows.forEach((r) => {
+      csv += `"${r.metric_name}",` + data.financials.balance_sheet.years.map((y) => r.values[y] ?? "").join(",") + `\n`;
+    });
+    csv += `\n`;
+
+    csv += `--- 5-YEAR CASH FLOW STATEMENT (₹ Cr) ---\n`;
+    csv += `Metric,` + data.financials.cash_flows.years.join(",") + `\n`;
+    data.financials.cash_flows.rows.forEach((r) => {
+      csv += `"${r.metric_name}",` + data.financials.cash_flows.years.map((y) => r.values[y] ?? "").join(",") + `\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${data.ticker}_Financial_360.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopySummary = () => {
+    if (!data) return;
+    const summary = `# ${data.company_name} (${data.ticker}) - 360° Financial Dossier
+- **Sector / Industry**: ${data.sector} • ${data.industry}
+- **Market Cap**: ₹${data.essentials.market_cap_cr.toLocaleString("en-IN")} Cr (${data.market_cap_category})
+- **Current Market Price**: ₹${data.essentials.current_price} (${data.essentials.day_change >= 0 ? "+" : ""}${data.essentials.day_change_pct}%)
+- **52-Week Range**: ₹${data.essentials.low_52w} - ₹${data.essentials.high_52w}
+- **Stock P/E / Industry P/E**: ${data.essentials.pe || "N/A"}x / ${data.essentials.industry_pe || "N/A"}x
+- **ROCE / ROE**: ${data.essentials.roce || "N/A"}% / ${data.essentials.roe || "N/A"}%
+- **Debt to Equity**: ${data.essentials.debt_to_equity ?? "0.00"}x
+- **2-Stage DCF Fair Value**: ₹${data.dcf_sensitivity_matrix?.base_fair_value || "N/A"} (Margin of Safety: ${data.dcf_sensitivity_matrix?.margin_of_safety_pct || "N/A"}%)
+- **Valuation Status**: ${data.dcf_sensitivity_matrix?.valuation_status || data.reverse_dcf.interpretation}
+- **Institutional Sentiment**: ${data.institutional_delta?.net_institutional_sentiment || "Stable"}
+- **Promoter Holding**: ${data.essentials.promoter_holding_pct || 54.2}% (0% Pledged)
+`;
+    navigator.clipboard.writeText(summary);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const calculateDynamic2StageFairValue = (eps: number, growth5y: number, wacc: number, termGrowth: number) => {
+    if (eps <= 0 || wacc <= termGrowth) return 0;
+    const r = wacc / 100.0;
+    const g = growth5y / 100.0;
+    const tg = termGrowth / 100.0;
+
+    let pv = 0.0;
+    let curE = eps;
+    for (let t = 1; t <= 5; t++) {
+      curE *= 1.0 + g;
+      pv += curE / Math.pow(1.0 + r, t);
+    }
+    for (let t = 6; t <= 10; t++) {
+      curE *= 1.0 + (g * 0.6 + tg * 0.4);
+      pv += curE / Math.pow(1.0 + r, t);
+    }
+    const tv = (curE * (1.0 + tg)) / Math.max(0.005, r - tg);
+    const pvTv = tv / Math.pow(1.0 + r, 10);
+    return Math.max(1, Math.round((pv + pvTv) * 100) / 100);
+  };
 
   const loadCompanyData = async (symbol: string) => {
     if (!symbol.trim()) return;
@@ -415,702 +520,1045 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
       {data && (
         <div className="space-y-6">
-          {/* Top Header Card */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-800 relative overflow-hidden space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              {/* Left Company Title & Details */}
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-2xl font-black text-white tracking-tight">{data.company_name}</h2>
-                  <span className="px-2.5 py-0.5 text-xs font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-md">
-                    {data.ticker}
-                  </span>
-                  <span className="px-2.5 py-0.5 text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 rounded-md">
-                    {data.market_cap_category}
-                  </span>
+          {/* Sticky Quick-Jump Anchor Ribbon & Export Actions */}
+          <div className="sticky top-2 z-20 glass-panel p-2.5 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-3">
+                {/* Anchor Jump Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                  <button
+                    onClick={() => scrollToSection("sec-overview")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all shrink-0"
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-quarterly")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-cyan-300 hover:bg-cyan-950/80 border border-cyan-900/50 transition-all shrink-0 flex items-center gap-1"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    <span>8Q Trends</span>
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-annual")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-emerald-300 hover:bg-emerald-950/80 border border-emerald-900/50 transition-all shrink-0 flex items-center gap-1"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    <span>5Y Financials</span>
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-segments")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all shrink-0"
+                  >
+                    Segments
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-forensics")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-amber-300 hover:bg-amber-950/80 border border-amber-900/50 transition-all shrink-0 flex items-center gap-1"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Forensics</span>
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-dcf")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-purple-300 hover:bg-purple-950/80 border border-purple-900/50 transition-all shrink-0 flex items-center gap-1"
+                  >
+                    <Sliders className="h-3.5 w-3.5" />
+                    <span>DCF Sensitivity Matrix</span>
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-shareholding")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all shrink-0"
+                  >
+                    Insiders & FIIs
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-peers")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all shrink-0"
+                  >
+                    Peers
+                  </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                  <span>Sector: <strong className="text-slate-200">{data.sector}</strong></span>
-                  <span>•</span>
-                  <span>Industry: <strong className="text-slate-200">{data.industry}</strong></span>
-                  {data.website && (
-                    <>
-                      <span>•</span>
-                      <a
-                        href={data.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-400 hover:underline inline-flex items-center gap-1"
+                {/* Direct Export & Sharing Actions */}
+                <div className="flex items-center gap-2 shrink-0 ml-auto">
+                  <button
+                    onClick={handleExportCSV}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-950 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-800 transition-all flex items-center gap-1.5 shadow-sm"
+                    title="Download 5Y & 8Q Financial Statements as CSV"
+                  >
+                    <Download className="h-3.5 w-3.5 text-cyan-400" />
+                    <span className="hidden sm:inline">Export CSV</span>
+                  </button>
+                  <button
+                    onClick={handleCopySummary}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-950 text-cyan-200 border border-cyan-800 hover:bg-cyan-900 transition-all flex items-center gap-1.5 shadow-sm"
+                    title="Copy 360° Executive Dossier to Clipboard"
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5 text-cyan-300" />}
+                    <span>{copied ? "Copied!" : "Copy Summary"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Section 1: Top Header Card & Essentials Overview */}
+              <div id="sec-overview" className="space-y-6">
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800 relative overflow-hidden space-y-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    {/* Left Company Title & Details */}
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h2 className="text-2xl font-black text-white tracking-tight">{data.company_name}</h2>
+                        <span className="px-2.5 py-0.5 text-xs font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-md">
+                          {data.ticker}
+                        </span>
+                        <span className="px-2.5 py-0.5 text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 rounded-md">
+                          {data.market_cap_category}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                        <span>Sector: <strong className="text-slate-200">{data.sector}</strong></span>
+                        <span>•</span>
+                        <span>Industry: <strong className="text-slate-200">{data.industry}</strong></span>
+                        {data.website && (
+                          <>
+                            <span>•</span>
+                            <a
+                              href={data.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-cyan-400 hover:underline inline-flex items-center gap-1"
+                            >
+                              <span>Official Website</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Price & Day Change */}
+                    <div className="flex items-center gap-6 bg-slate-950/80 p-4 rounded-xl border border-slate-800 shrink-0">
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase font-semibold block">Current Market Price</span>
+                        <div className="text-2xl font-black text-white font-mono font-tabular mt-0.5">
+                          ₹{data.essentials.current_price.toLocaleString("en-IN")}
+                        </div>
+                        <div className={`text-xs font-semibold font-mono flex items-center gap-1 mt-0.5 ${
+                          data.essentials.day_change >= 0 ? "text-emerald-400" : "text-rose-400"
+                        }`}>
+                          {data.essentials.day_change >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                          <span>{data.essentials.day_change >= 0 ? `+₹${data.essentials.day_change}` : `-₹${Math.abs(data.essentials.day_change)}`}</span>
+                          <span>({data.essentials.day_change_pct >= 0 ? `+${data.essentials.day_change_pct}%` : `${data.essentials.day_change_pct}%`})</span>
+                        </div>
+                      </div>
+
+                      {onNavigateToQuant && (
+                        <button
+                          onClick={() => onNavigateToQuant(data.ticker)}
+                          className="px-3 py-2 rounded-xl bg-indigo-950/80 border border-indigo-700 text-indigo-300 text-xs font-semibold hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
+                        >
+                          <span>Quant Scorecard</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 52-Week Range Slider Bar */}
+                  <div className="pt-3 border-t border-slate-800/80 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-slate-400">
+                        52W Low: <strong className="text-slate-200">₹{data.essentials.low_52w.toFixed(2)}</strong>
+                      </span>
+                      <span className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold">52-Week Range Slider</span>
+                      <span className="text-slate-400">
+                        52W High: <strong className="text-slate-200">₹{data.essentials.high_52w.toFixed(2)}</strong>
+                      </span>
+                    </div>
+
+                    <div className="relative h-2.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                      <div
+                        className="absolute top-0 bottom-0 bg-gradient-to-r from-emerald-500 via-cyan-500 to-amber-500 rounded-full opacity-80"
+                        style={{ width: "100%" }}
+                      />
+                      {/* Pin position */}
+                      <div
+                        className="absolute top-0 bottom-0 w-2 bg-white rounded-full shadow-md shadow-white"
+                        style={{
+                          left: `${calculate52WPosition(data.essentials.current_price, data.essentials.low_52w, data.essentials.high_52w)}%`,
+                          transform: "translateX(-50%)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 12-Ratio Essentials Grid (Finology Ticker Style) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Market Cap</span>
+                    <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
+                      ₹{data.essentials.market_cap_cr.toLocaleString("en-IN")} Cr
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Stock P/E</span>
+                    <div className="text-sm font-bold text-cyan-400 font-mono font-tabular">
+                      {data.essentials.pe ? `${data.essentials.pe}x` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Industry P/E</span>
+                    <div className="text-sm font-bold text-slate-300 font-mono font-tabular">
+                      {data.essentials.industry_pe ? `${data.essentials.industry_pe}x` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Price to Book</span>
+                    <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
+                      {data.essentials.pb ? `${data.essentials.pb}x` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROCE</span>
+                    <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
+                      {data.essentials.roce ? `${data.essentials.roce}%` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROE</span>
+                    <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
+                      {data.essentials.roe ? `${data.essentials.roe}%` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Dividend Yield</span>
+                    <div className="text-sm font-bold text-amber-300 font-mono font-tabular">
+                      {data.essentials.dividend_yield ? `${data.essentials.dividend_yield}%` : "0.00%"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Debt to Equity</span>
+                    <div className="text-sm font-bold text-slate-200 font-mono font-tabular">
+                      {data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined ? `${data.essentials.debt_to_equity}x` : "0.00 (Cash Rich)"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">EPS (TTM)</span>
+                    <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
+                      {data.essentials.eps_ttm ? `₹${data.essentials.eps_ttm}` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Face Value</span>
+                    <div className="text-sm font-bold text-slate-300 font-mono font-tabular">
+                      ₹{data.essentials.face_value || "2.0"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Free Cash Flow</span>
+                    <div className="text-sm font-bold text-cyan-300 font-mono font-tabular">
+                      ₹{data.essentials.fcf_cr ? `${data.essentials.fcf_cr.toLocaleString("en-IN")} Cr` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Promoter Holding</span>
+                    <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
+                      {data.essentials.promoter_holding_pct ? `${data.essentials.promoter_holding_pct}%` : "54.2%"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interactive Charting Suite (Price & PE Multiple) */}
+                <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+                    <div>
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-cyan-400" />
+                        <span>Historical Price & Valuation Performance</span>
+                      </h3>
+                      {chartView === "pe" ? (
+                        <p className="text-[11px] text-amber-400/90 font-mono flex flex-wrap items-center gap-2 mt-0.5">
+                          <span>1-Year Trailing P/E Multiple Series</span>
+                          <span>•</span>
+                          <span>1Y Median P/E: <strong className="text-white">{medianPe}x</strong></span>
+                          <span>•</span>
+                          <span>Current P/E: <strong className="text-white">{data.essentials.pe || "N/A"}x</strong></span>
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-slate-400 mt-0.5">Daily closes on National Stock Exchange of India (NSE) / BSE</p>
+                      )}
+                    </div>
+
+                    {/* Chart Mode Switcher */}
+                    <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+                      <button
+                        onClick={() => setChartView("price")}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          chartView === "price"
+                            ? "bg-cyan-950 text-cyan-300 border border-cyan-800 shadow"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
                       >
-                        <span>Official Website</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </>
+                        Price & Volume
+                      </button>
+                      <button
+                        onClick={() => setChartView("pe")}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          chartView === "pe"
+                            ? "bg-amber-950 text-amber-300 border border-amber-800 shadow"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        P/E Multiple
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="h-64 w-full pt-2">
+                    {chartData && chartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="companyPriceGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                            </linearGradient>
+                            <linearGradient id="companyPeGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis
+                            dataKey="date"
+                            stroke="#475569"
+                            fontSize={10}
+                            tickLine={false}
+                            tickFormatter={(v) => v.slice(5)}
+                          />
+                          <YAxis
+                            stroke="#475569"
+                            fontSize={10}
+                            tickLine={false}
+                            domain={["auto", "auto"]}
+                            tickFormatter={(v) => (chartView === "pe" ? `${v}x` : `₹${v}`)}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "#0f172a",
+                              borderColor: "#334155",
+                              borderRadius: "0.75rem",
+                              color: "#f8fafc",
+                              fontSize: "12px",
+                            }}
+                            formatter={(val: any) => {
+                              if (chartView === "pe") {
+                                return [`${Number(val).toFixed(2)}x`, "P/E Multiple"];
+                              }
+                              return [`₹${Number(val).toFixed(2)}`, "Closing Price"];
+                            }}
+                            labelFormatter={(label) => `Date: ${label}`}
+                          />
+                          {chartView === "pe" && medianPe > 0 && (
+                            <ReferenceLine
+                              y={medianPe}
+                              stroke="#94a3b8"
+                              strokeDasharray="4 4"
+                              label={{
+                                value: `Median: ${medianPe}x`,
+                                fill: "#94a3b8",
+                                fontSize: 10,
+                                position: "insideTopRight",
+                              }}
+                            />
+                          )}
+                          <Area
+                            type="monotone"
+                            dataKey={chartView === "pe" ? "pe" : "close"}
+                            stroke={chartView === "pe" ? "#f59e0b" : "#06b6d4"}
+                            strokeWidth={2}
+                            fillOpacity={1}
+                            fill={chartView === "pe" ? "url(#companyPeGrad)" : "url(#companyPriceGrad)"}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-slate-500 text-xs font-mono">
+                        Price & valuation trend data currently unavailable
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: 8-Quarter Financial Trends & Margin Trajectory */}
+              {data.quarterly_financials && (
+                <div id="sec-quarterly" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+                    <div>
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-cyan-400" />
+                        <span>8-Quarter Financial Performance & Margin Trajectory</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-400">Quarterly audited financial statements (₹ in Crores)</p>
+                    </div>
+
+                    {/* Growth Highlights */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {data.quarterly_financials.yoy_revenue_growth_pct !== null && data.quarterly_financials.yoy_revenue_growth_pct !== undefined && (
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                          YoY Sales: +{data.quarterly_financials.yoy_revenue_growth_pct}%
+                        </span>
+                      )}
+                      {data.quarterly_financials.yoy_pat_growth_pct !== null && data.quarterly_financials.yoy_pat_growth_pct !== undefined && (
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                          YoY PAT: +{data.quarterly_financials.yoy_pat_growth_pct}%
+                        </span>
+                      )}
+                      {data.quarterly_financials.latest_opm_pct !== null && data.quarterly_financials.latest_opm_pct !== undefined && (
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-amber-950 text-amber-300 border border-amber-800">
+                          Latest OPM: {data.quarterly_financials.latest_opm_pct}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 8-Quarter Data Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                          <th className="pb-2.5 min-w-[200px]">Quarterly Metric</th>
+                          {data.quarterly_financials.quarters.map((q) => (
+                            <th key={q} className="pb-2.5 text-right font-mono min-w-[80px]">{q}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono">
+                        {data.quarterly_financials.rows.map((row) => (
+                          <tr
+                            key={row.metric_name}
+                            className={`hover:bg-slate-800/30 ${
+                              row.is_bold ? "font-bold text-white bg-slate-900/30" : "text-slate-300"
+                            }`}
+                          >
+                            <td className="py-2.5 flex items-center gap-1.5">
+                              <span>{row.metric_name}</span>
+                              {row.is_percentage && (
+                                <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-1 rounded border border-cyan-800/40">Margin</span>
+                              )}
+                            </td>
+                            {data.quarterly_financials!.quarters.map((q) => {
+                              const val = row.values[q];
+                              return (
+                                <td
+                                  key={q}
+                                  className={`py-2.5 text-right font-tabular ${
+                                    row.is_percentage
+                                      ? "text-amber-300 font-semibold"
+                                      : val !== null && val < 0
+                                      ? "text-rose-400"
+                                      : ""
+                                  }`}
+                                >
+                                  {val !== null && val !== undefined
+                                    ? row.is_percentage
+                                      ? `${val}%`
+                                      : val.toLocaleString("en-IN")
+                                    : "-"}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 3: 5-Year Historical Financial Statements */}
+              <div id="sec-annual" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-emerald-400" />
+                      <span>5-Year Historical Audited Financial Statements</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Annual audited filings (₹ in Crores)</p>
+                  </div>
+
+                  {/* Statement Tabs */}
+                  <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                    <button
+                      onClick={() => setFinancialTab("pl")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                        financialTab === "pl"
+                          ? "bg-emerald-950 text-emerald-300 border border-emerald-800 shadow"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Profit & Loss (P&L)
+                    </button>
+                    <button
+                      onClick={() => setFinancialTab("bs")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                        financialTab === "bs"
+                          ? "bg-emerald-950 text-emerald-300 border border-emerald-800 shadow"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Balance Sheet
+                    </button>
+                    <button
+                      onClick={() => setFinancialTab("cf")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                        financialTab === "cf"
+                          ? "bg-emerald-950 text-emerald-300 border border-emerald-800 shadow"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Cash Flows
+                    </button>
+                  </div>
+                </div>
+
+                {/* Financial Statements Table */}
+                <div className="overflow-x-auto">
+                  {financialTab === "pl" && (
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                          <th className="pb-2.5 min-w-[200px]">Financial Metric</th>
+                          {data.financials.income_statement.years.map((y) => (
+                            <th key={y} className="pb-2.5 text-right font-mono min-w-[80px]">{y}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono">
+                        {data.financials.income_statement.rows.map((row) => (
+                          <tr key={row.metric_name} className={`hover:bg-slate-800/30 ${row.is_bold ? "font-bold text-white bg-slate-900/30" : "text-slate-300"}`}>
+                            <td className="py-2.5">{row.metric_name}</td>
+                            {data.financials.income_statement.years.map((y) => (
+                              <td key={y} className="py-2.5 text-right font-tabular">
+                                {row.values[y] !== null && row.values[y] !== undefined ? row.values[y]?.toLocaleString("en-IN") : "-"}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {financialTab === "bs" && (
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                          <th className="pb-2.5 min-w-[200px]">Balance Sheet Line Item</th>
+                          {data.financials.balance_sheet.years.map((y) => (
+                            <th key={y} className="pb-2.5 text-right font-mono min-w-[80px]">{y}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono">
+                        {data.financials.balance_sheet.rows.map((row) => (
+                          <tr key={row.metric_name} className={`hover:bg-slate-800/30 ${row.is_bold ? "font-bold text-white bg-slate-900/30" : "text-slate-300"}`}>
+                            <td className="py-2.5">{row.metric_name}</td>
+                            {data.financials.balance_sheet.years.map((y) => (
+                              <td key={y} className="py-2.5 text-right font-tabular">
+                                {row.values[y] !== null && row.values[y] !== undefined ? row.values[y]?.toLocaleString("en-IN") : "-"}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {financialTab === "cf" && (
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                          <th className="pb-2.5 min-w-[200px]">Cash Flow Metric</th>
+                          {data.financials.cash_flows.years.map((y) => (
+                            <th key={y} className="pb-2.5 text-right font-mono min-w-[80px]">{y}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono">
+                        {data.financials.cash_flows.rows.map((row) => (
+                          <tr key={row.metric_name} className={`hover:bg-slate-800/30 ${row.is_bold ? "font-bold text-white bg-slate-900/30" : "text-slate-300"}`}>
+                            <td className="py-2.5">{row.metric_name}</td>
+                            {data.financials.cash_flows.years.map((y) => (
+                              <td key={y} className="py-2.5 text-right font-tabular">
+                                {row.values[y] !== null && row.values[y] !== undefined ? row.values[y]?.toLocaleString("en-IN") : "-"}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   )}
                 </div>
               </div>
 
-              {/* Right Price & Day Change */}
-              <div className="flex items-center gap-6 bg-slate-950/80 p-4 rounded-xl border border-slate-800 shrink-0">
-                <div>
-                  <span className="text-[10px] text-slate-500 uppercase font-semibold block">Current Market Price</span>
-                  <div className="text-2xl font-black text-white font-mono font-tabular mt-0.5">
-                    ₹{data.essentials.current_price.toLocaleString("en-IN")}
+              {/* Section 4: Tijori-Style Revenue Mix & Forensic Health Probes */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 1. Revenue Segment Mix (Tijori Style) */}
+                <div id="sec-segments" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4 text-cyan-400" />
+                      <span>Revenue & Product Segment Breakdown (Tijori Style)</span>
+                    </h3>
+                    <span className="text-[10px] text-slate-500 font-mono">Segment Mix</span>
                   </div>
-                  <div className={`text-xs font-semibold font-mono flex items-center gap-1 mt-0.5 ${
-                    data.essentials.day_change >= 0 ? "text-emerald-400" : "text-rose-400"
-                  }`}>
-                    {data.essentials.day_change >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                    <span>{data.essentials.day_change >= 0 ? `+₹${data.essentials.day_change}` : `-₹${Math.abs(data.essentials.day_change)}`}</span>
-                    <span>({data.essentials.day_change_pct >= 0 ? `+${data.essentials.day_change_pct}%` : `${data.essentials.day_change_pct}%`})</span>
+
+                  {/* Segment Bars */}
+                  <div className="space-y-3">
+                    {data.segments.map((seg) => (
+                      <div key={seg.name} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-semibold text-slate-200">{seg.name}</span>
+                          <div className="flex items-center gap-2 font-mono">
+                            {seg.revenue_cr && <span className="text-slate-400">₹{seg.revenue_cr} Cr</span>}
+                            <span className="font-bold text-cyan-400">{seg.percentage}%</span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${seg.percentage}%`,
+                              backgroundColor: seg.color || "#06b6d4",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Geographic Mix */}
+                  <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                    <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-slate-400" />
+                      <span>Geographic Distribution</span>
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {data.geography.map((geo) => (
+                        <div key={geo.region} className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex justify-between items-center text-xs">
+                          <span className="text-slate-300 font-medium">{geo.region}</span>
+                          <span className="font-bold text-slate-100 font-mono">{geo.percentage}%</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {onNavigateToQuant && (
-                  <button
-                    onClick={() => onNavigateToQuant(data.ticker)}
-                    className="px-3 py-2 rounded-xl bg-indigo-950/80 border border-indigo-700 text-indigo-300 text-xs font-semibold hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
-                  >
-                    <span>Quant Scorecard</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 52-Week Range Slider Bar */}
-            <div className="pt-3 border-t border-slate-800/80 space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">
-                  52W Low: <strong className="text-slate-200">₹{data.essentials.low_52w.toFixed(2)}</strong>
-                </span>
-                <span className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold">52-Week Range Slider</span>
-                <span className="text-slate-400">
-                  52W High: <strong className="text-slate-200">₹{data.essentials.high_52w.toFixed(2)}</strong>
-                </span>
-              </div>
-
-              <div className="relative h-2.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                <div
-                  className="absolute top-0 bottom-0 bg-gradient-to-r from-emerald-500 via-cyan-500 to-amber-500 rounded-full opacity-80"
-                  style={{ width: "100%" }}
-                />
-                {/* Pin position */}
-                <div
-                  className="absolute top-0 bottom-0 w-2 bg-white rounded-full shadow-md shadow-white"
-                  style={{
-                    left: `${calculate52WPosition(data.essentials.current_price, data.essentials.low_52w, data.essentials.high_52w)}%`,
-                    transform: "translateX(-50%)",
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 12-Ratio Essentials Grid (Finology Ticker Style) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Market Cap</span>
-              <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
-                ₹{data.essentials.market_cap_cr.toLocaleString("en-IN")} Cr
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Stock P/E</span>
-              <div className="text-sm font-bold text-cyan-400 font-mono font-tabular">
-                {data.essentials.pe ? `${data.essentials.pe}x` : "N/A"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Industry P/E</span>
-              <div className="text-sm font-bold text-slate-300 font-mono font-tabular">
-                {data.essentials.industry_pe ? `${data.essentials.industry_pe}x` : "N/A"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Price to Book</span>
-              <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
-                {data.essentials.pb ? `${data.essentials.pb}x` : "N/A"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROCE</span>
-              <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
-                {data.essentials.roce ? `${data.essentials.roce}%` : "N/A"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">ROE</span>
-              <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
-                {data.essentials.roe ? `${data.essentials.roe}%` : "N/A"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Dividend Yield</span>
-              <div className="text-sm font-bold text-amber-300 font-mono font-tabular">
-                {data.essentials.dividend_yield ? `${data.essentials.dividend_yield}%` : "0.00%"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Debt to Equity</span>
-              <div className="text-sm font-bold text-slate-200 font-mono font-tabular">
-                {data.essentials.debt_to_equity !== null && data.essentials.debt_to_equity !== undefined ? `${data.essentials.debt_to_equity}x` : "0.00 (Cash Rich)"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">EPS (TTM)</span>
-              <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
-                {data.essentials.eps_ttm ? `₹${data.essentials.eps_ttm}` : "N/A"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Face Value</span>
-              <div className="text-sm font-bold text-slate-300 font-mono font-tabular">
-                ₹{data.essentials.face_value || "2.0"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Free Cash Flow</span>
-              <div className="text-sm font-bold text-cyan-300 font-mono font-tabular">
-                ₹{data.essentials.fcf_cr ? `${data.essentials.fcf_cr.toLocaleString("en-IN")} Cr` : "N/A"}
-              </div>
-            </div>
-
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Promoter Holding</span>
-              <div className="text-sm font-bold text-slate-100 font-mono font-tabular">
-                {data.essentials.promoter_holding_pct ? `${data.essentials.promoter_holding_pct}%` : "54.2%"}
-              </div>
-            </div>
-          </div>
-
-          {/* Tijori-Style Revenue Mix & Forensic Health Probes */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 1. Revenue Segment Mix (Tijori Style) */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <PieChartIcon className="h-4 w-4 text-cyan-400" />
-                  <span>Revenue & Business Segment Mix (Tijori Style)</span>
-                </h3>
-                <span className="text-[10px] text-slate-500 font-mono">Segment Distribution</span>
-              </div>
-
-              {/* Progress Distribution Bar */}
-              <div className="h-3 w-full rounded-full overflow-hidden flex bg-slate-900">
-                {data.segments.map((seg, idx) => (
-                  <div
-                    key={seg.name}
-                    style={{
-                      width: `${seg.percentage}%`,
-                      backgroundColor: seg.color || ["#06b6d4", "#10b981", "#f59e0b", "#8b5cf6"][idx % 4],
-                    }}
-                    title={`${seg.name}: ${seg.percentage}%`}
-                  />
-                ))}
-              </div>
-
-              {/* Segments List */}
-              <div className="space-y-2 text-xs">
-                {data.segments.map((seg, idx) => (
-                  <div
-                    key={seg.name}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{
-                          backgroundColor: seg.color || ["#06b6d4", "#10b981", "#f59e0b", "#8b5cf6"][idx % 4],
-                        }}
-                      />
-                      <span className="font-semibold text-slate-200">{seg.name}</span>
-                    </div>
-                    <div className="text-right font-mono">
-                      <span className="font-bold text-white font-tabular">{seg.percentage}%</span>
-                      {seg.revenue_cr && (
-                        <span className="text-slate-400 text-[11px] block">₹{seg.revenue_cr} Cr</span>
-                      )}
-                    </div>
+                {/* 2. Forensic Health Checks (Tijori Style) */}
+                <div id="sec-forensics" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                      <span>Forensic Health Probes (5 Red-Flag Checks)</span>
+                    </h3>
+                    <span className="text-[10px] text-slate-500 font-mono">Tijori Forensics</span>
                   </div>
-                ))}
-              </div>
 
-              {/* Geographic Distribution */}
-              <div className="pt-2 border-t border-slate-800/80">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Globe className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Geographic Revenue Spread</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {data.geography.map((geo) => (
-                    <div key={geo.region} className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 flex justify-between">
-                      <span className="text-slate-300">{geo.region}:</span>
-                      <span className="font-bold text-cyan-400 font-mono">{geo.percentage}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 2. Forensic Health Checks & Red Flags (Tijori Style) */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  <span>Forensic Health Check & Red-Flag Probe</span>
-                </h3>
-                <span className="text-[10px] text-slate-500 font-mono">Accounting Health</span>
-              </div>
-
-              <div className="space-y-2.5 text-xs">
-                {data.forensics.map((f) => (
-                  <div
-                    key={f.title}
-                    className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-200">{f.title}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${
-                          f.status === "pass"
-                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                            : f.status === "warning"
-                            ? "bg-amber-950 text-amber-300 border border-amber-800"
-                            : "bg-rose-950 text-rose-300 border border-rose-800"
-                        }`}
+                  <div className="space-y-2.5">
+                    {data.forensics.map((f) => (
+                      <div
+                        key={f.title}
+                        className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-1 hover:border-slate-700 transition-colors"
                       >
-                        {f.status === "pass" ? "PASS" : f.status === "warning" ? "CHECK" : "FLAG"}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-200 flex items-center gap-2">
+                            {f.status === "pass" && <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />}
+                            {f.status === "warning" && <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />}
+                            {f.status === "flag" && <XCircle className="h-4 w-4 text-rose-500 shrink-0" />}
+                            <span>{f.title}</span>
+                          </span>
+                          <div className="flex items-center gap-2 font-mono">
+                            <span className="font-bold text-slate-100">{f.value_str}</span>
+                            <span className="text-[10px] text-slate-500">({f.benchmark_str})</span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-400 leading-relaxed pt-0.5">{f.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 5: 2-Stage DCF Valuation & 5x5 Sensitivity Matrix */}
+              <div id="sec-dcf" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Sliders className="h-4 w-4 text-purple-400" />
+                      <span>2-Stage DCF Valuation & 5x5 Sensitivity Matrix</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      5-Year High Growth Stage + 5-Year Fade Stage + Gordon Growth Terminal Value
+                    </p>
+                  </div>
+
+                  {/* Status Badge */}
+                  {data.dcf_sensitivity_matrix && (
+                    <div className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${
+                      data.dcf_sensitivity_matrix.margin_of_safety_pct >= 15
+                        ? "bg-emerald-950/80 text-emerald-300 border-emerald-800"
+                        : data.dcf_sensitivity_matrix.margin_of_safety_pct >= -15
+                        ? "bg-cyan-950/80 text-cyan-300 border-cyan-800"
+                        : "bg-rose-950/80 text-rose-300 border-rose-800"
+                    }`}>
+                      {data.dcf_sensitivity_matrix.valuation_status}
+                    </div>
+                  )}
+                </div>
+
+                {/* Valuation Metric Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Intrinsic Fair Value (Base Case)</span>
+                    <div className="text-xl font-black text-purple-300 font-mono font-tabular">
+                      ₹{data.dcf_sensitivity_matrix?.base_fair_value ? data.dcf_sensitivity_matrix.base_fair_value.toFixed(2) : "N/A"}
+                    </div>
+                    <span className="text-[11px] text-slate-400">At 15% 5Y CAGR, 12% WACC, 4% Terminal</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Current Market Price (CMP)</span>
+                    <div className="text-xl font-black text-white font-mono font-tabular">
+                      ₹{data.essentials.current_price.toFixed(2)}
+                    </div>
+                    <span className="text-[11px] text-slate-400">Live traded price on exchange</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Margin of Safety</span>
+                    <div className={`text-xl font-black font-mono font-tabular ${
+                      (data.dcf_sensitivity_matrix?.margin_of_safety_pct || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                    }`}>
+                      {data.dcf_sensitivity_matrix?.margin_of_safety_pct !== undefined
+                        ? `${data.dcf_sensitivity_matrix.margin_of_safety_pct > 0 ? "+" : ""}${data.dcf_sensitivity_matrix.margin_of_safety_pct}%`
+                        : "N/A"}
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      {(data.dcf_sensitivity_matrix?.margin_of_safety_pct || 0) >= 0 ? "Discount to Fair Value" : "Premium over Fair Value"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Interactive Sliders */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-950/90 border border-slate-800">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Discount Rate (WACC):</span>
+                      <span className="font-bold text-cyan-400 font-mono">{dcfWacc}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="9"
+                      max="16"
+                      step="0.5"
+                      value={dcfWacc}
+                      onChange={(e) => setDcfWacc(Number(e.target.value))}
+                      className="w-full accent-cyan-500 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">5-Year Growth CAGR:</span>
+                      <span className="font-bold text-emerald-400 font-mono">{dcfGrowth5y}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="35"
+                      step="1"
+                      value={dcfGrowth5y}
+                      onChange={(e) => setDcfGrowth5y(Number(e.target.value))}
+                      className="w-full accent-emerald-500 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Terminal Growth Rate:</span>
+                      <span className="font-bold text-amber-400 font-mono">{dcfTerminalGrowth}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="2"
+                      max="6"
+                      step="0.5"
+                      value={dcfTerminalGrowth}
+                      onChange={(e) => setDcfTerminalGrowth(Number(e.target.value))}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Dynamic Calculated Fair Value Result */}
+                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-xs text-slate-300">
+                    Custom Scenario Intrinsic Value:{" "}
+                    <strong className="text-white text-sm font-mono">
+                      ₹{calculateDynamic2StageFairValue(data.essentials.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth)}
+                    </strong>
+                  </div>
+                  <div className="text-xs font-mono">
+                    {(() => {
+                      const fv = calculateDynamic2StageFairValue(data.essentials.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth);
+                      const mos = Math.round(((fv - data.essentials.current_price) / Math.max(1, fv)) * 1000) / 10;
+                      return (
+                        <span className={mos >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                          Margin of Safety: {mos > 0 ? "+" : ""}{mos}%
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* 5x5 WACC vs Terminal Growth Sensitivity Matrix Table */}
+                {data.dcf_sensitivity_matrix && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        5x5 Valuation Sensitivity Grid (WACC vs Terminal Growth)
                       </span>
+                      <span className="text-[10px] text-slate-400 font-mono">Fair Value (₹) & Margin of Safety (%)</span>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                      <span>Value: <strong className="text-slate-200">{f.value_str}</strong></span>
-                      <span>Target: <strong className="text-slate-400">{f.benchmark_str}</strong></span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed pt-0.5">{f.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          {/* Interactive Charting Suite (Price, Volume, PE Multiple) */}
-          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-cyan-400" />
-                  <span>Historical Price & Valuation Performance</span>
-                </h3>
-                {chartView === "pe" ? (
-                  <p className="text-[11px] text-amber-400/90 font-mono flex flex-wrap items-center gap-2 mt-0.5">
-                    <span>1-Year Trailing P/E Multiple Series</span>
-                    <span>•</span>
-                    <span>1Y Median P/E: <strong className="text-white">{medianPe}x</strong></span>
-                    <span>•</span>
-                    <span>Current P/E: <strong className="text-white">{data.essentials.pe || "N/A"}x</strong></span>
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-slate-400 mt-0.5">Daily closes on National Stock Exchange of India (NSE) / BSE</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-center text-xs border border-slate-800 rounded-xl overflow-hidden">
+                        <thead>
+                          <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 text-[10px]">
+                            <th className="py-2 px-3 text-left font-semibold">WACC \ Term. Growth</th>
+                            {data.dcf_sensitivity_matrix.terminal_growth_rates.map((tg) => (
+                              <th key={tg} className="py-2 px-3 font-mono font-bold text-amber-300">
+                                {tg.toFixed(1)}%
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/80 font-mono">
+                          {data.dcf_sensitivity_matrix.grid.map((row, rIdx) => {
+                            const wacc = data.dcf_sensitivity_matrix!.wacc_rates[rIdx];
+                            return (
+                              <tr key={wacc} className="hover:bg-slate-800/20">
+                                <td className="py-2 px-3 text-left font-bold text-cyan-300 bg-slate-950/60">
+                                  {wacc.toFixed(1)}%
+                                </td>
+                                {row.map((cell) => (
+                                  <td
+                                    key={`${cell.wacc_pct}-${cell.terminal_growth_pct}`}
+                                    className={`py-2 px-3 transition-colors ${
+                                      cell.is_base_case
+                                        ? "bg-purple-950/40 border-2 border-purple-500/80 font-black text-white"
+                                        : cell.margin_of_safety_pct >= 0
+                                        ? "bg-emerald-950/10 text-emerald-300"
+                                        : "text-slate-300"
+                                    }`}
+                                  >
+                                    <div className="text-xs font-bold font-tabular">₹{cell.fair_value.toFixed(0)}</div>
+                                    <div className={`text-[10px] ${
+                                      cell.margin_of_safety_pct >= 0 ? "text-emerald-400 font-semibold" : "text-slate-500"
+                                    }`}>
+                                      {cell.margin_of_safety_pct > 0 ? "+" : ""}{cell.margin_of_safety_pct}%
+                                    </div>
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 )}
-              </div>
 
-              {/* Chart Mode Switcher */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
-                <button
-                  onClick={() => setChartView("price")}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    chartView === "price"
-                      ? "bg-cyan-950 text-cyan-300 border border-cyan-800 shadow"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  Price & Volume
-                </button>
-                <button
-                  onClick={() => setChartView("pe")}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    chartView === "pe"
-                      ? "bg-amber-950 text-amber-300 border border-amber-800 shadow"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  P/E Multiple
-                </button>
-              </div>
-            </div>
-
-            <div className="h-64 w-full pt-2">
-              {chartData && chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="companyPriceGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
-                      </linearGradient>
-                      <linearGradient id="companyPeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="date"
-                      stroke="#475569"
-                      fontSize={10}
-                      tickLine={false}
-                      tickFormatter={(v) => v.slice(5)}
-                    />
-                    <YAxis
-                      stroke="#475569"
-                      fontSize={10}
-                      tickLine={false}
-                      domain={["auto", "auto"]}
-                      tickFormatter={(v) => (chartView === "pe" ? `${v}x` : `₹${v}`)}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#0f172a",
-                        borderColor: "#334155",
-                        borderRadius: "0.75rem",
-                        color: "#f8fafc",
-                        fontSize: "12px",
-                      }}
-                      formatter={(val: any) => {
-                        if (chartView === "pe") {
-                          return [`${Number(val).toFixed(2)}x`, "P/E Multiple"];
-                        }
-                        return [`₹${Number(val).toFixed(2)}`, "Closing Price"];
-                      }}
-                      labelFormatter={(label) => `Date: ${label}`}
-                    />
-                    {chartView === "pe" && medianPe > 0 && (
-                      <ReferenceLine
-                        y={medianPe}
-                        stroke="#94a3b8"
-                        strokeDasharray="4 4"
-                        label={{
-                          value: `Median: ${medianPe}x`,
-                          fill: "#94a3b8",
-                          fontSize: 10,
-                          position: "insideTopRight",
-                        }}
-                      />
-                    )}
-                    <Area
-                      type="monotone"
-                      dataKey={chartView === "pe" ? "pe" : "close"}
-                      stroke={chartView === "pe" ? "#f59e0b" : "#06b6d4"}
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill={chartView === "pe" ? "url(#companyPeGrad)" : "url(#companyPriceGrad)"}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-500 text-xs font-mono">
-                  Price & valuation trend data currently unavailable
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 5-Year Financial Statements (Finology Style: P&L, Balance Sheet, Cash Flow) */}
-          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Layers className="h-4 w-4 text-emerald-400" />
-                <span>5-Year Historical Financial Statements</span>
-              </h3>
-
-              {/* Statement Tabs */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
-                <button
-                  onClick={() => setFinancialTab("pl")}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    financialTab === "pl"
-                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800 shadow"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  Profit & Loss (P&L)
-                </button>
-                <button
-                  onClick={() => setFinancialTab("bs")}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    financialTab === "bs"
-                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800 shadow"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  Balance Sheet
-                </button>
-                <button
-                  onClick={() => setFinancialTab("cf")}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    financialTab === "cf"
-                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800 shadow"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  Cash Flows
-                </button>
-              </div>
-            </div>
-
-            {/* Financial Statements Table */}
-            <div className="overflow-x-auto">
-              {financialTab === "pl" && (
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
-                      <th className="pb-2.5">Financial Metric</th>
-                      {data.financials.income_statement.years.map((y) => (
-                        <th key={y} className="pb-2.5 text-right font-mono">{y}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {data.financials.income_statement.rows.map((row) => (
-                      <tr key={row.metric_name} className={`hover:bg-slate-800/30 ${row.is_bold ? "font-bold text-white" : "text-slate-300"}`}>
-                        <td className="py-2">{row.metric_name}</td>
-                        {data.financials.income_statement.years.map((y) => (
-                          <td key={y} className="py-2 text-right font-tabular">
-                            {row.values[y] !== null && row.values[y] !== undefined ? row.values[y]?.toLocaleString("en-IN") : "-"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
-              {financialTab === "bs" && (
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
-                      <th className="pb-2.5">Balance Sheet Line Item</th>
-                      {data.financials.balance_sheet.years.map((y) => (
-                        <th key={y} className="pb-2.5 text-right font-mono">{y}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {data.financials.balance_sheet.rows.map((row) => (
-                      <tr key={row.metric_name} className={`hover:bg-slate-800/30 ${row.is_bold ? "font-bold text-white" : "text-slate-300"}`}>
-                        <td className="py-2">{row.metric_name}</td>
-                        {data.financials.balance_sheet.years.map((y) => (
-                          <td key={y} className="py-2 text-right font-tabular">
-                            {row.values[y] !== null && row.values[y] !== undefined ? row.values[y]?.toLocaleString("en-IN") : "-"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
-              {financialTab === "cf" && (
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
-                      <th className="pb-2.5">Cash Flow Metric</th>
-                      {data.financials.cash_flows.years.map((y) => (
-                        <th key={y} className="pb-2.5 text-right font-mono">{y}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {data.financials.cash_flows.rows.map((row) => (
-                      <tr key={row.metric_name} className={`hover:bg-slate-800/30 ${row.is_bold ? "font-bold text-white" : "text-slate-300"}`}>
-                        <td className="py-2">{row.metric_name}</td>
-                        {data.financials.cash_flows.years.map((y) => (
-                          <td key={y} className="py-2 text-right font-tabular">
-                            {row.values[y] !== null && row.values[y] !== undefined ? row.values[y]?.toLocaleString("en-IN") : "-"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-
-          {/* Reverse DCF Implied Growth Calculator & Shareholding Evolution */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 1. Reverse DCF Calculator (Tijori Style) */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Sliders className="h-4 w-4 text-amber-400" />
-                  <span>Reverse DCF Valuation Calculator</span>
-                </h3>
-                <span className="text-[10px] text-slate-500 font-mono">Implied Growth</span>
-              </div>
-
-              {/* Sliders */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Discount Rate:</span>
-                    <span className="font-bold text-cyan-400 font-mono">{discountRate}%</span>
+                {/* Reverse DCF Implied Growth Calculator */}
+                <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-300 font-semibold">Reverse DCF Implied 5Y Growth:</span>
+                    <span className="text-lg font-black text-amber-400 font-mono">
+                      {calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}% CAGR
+                    </span>
                   </div>
-                  <input
-                    type="range"
-                    min="8"
-                    max="18"
-                    step="0.5"
-                    value={discountRate}
-                    onChange={(e) => setDiscountRate(Number(e.target.value))}
-                    className="w-full accent-cyan-500 cursor-pointer"
-                  />
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    At the current price of ₹{data.essentials.current_price}, the market assumes the company will compound earnings at <strong>{calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}% per year</strong> over the next 5 years (at {discountRate}% discount rate and {terminalGrowth}% terminal growth).
+                  </p>
                 </div>
+              </div>
 
-                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Terminal Growth:</span>
-                    <span className="font-bold text-amber-400 font-mono">{terminalGrowth}%</span>
+              {/* Section 6: Shareholding Evolution & Institutional Flow Delta */}
+              <div id="sec-shareholding" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-cyan-400" />
+                      <span>Shareholding Pattern Evolution & Institutional Delta</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Quarterly ownership distribution and institutional flow shifts</p>
                   </div>
-                  <input
-                    type="range"
-                    min="2"
-                    max="6"
-                    step="0.5"
-                    value={terminalGrowth}
-                    onChange={(e) => setTerminalGrowth(Number(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
+
+                  {/* Sentiment Badge */}
+                  {data.institutional_delta && (
+                    <div className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-950 text-cyan-300 border border-slate-800 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>{data.institutional_delta.net_institutional_sentiment}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Dynamic DCF Output */}
-              <div className="p-4 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400 font-semibold">Implied 5-Year PAT CAGR:</span>
-                  <span className="text-xl font-black text-amber-400 font-mono font-tabular">
-                    {calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}%
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  At the current market price of ₹{data.essentials.current_price}, the market expects the company to compound its net profit at approximately <strong>{calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}% per annum</strong> over the next 5 years.
-                </p>
-              </div>
-            </div>
+                {/* Institutional Delta Cards */}
+                {data.institutional_delta && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Promoter QoQ Delta</span>
+                      <div className={`text-sm font-bold font-mono font-tabular ${
+                        data.institutional_delta.promoter_qoq_delta >= 0 ? "text-emerald-400" : "text-rose-400"
+                      }`}>
+                        {data.institutional_delta.promoter_qoq_delta >= 0 ? `+${data.institutional_delta.promoter_qoq_delta}%` : `${data.institutional_delta.promoter_qoq_delta}%`}
+                      </div>
+                    </div>
 
-            {/* 2. Shareholding Pattern Evolution */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-cyan-400" />
-                  <span>Shareholding Pattern Evolution (4 Quarters)</span>
-                </h3>
-                <span className="text-[10px] text-slate-500 font-mono">Institutional Ownership</span>
-              </div>
+                    <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">FII Net QoQ Delta</span>
+                      <div className={`text-sm font-bold font-mono font-tabular ${
+                        data.institutional_delta.fii_qoq_delta >= 0 ? "text-emerald-400" : "text-rose-400"
+                      }`}>
+                        {data.institutional_delta.fii_qoq_delta >= 0 ? `+${data.institutional_delta.fii_qoq_delta}%` : `${data.institutional_delta.fii_qoq_delta}%`}
+                      </div>
+                    </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
-                      <th className="pb-2">Quarter</th>
-                      <th className="pb-2 text-right">Promoters</th>
-                      <th className="pb-2 text-right">FIIs</th>
-                      <th className="pb-2 text-right">DIIs</th>
-                      <th className="pb-2 text-right">Public / Retail</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {data.shareholding.map((sh) => (
-                      <tr key={sh.quarter} className="hover:bg-slate-800/30">
-                        <td className="py-2.5 text-slate-200 font-semibold">{sh.quarter}</td>
-                        <td className="py-2.5 text-right font-bold text-cyan-300 font-tabular">{sh.promoter_pct}%</td>
-                        <td className="py-2.5 text-right text-emerald-400 font-tabular">{sh.fii_pct}%</td>
-                        <td className="py-2.5 text-right text-amber-300 font-tabular">{sh.dii_pct}%</td>
-                        <td className="py-2.5 text-right text-slate-400 font-tabular">{sh.public_pct}%</td>
+                    <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">DII Net QoQ Delta</span>
+                      <div className={`text-sm font-bold font-mono font-tabular ${
+                        data.institutional_delta.dii_qoq_delta >= 0 ? "text-emerald-400" : "text-rose-400"
+                      }`}>
+                        {data.institutional_delta.dii_qoq_delta >= 0 ? `+${data.institutional_delta.dii_qoq_delta}%` : `${data.institutional_delta.dii_qoq_delta}%`}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Promoter Pledging</span>
+                      <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
+                        0.0% Pledged
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4-Quarter Shareholding Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                        <th className="pb-2">Quarter</th>
+                        <th className="pb-2 text-right">Promoters</th>
+                        <th className="pb-2 text-right">FIIs</th>
+                        <th className="pb-2 text-right">DIIs</th>
+                        <th className="pb-2 text-right">Public / Retail</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono">
+                      {data.shareholding.map((sh) => (
+                        <tr key={sh.quarter} className="hover:bg-slate-800/30">
+                          <td className="py-2.5 text-slate-200 font-semibold">{sh.quarter}</td>
+                          <td className="py-2.5 text-right font-bold text-cyan-300 font-tabular">{sh.promoter_pct}%</td>
+                          <td className="py-2.5 text-right text-emerald-400 font-tabular">{sh.fii_pct}%</td>
+                          <td className="py-2.5 text-right text-amber-300 font-tabular">{sh.dii_pct}%</td>
+                          <td className="py-2.5 text-right text-slate-400 font-tabular">{sh.public_pct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Section 7: Sector Peer Comparison Table */}
+              <div id="sec-peers" className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2 pb-2 border-b border-slate-800">
+                  <Building2 className="h-4 w-4 text-emerald-400" />
+                  <span>Sector Peer Comparison & Valuation Benchmarks</span>
+                </h3>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                        <th className="pb-2.5">Company Name</th>
+                        <th className="pb-2.5 text-right">CMP (₹)</th>
+                        <th className="pb-2.5 text-right">Market Cap (₹ Cr)</th>
+                        <th className="pb-2.5 text-right">P/E</th>
+                        <th className="pb-2.5 text-right">P/B</th>
+                        <th className="pb-2.5 text-right">ROE (%)</th>
+                        <th className="pb-2.5 text-right">ROCE (%)</th>
+                        <th className="pb-2.5 text-right">OPM (%)</th>
+                        <th className="pb-2.5 text-right">1Y Return</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono">
+                      {/* Current Company */}
+                      <tr className="bg-cyan-950/20 font-bold text-cyan-300">
+                        <td className="py-2.5">{data.company_name} (Current)</td>
+                        <td className="py-2.5 text-right font-tabular">₹{data.essentials.current_price.toFixed(2)}</td>
+                        <td className="py-2.5 text-right font-tabular">₹{data.essentials.market_cap_cr.toLocaleString("en-IN")}</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.pe || "-"}x</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.pb || "-"}x</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.roe || "-"}%</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.roce || "-"}%</td>
+                        <td className="py-2.5 text-right font-tabular">22.4%</td>
+                        <td className="py-2.5 text-right font-tabular text-emerald-400">+28.5%</td>
+                      </tr>
+
+                      {/* Peers */}
+                      {data.peers.map((peer) => (
+                        <tr
+                          key={peer.ticker}
+                          onClick={() => {
+                            setTickerInput(peer.name);
+                            loadCompanyData(peer.name);
+                          }}
+                          className="hover:bg-slate-800/40 cursor-pointer transition-colors text-slate-200"
+                        >
+                          <td className="py-2.5 flex items-center gap-1.5">
+                            <span>{peer.name}</span>
+                            <ArrowUpRight className="h-3 w-3 text-slate-500" />
+                          </td>
+                          <td className="py-2.5 text-right font-tabular">₹{peer.cmp.toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-tabular text-slate-400">₹{peer.market_cap_cr.toLocaleString("en-IN")}</td>
+                          <td className="py-2.5 text-right font-tabular">{peer.pe ? `${peer.pe}x` : "-"}</td>
+                          <td className="py-2.5 text-right font-tabular">{peer.pb ? `${peer.pb}x` : "-"}</td>
+                          <td className="py-2.5 text-right font-tabular text-emerald-400">{peer.roe ? `${peer.roe}%` : "-"}</td>
+                          <td className="py-2.5 text-right font-tabular text-emerald-400">{peer.roce ? `${peer.roce}%` : "-"}</td>
+                          <td className="py-2.5 text-right font-tabular">{peer.opm_pct ? `${peer.opm_pct}%` : "-"}</td>
+                          <td className={`py-2.5 text-right font-tabular ${(peer.return_1y || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                            {(peer.return_1y || 0) >= 0 ? `+${peer.return_1y}%` : `${peer.return_1y}%`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Sector Peer Comparison Table */}
-          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 pb-2 border-b border-slate-800">
-              <Building2 className="h-4 w-4 text-emerald-400" />
-              <span>Sector Peer Comparison & Valuation Matrix</span>
-            </h3>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
-                    <th className="pb-2.5">Company Name</th>
-                    <th className="pb-2.5 text-right">CMP (₹)</th>
-                    <th className="pb-2.5 text-right">Market Cap (₹ Cr)</th>
-                    <th className="pb-2.5 text-right">P/E</th>
-                    <th className="pb-2.5 text-right">P/B</th>
-                    <th className="pb-2.5 text-right">ROE (%)</th>
-                    <th className="pb-2.5 text-right">ROCE (%)</th>
-                    <th className="pb-2.5 text-right">OPM (%)</th>
-                    <th className="pb-2.5 text-right">1Y Return</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {/* Current Company */}
-                  <tr className="bg-cyan-950/20 font-bold text-cyan-300">
-                    <td className="py-2.5">{data.company_name} (Current)</td>
-                    <td className="py-2.5 text-right font-tabular">₹{data.essentials.current_price.toFixed(2)}</td>
-                    <td className="py-2.5 text-right font-tabular">₹{data.essentials.market_cap_cr.toLocaleString("en-IN")}</td>
-                    <td className="py-2.5 text-right font-tabular">{data.essentials.pe || "-"}x</td>
-                    <td className="py-2.5 text-right font-tabular">{data.essentials.pb || "-"}x</td>
-                    <td className="py-2.5 text-right font-tabular">{data.essentials.roe || "-"}%</td>
-                    <td className="py-2.5 text-right font-tabular">{data.essentials.roce || "-"}%</td>
-                    <td className="py-2.5 text-right font-tabular">22.4%</td>
-                    <td className="py-2.5 text-right font-tabular text-emerald-400">+28.5%</td>
-                  </tr>
-
-                  {/* Peers */}
-                  {data.peers.map((peer) => (
-                    <tr
-                      key={peer.ticker}
-                      onClick={() => loadCompanyData(peer.name)}
-                      className="hover:bg-slate-800/40 cursor-pointer transition-colors text-slate-200"
-                    >
-                      <td className="py-2.5 flex items-center gap-1.5">
-                        <span>{peer.name}</span>
-                        <ArrowUpRight className="h-3 w-3 text-slate-500" />
-                      </td>
-                      <td className="py-2.5 text-right font-tabular">₹{peer.cmp.toFixed(2)}</td>
-                      <td className="py-2.5 text-right font-tabular text-slate-400">₹{peer.market_cap_cr.toLocaleString("en-IN")}</td>
-                      <td className="py-2.5 text-right font-tabular">{peer.pe ? `${peer.pe}x` : "-"}</td>
-                      <td className="py-2.5 text-right font-tabular">{peer.pb ? `${peer.pb}x` : "-"}</td>
-                      <td className="py-2.5 text-right font-tabular text-emerald-400">{peer.roe ? `${peer.roe}%` : "-"}</td>
-                      <td className="py-2.5 text-right font-tabular text-emerald-400">{peer.roce ? `${peer.roce}%` : "-"}</td>
-                      <td className="py-2.5 text-right font-tabular">{peer.opm_pct ? `${peer.opm_pct}%` : "-"}</td>
-                      <td className={`py-2.5 text-right font-tabular ${(peer.return_1y || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                        {(peer.return_1y || 0) >= 0 ? `+${peer.return_1y}%` : `${peer.return_1y}%`}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-};
+      );
+    };

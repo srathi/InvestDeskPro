@@ -321,6 +321,51 @@ class CompanyEssentials(BaseModel):
     volume: Optional[float] = None
 
 
+class QuarterlyFinancialRow(BaseModel):
+    metric_name: str
+    values: Dict[str, Optional[float]] = Field(default_factory=dict)
+    is_bold: bool = False
+    is_percentage: bool = False
+
+
+class QuarterlyFinancialTable(BaseModel):
+    quarters: List[str]
+    rows: List[QuarterlyFinancialRow]
+    yoy_revenue_growth_pct: Optional[float] = None
+    yoy_pat_growth_pct: Optional[float] = None
+    latest_opm_pct: Optional[float] = None
+
+
+class DCFSensitivityCell(BaseModel):
+    wacc_pct: float
+    terminal_growth_pct: float
+    fair_value: float
+    margin_of_safety_pct: float
+    is_base_case: bool = False
+
+
+class DCFSensitivityMatrix(BaseModel):
+    wacc_rates: List[float]
+    terminal_growth_rates: List[float]
+    grid: List[List[DCFSensitivityCell]]
+    base_wacc_pct: float
+    base_growth_pct: float
+    base_terminal_growth_pct: float
+    base_fair_value: float
+    current_market_price: float
+    margin_of_safety_pct: float
+    valuation_status: str
+
+
+class InstitutionalDelta(BaseModel):
+    promoter_qoq_delta: float
+    fii_qoq_delta: float
+    dii_qoq_delta: float
+    public_qoq_delta: float
+    pledged_shares_pct: float = 0.0
+    net_institutional_sentiment: str
+
+
 class Company360Response(BaseModel):
     ticker: str
     company_name: str
@@ -337,8 +382,11 @@ class Company360Response(BaseModel):
     geography: List[GeographicSegment] = Field(default_factory=list)
     forensics: List[ForensicProbe] = Field(default_factory=list)
     reverse_dcf: ReverseDCFModel
+    dcf_sensitivity_matrix: Optional[DCFSensitivityMatrix] = None
     financials: CompanyFinancials
+    quarterly_financials: Optional[QuarterlyFinancialTable] = None
     shareholding: List[ShareholdingQuarter] = Field(default_factory=list)
+    institutional_delta: Optional[InstitutionalDelta] = None
     peers: List[PeerComparisonStock] = Field(default_factory=list)
     price_history: List[StockPricePoint] = Field(default_factory=list)
 
