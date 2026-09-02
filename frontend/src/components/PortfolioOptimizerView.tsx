@@ -107,6 +107,7 @@ export const PortfolioOptimizerView: React.FC = () => {
     }
     setLoading(true);
     setError(null);
+    setResult(null);
     try {
       const data = await optimizePortfolio(tickers, cap);
       setResult(data);
@@ -349,10 +350,38 @@ export const PortfolioOptimizerView: React.FC = () => {
         </div>
       )}
 
-      {loading && !result && (
-        <div className="py-24 flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-10 w-10 text-indigo-400 animate-spin" />
-          <p className="text-sm font-mono text-slate-400">Calculating inverse-volatility risk-parity weights & covariance matrix...</p>
+      {loading && (
+        <div className="space-y-6 animate-pulse py-4">
+          <div className="glass-panel p-8 rounded-3xl border border-purple-800/40 text-center space-y-5 my-2 relative overflow-hidden bg-gradient-to-b from-purple-950/20 to-slate-950/80">
+            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-2xl bg-purple-500/20 animate-ping" />
+              <div className="relative w-14 h-14 rounded-2xl bg-purple-950 border border-purple-500/50 flex items-center justify-center text-purple-400">
+                <Loader2 className="h-7 w-7 animate-spin" />
+              </div>
+            </div>
+            <div className="space-y-2 max-w-lg mx-auto">
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Solving Convex Risk-Parity Quadratic Optimization
+              </h3>
+              <p className="text-xs text-slate-400 font-mono leading-relaxed">
+                Ingesting historical daily price series, computing covariance matrix & equalizing marginal risk contributions with {maxWeight}% allocation cap...
+              </p>
+            </div>
+            {/* Animated Loading Bar */}
+            <div className="max-w-xs mx-auto h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-purple-500 via-indigo-400 to-purple-500 animate-pulse w-full" />
+            </div>
+          </div>
+
+          {/* Skeleton Cards Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 rounded-2xl bg-slate-900/40 border border-slate-800/60 p-4 space-y-2">
+                <div className="h-3 w-20 bg-slate-800 rounded" />
+                <div className="h-6 w-28 bg-slate-800/80 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

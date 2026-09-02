@@ -80,15 +80,18 @@ const QUICK_SEARCH_CHIPS: QuickSearchChip[] = [
 ];
 
 const PRESET_COMPANIES = [
-  { ticker: "RELIANCE", name: "Reliance Ind." },
-  { ticker: "TCS", name: "TCS" },
-  { ticker: "HDFCBANK", name: "HDFC Bank" },
-  { ticker: "TATAMOTORS", name: "Tata Motors" },
-  { ticker: "INFY", name: "Infosys" },
-  { ticker: "PICCADILY", name: "Piccadily Agro" },
-  { ticker: "ITC", name: "ITC Ltd." },
-  { ticker: "TRENT", name: "Trent" },
-  { ticker: "CDSL", name: "CDSL" },
+  { ticker: "RELIANCE", name: "Reliance Ind.", sector: "Oil & Gas / Retail", tag: "Large Cap 🏢" },
+  { ticker: "TCS", name: "TCS", sector: "IT Services", tag: "High ROCE 💎" },
+  { ticker: "HDFCBANK", name: "HDFC Bank", sector: "Banking", tag: "Core Bank 🏦" },
+  { ticker: "TATAMOTORS", name: "Tata Motors", sector: "Automotive", tag: "EV Leader 🚗" },
+  { ticker: "INFY", name: "Infosys", sector: "IT & Cloud", tag: "Tech Bluechip 💻" },
+  { ticker: "PICCADIL", name: "Piccadily Agro", sector: "Distilleries", tag: "Compounder 🚀" },
+  { ticker: "CONFIPET", name: "Confidence Pet.", sector: "LPG Infrastructure", tag: "Small Cap ⚡" },
+  { ticker: "ITC", name: "ITC Ltd.", sector: "FMCG / Cigarettes", tag: "High Dividend 💰" },
+  { ticker: "LT", name: "Larsen & Toubro", sector: "Capital Goods", tag: "Infra Giant 🏗️" },
+  { ticker: "BAJFINANCE", name: "Bajaj Finance", sector: "NBFC / Lending", tag: "Retail Credit 💳" },
+  { ticker: "SUNPHARMA", name: "Sun Pharma", sector: "Healthcare", tag: "Pharma Leader 💊" },
+  { ticker: "TRENT", name: "Trent", sector: "Retail / Apparel", tag: "Retail Alpha ⭐" },
 ];
 
 interface Company360ViewProps {
@@ -188,6 +191,19 @@ export const Company360View: React.FC<Company360ViewProps> = ({
       }
     } else if (e.key === "Escape") {
       setHeroShowDropdown(false);
+    }
+  };
+
+  const handleHeroSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (heroSelectedIndex >= 0 && heroSelectedIndex < heroSearchResults.length) {
+      const selected = heroSearchResults[heroSelectedIndex];
+      handleHeroSelect({ id: selected.id, type: selected.type as "stock" | "fund" });
+    } else if (heroSearchResults.length > 0) {
+      const first = heroSearchResults[0];
+      handleHeroSelect({ id: first.id, type: first.type as "stock" | "fund" });
+    } else if (heroSearchQuery.trim()) {
+      handleHeroSelect({ id: heroSearchQuery.trim().toUpperCase(), type: "stock" });
     }
   };
 
@@ -704,48 +720,115 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Quick Presets & Global Search Navigation Ribbon */}
-      <div className="glass-panel p-3 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-          <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mr-1 shrink-0 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-            <span>Presets:</span>
-          </span>
-          {PRESET_COMPANIES.map((item) => (
-            <button
-              key={item.ticker}
-              onClick={() => {
-                setTickerInput(item.ticker);
-                loadCompanyData(item.ticker);
+      {/* 🌟 Top Hero Search & Multiline Suggestions Panel */}
+      <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-4 relative z-30 shadow-2xl backdrop-blur-xl">
+        {/* Full-Width Search Input Bar */}
+        <div ref={heroSearchRef} className="relative w-full">
+          <form onSubmit={handleHeroSearchSubmit} className="relative w-full flex items-center">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-cyan-400 pointer-events-none" />
+            <input
+              type="text"
+              value={heroSearchQuery}
+              onChange={(e) => {
+                setHeroSearchQuery(e.target.value);
+                setHeroShowDropdown(true);
               }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all whitespace-nowrap ${
-                data?.ticker === item.ticker || tickerInput.toUpperCase().includes(item.ticker)
-                  ? "bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm shadow-cyan-950"
-                  : "bg-slate-900/60 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-700"
-              }`}
+              onFocus={() => {
+                if (heroSearchResults.length > 0) setHeroShowDropdown(true);
+              }}
+              onKeyDown={handleHeroKeyDown}
+              placeholder="Search any Indian Stock or Mutual Fund (e.g. RELIANCE, TCS, PICCADIL, TATAMOTORS, PARAG PARIKH)..."
+              className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-cyan-500 rounded-2xl pl-12 pr-36 py-3.5 text-sm md:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all shadow-inner font-mono uppercase"
+            />
+            {heroIsSearching && (
+              <Loader2 className="absolute right-32 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400 animate-spin" />
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs md:text-sm font-semibold rounded-xl transition-all shadow-md shadow-cyan-950 flex items-center gap-1.5 disabled:opacity-50"
             >
-              {item.name}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              <span>360° Audit</span>
             </button>
-          ))}
+          </form>
+
+          {/* Debounced Autocomplete Dropdown */}
+          {heroShowDropdown && heroSearchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl max-h-80 overflow-y-auto divide-y divide-slate-800/60 z-50">
+              <div className="px-4 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
+                <span>Direct Search Matches ({heroSearchResults.length})</span>
+                <span className="text-[9px] font-mono lowercase">↑↓ navigate • ↵ select • esc close</span>
+              </div>
+              {heroSearchResults.map((item, idx) => (
+                <button
+                  key={`${item.type}-${item.id}`}
+                  type="button"
+                  onClick={() => {
+                    setHeroShowDropdown(false);
+                    setHeroSearchQuery("");
+                    handleHeroSelect({ id: item.id, type: item.type as "stock" | "fund" });
+                  }}
+                  className={`w-full text-left px-4 py-3 flex items-center justify-between text-xs md:text-sm transition-colors ${
+                    idx === heroSelectedIndex ? "bg-cyan-950/70 text-cyan-200" : "hover:bg-slate-900/80 text-slate-200"
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white font-mono text-sm">{item.symbol_or_code || item.id}</span>
+                      <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${
+                        item.type === "stock" ? "bg-cyan-950 text-cyan-300 border border-cyan-800" : "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                      }`}>
+                        {item.type === "stock" ? "NSE/BSE Equity" : "Mutual Fund"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 font-medium">{item.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ChevronRight className="h-4 w-4 text-slate-600" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Global Search Trigger */}
-        <button
-          type="button"
-          onClick={() => {
-            const input = document.querySelector<HTMLInputElement>("header input");
-            input?.focus();
-            input?.select();
-          }}
-          className="text-xs text-slate-400 hover:text-cyan-300 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 hover:border-cyan-800 transition-all flex items-center gap-2 shrink-0 font-mono group"
-          title="Search any stock or fund with Cmd+K"
-        >
-          <Search className="h-3.5 w-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
-          <span>Search any stock...</span>
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-slate-500 bg-slate-900 border border-slate-800 rounded font-mono">
-            ⌘K
-          </kbd>
-        </button>
+        {/* Multi-line Quick Presets Panel Below Input */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-2">
+          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Institutional 360° Watchlist (Instant 1-Click Deep Audit):</span>
+            </span>
+            <span className="text-[10px] text-slate-500 font-normal lowercase hidden sm:inline">click to audit company</span>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {PRESET_COMPANIES.map((item) => (
+              <button
+                key={item.ticker}
+                onClick={() => {
+                  setTickerInput(item.ticker);
+                  loadCompanyData(item.ticker);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  data?.ticker === item.ticker || tickerInput.toUpperCase().includes(item.ticker)
+                    ? "bg-cyan-950 text-cyan-300 border border-cyan-600 shadow-md shadow-cyan-950 font-semibold"
+                    : "bg-slate-900/70 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 hover:bg-slate-900"
+                }`}
+              >
+                <span className="font-mono font-bold text-white">{item.ticker}</span>
+                <span className="text-slate-400">({item.name})</span>
+                <span className="text-[10px] font-mono text-slate-500 bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-800/80">
+                  {item.sector}
+                </span>
+                <span className="text-[10px] text-cyan-400 font-semibold">
+                  {item.tag}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {error && (
