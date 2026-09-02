@@ -11,6 +11,7 @@ import pandas as pd
 import yfinance as yf
 
 from app.core.factors import normalize_ticker, safe_float
+from app.core.growth_forecast import calculate_forward_estimates
 from app.schemas import (
     Company360Response,
     CompanyEssentials,
@@ -20,6 +21,7 @@ from app.schemas import (
     FinancialStatementRow,
     FinancialStatementTable,
     ForensicProbe,
+    ForwardGrowthEstimates,
     GeographicSegment,
     HistoricalValuationSummary,
     InstitutionalDelta,
@@ -1346,6 +1348,25 @@ def fetch_company_360(ticker: str) -> Company360Response:
         peers=peers[:5],
         price_history=price_history,
         historical_valuation_summary=historical_valuation_summary,
+        forward_estimates=calculate_forward_estimates(
+            ticker=clean_sym,
+            financials=financials,
+            essentials=essentials,
+            historical_pe_summary=historical_valuation_summary,
+        ),
+    )
+
+
+def fetch_company_forecast(ticker: str) -> ForwardGrowthEstimates:
+    """Fetch dedicated 1Y, 2Y, and 3Y forward growth and earnings projections for a ticker."""
+    res = fetch_company_360(ticker)
+    if res.forward_estimates:
+        return res.forward_estimates
+    return calculate_forward_estimates(
+        ticker=ticker,
+        financials=res.financials,
+        essentials=res.essentials,
+        historical_pe_summary=res.historical_valuation_summary,
     )
 
 

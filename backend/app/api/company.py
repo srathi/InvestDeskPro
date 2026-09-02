@@ -4,7 +4,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from app.core.company_deep import fetch_company_360, fetch_company_history
+from app.core.company_deep import fetch_company_360, fetch_company_forecast, fetch_company_history
+from app.core.factors import search_indian_stocks
 from app.core.mf_engine import search_mutual_funds
 from app.core.screener_engine import (
     MASTER_STOCK_UNIVERSE,
@@ -13,6 +14,7 @@ from app.core.screener_engine import (
 )
 from app.schemas import (
     Company360Response,
+    ForwardGrowthEstimates,
     InvestmentBundleItem,
     ScreenerFilterRequest,
     ScreenerResponse,
@@ -39,6 +41,15 @@ def get_company_deep(ticker: str):
         return fetch_company_360(ticker)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch Company 360 for {ticker}: {str(e)}")
+
+
+@router.get("/company/{ticker}/forecast", response_model=ForwardGrowthEstimates)
+def get_company_forecast(ticker: str):
+    """Retrieve 1Y, 2Y, and 3Y forward growth and earnings forecasts across Base, Bull, and Bear cases."""
+    try:
+        return fetch_company_forecast(ticker)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate growth forecast for {ticker}: {str(e)}")
 
 
 @router.get("/company/{ticker}/history", response_model=StockHistoryResponse)

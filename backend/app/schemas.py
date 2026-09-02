@@ -397,6 +397,46 @@ class StockHistoryResponse(BaseModel):
     valuation_summary: HistoricalValuationSummary
 
 
+class ForwardYearProjection(BaseModel):
+    horizon_years: int
+    year_label: str
+    revenue_cr: float
+    pat_cr: float
+    eps: float
+    net_margin_pct: float
+    target_price: float
+    implied_return_pct: float
+    implied_cagr_pct: float
+
+
+class ForwardScenario(BaseModel):
+    scenario_name: str
+    scenario_description: str
+    assumed_revenue_growth_pct: float
+    assumed_net_margin_pct: float
+    assumed_exit_pe: float
+    projections: List[ForwardYearProjection] = Field(default_factory=list)
+
+
+class ForwardGrowthEstimates(BaseModel):
+    ticker: str
+    base_year_label: str
+    base_revenue_cr: float
+    base_pat_cr: float
+    base_eps: float
+    base_cmp: float
+    historical_cagr_3y_rev: Optional[float] = None
+    historical_cagr_5y_rev: Optional[float] = None
+    historical_cagr_3y_pat: Optional[float] = None
+    historical_cagr_5y_pat: Optional[float] = None
+    sustainable_growth_rate: Optional[float] = None
+    median_pe_benchmark: float
+    base_case: ForwardScenario
+    bull_case: ForwardScenario
+    bear_case: ForwardScenario
+    driver_attribution: str
+
+
 class Company360Response(BaseModel):
     ticker: str
     company_name: str
@@ -421,6 +461,7 @@ class Company360Response(BaseModel):
     peers: List[PeerComparisonStock] = Field(default_factory=list)
     price_history: List[StockPricePoint] = Field(default_factory=list)
     historical_valuation_summary: Optional[HistoricalValuationSummary] = None
+    forward_estimates: Optional[ForwardGrowthEstimates] = None
 
 
 # ---------------------------------------------------------------------------

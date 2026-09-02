@@ -27,6 +27,8 @@ import {
   FileSpreadsheet,
   Sparkles,
   Table,
+  Target,
+  Calculator,
 } from "lucide-react";
 import {
   AreaChart,
@@ -52,6 +54,9 @@ import {
   HistoricalValuationSummary,
   StockPricePoint,
   StockSearchResult,
+  ForwardGrowthEstimates,
+  ForwardScenario,
+  ForwardYearProjection,
 } from "../lib/api";
 import { useDebounce } from "../hooks/useDebounce";
 
@@ -89,6 +94,12 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const [showDma, setShowDma] = useState(true);
   const [historyCache, setHistoryCache] = useState<Record<string, StockHistoryResponse>>({});
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Forward Growth Projections Interactive State
+  const [selectedScenario, setSelectedScenario] = useState<"base" | "bull" | "bear" | "custom">("base");
+  const [customRevGrowth, setCustomRevGrowth] = useState<number>(15.0);
+  const [customNetMargin, setCustomNetMargin] = useState<number>(12.0);
+  const [customExitPe, setCustomExitPe] = useState<number>(22.0);
 
   // DCF Interactive State
   const [dcfWacc, setDcfWacc] = useState(12.0);
@@ -324,6 +335,119 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const activePoints = activeHistory?.history || data?.price_history || [];
   const valSummary = activeHistory?.valuation_summary || data?.historical_valuation_summary;
 
+  // Sync custom scenario defaults when company data loads
+  useEffect(() => {
+    if (data?.forward_estimates) {
+      setCustomRevGrowth(data.forward_estimates.base_case.assumed_revenue_growth_pct);
+      setCustomNetMargin(data.forward_estimates.base_case.assumed_net_margin_pct);
+      setCustomExitPe(data.forward_estimates.base_case.assumed_exit_pe);
+    }
+  }, [data]);
+
+  // Active Forecast Scenario & Projections
+  const activeForecastScenario = useMemo<ForwardScenario | null>(() => {
+    if (!data?.forward_estimates) return null;
+    if (selectedScenario === "bull") return data.forward_estimates.bull_case;
+    if (selectedScenario === "bear") return data.forward_estimates.bear_case;
+    if (selectedScenario === "base") return data.forward_estimates.base_case;
+
+    // Custom Scenario Calculation
+    const est = data.forward_estimates;
+    const baseRev = est.base_revenue_cr;
+    const basePat = est.base_pat_cr;
+    const baseEps = est.base_eps;
+    const cmp = est.base_cmp;
+    const gDec = customRevGrowth / 100.0;
+    const mDec = customNetMargin / 100.0;
+
+    let baseYrInt = 26;
+    try {
+      baseYrInt = parseInt(est.base_year_label.slice(2, 4)) || 26;
+    } catch {
+      baseYrInt = 26;
+    }
+
+    const customProjections: ForwardYearProjection[] = [1, 2, 3].map((h) => {
+      const yrLabel = `FY${baseYrInt + h} (${h}Y Forward)`;
+      const projRev = Math.round(baseRev * Math.pow(1 + gDec, h) * 10) / 10;
+      const projPat = Math.round(projRev * mDec * 10) / 10;
+      const patMult = projPat / Math.max(1.0, basePat);
+      const projEps = Math.round(baseEps * patMult * 100) / 100;
+      const targetPrice = Math.round(projEps * customExitPe * 100) / 100;
+      const impliedReturn = Math.round(((targetPrice - cmp) / cmp) * 10000) / 100;
+      const impliedCagr =
+        targetPrice > 0 && cmp > 0
+          ? Math.round((Math.pow(targetPrice / cmp, 1.0 / h) - 1.0) * 10000) / 100
+          : Math.round((impliedReturn / h) * 100) / 100;
+
+      return {
+        horizon_years: h,
+        year_label: yrLabel,
+        revenue_cr: projRev,
+        pat_cr: projPat,
+        eps: projEps,
+        net_margin_pct: customNetMargin,
+        target_price: targetPrice,
+        implied_return_pct: impliedReturn,
+        implied_cagr_pct: impliedCagr,
+      };
+    });
+
+    return {
+      scenario_name: "Custom User Scenario",
+      scenario_description: `User-defined assumptions: ${customRevGrowth}% Annual Top-Line Growth, ${customNetMargin}% Net Margin, and ${customExitPe}x Exit Valuation Multiple.`,
+      assumed_revenue_growth_pct: customRevGrowth,
+      assumed_net_margin_pct: customNetMargin,
+      assumed_exit_pe: customExitPe,
+      projections: customProjections,
+    };
+  }, [data, selectedScenario, customRevGrowth, customNetMargin, customExitPe]);
+
+  // Combined 5Y Historical + 3Y Forward Trajectory Chart Data
+  const forecastChartData = useMemo(() => {
+    if (!data?.financials?.income_statement || !activeForecastScenario) return [];
+    const years = data.financials.income_statement.years || [];
+    const revRow = data.financials.income_statement.rows.find(
+      (r) =>
+        r.metric_name.toLowerCase().includes("revenue") ||
+        r.metric_name.toLowerCase().includes("sales")
+    );
+    const patRow = data.financials.income_statement.rows.find(
+      (r) =>
+        r.metric_name.toLowerCase().includes("net profit") ||
+        r.metric_name.toLowerCase().includes("pat")
+    );
+
+    const histPoints = years.map((y) => ({
+      year: y,
+      revenue_hist: revRow?.values[y] ?? null,
+      pat_hist: patRow?.values[y] ?? null,
+      revenue_proj: null as number | null,
+      pat_proj: null as number | null,
+      is_projection: false,
+    }));
+
+    // Bridge historical last point to projection start
+    if (histPoints.length > 0) {
+      const lastPoint = histPoints[histPoints.length - 1];
+      lastPoint.revenue_proj = lastPoint.revenue_hist;
+      lastPoint.pat_proj = lastPoint.pat_hist;
+    }
+
+    const projPoints = activeForecastScenario.projections.map((p) => ({
+      year: p.year_label.split(" ")[0],
+      revenue_hist: null as number | null,
+      pat_hist: null as number | null,
+      revenue_proj: p.revenue_cr,
+      pat_proj: p.pat_cr,
+      is_projection: true,
+      eps: p.eps,
+      target_price: p.target_price,
+    }));
+
+    return [...histPoints, ...projPoints];
+  }, [data, activeForecastScenario]);
+
   return (
     <div className="space-y-6">
       {/* Quick Presets & Global Search Navigation Ribbon */}
@@ -472,6 +596,13 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                     className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all shrink-0"
                   >
                     Overview
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("sec-forecast")}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-cyan-950/80 text-cyan-300 hover:bg-cyan-900 border border-cyan-800 transition-all shrink-0 flex items-center gap-1 shadow-sm"
+                  >
+                    <Target className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>Forecast (1Y-3Y)</span>
                   </button>
                   <button
                     onClick={() => scrollToSection("sec-quarterly")}
@@ -1110,6 +1241,353 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Section: 1-to-3 Year Forward Earnings & Growth Forecasting Suite */}
+              {activeForecastScenario && data.forward_estimates && (
+                <div id="sec-forecast" className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-6">
+                  {/* Section Header & Scenario Switcher */}
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-cyan-400" />
+                        <h3 className="text-base font-bold text-white tracking-tight">
+                          1-to-3 Year Forward Earnings & Growth Forecasting Engine
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                          {data.forward_estimates.base_year_label} Base
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Forward fundamental CAGR compounding, DuPont net margin projections, and multi-scenario target price discovery.
+                      </p>
+                    </div>
+
+                    {/* Scenario Mode Switcher */}
+                    <div className="flex flex-wrap items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                      <button
+                        onClick={() => setSelectedScenario("base")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          selectedScenario === "base"
+                            ? "bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        Base Case (Most Likely)
+                      </button>
+                      <button
+                        onClick={() => setSelectedScenario("bull")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          selectedScenario === "bull"
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-700 shadow-sm"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        Bull Case (Accelerated)
+                      </button>
+                      <button
+                        onClick={() => setSelectedScenario("bear")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          selectedScenario === "bear"
+                            ? "bg-rose-950 text-rose-300 border border-rose-800 shadow-sm"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        Bear Case (Slowdown)
+                      </button>
+                      <button
+                        onClick={() => setSelectedScenario("custom")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                          selectedScenario === "custom"
+                            ? "bg-purple-950 text-purple-300 border border-purple-700 shadow-sm"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <Sliders className="h-3 w-3" />
+                        <span>Custom Simulator</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Historical Growth Anchors & Assumptions Strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs font-mono bg-slate-900/40 p-3 rounded-xl border border-slate-800/80">
+                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">3Y Historical Rev CAGR</span>
+                      <span className="font-bold text-slate-200">
+                        {data.forward_estimates.historical_cagr_3y_rev !== null && data.forward_estimates.historical_cagr_3y_rev !== undefined
+                          ? `+${data.forward_estimates.historical_cagr_3y_rev}%`
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">5Y Historical Rev CAGR</span>
+                      <span className="font-bold text-slate-200">
+                        {data.forward_estimates.historical_cagr_5y_rev !== null && data.forward_estimates.historical_cagr_5y_rev !== undefined
+                          ? `+${data.forward_estimates.historical_cagr_5y_rev}%`
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">3Y Historical PAT CAGR</span>
+                      <span className="font-bold text-emerald-300">
+                        {data.forward_estimates.historical_cagr_3y_pat !== null && data.forward_estimates.historical_cagr_3y_pat !== undefined
+                          ? `+${data.forward_estimates.historical_cagr_3y_pat}%`
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                      <span className="text-[10px] text-cyan-400 uppercase block font-semibold">Sustainable Growth (SGR)</span>
+                      <span className="font-bold text-cyan-300">
+                        {data.forward_estimates.sustainable_growth_rate !== null && data.forward_estimates.sustainable_growth_rate !== undefined
+                          ? `+${data.forward_estimates.sustainable_growth_rate}%`
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800 col-span-2 sm:col-span-1">
+                      <span className="text-[10px] text-amber-400 uppercase block font-semibold">5Y Median Benchmark P/E</span>
+                      <span className="font-bold text-amber-300">{data.forward_estimates.median_pe_benchmark}x</span>
+                    </div>
+                  </div>
+
+                  {/* Interactive Sliders (When Custom Simulator is Selected) */}
+                  {selectedScenario === "custom" && (
+                    <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-900/50 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-purple-200 flex items-center gap-1.5 uppercase tracking-wide">
+                          <Calculator className="h-4 w-4 text-purple-400" />
+                          <span>Interactive Custom Scenario Parameters</span>
+                        </h4>
+                        <span className="text-[11px] text-purple-300 font-mono">Real-time dynamic recalculation</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs font-mono">
+                            <span className="text-slate-400">Annual Revenue Growth:</span>
+                            <span className="font-bold text-cyan-300">{customRevGrowth}% / yr</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="2"
+                            max="50"
+                            step="0.5"
+                            value={customRevGrowth}
+                            onChange={(e) => setCustomRevGrowth(parseFloat(e.target.value))}
+                            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs font-mono">
+                            <span className="text-slate-400">Net Profit Margin (NPM):</span>
+                            <span className="font-bold text-emerald-300">{customNetMargin}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="2"
+                            max="45"
+                            step="0.5"
+                            value={customNetMargin}
+                            onChange={(e) => setCustomNetMargin(parseFloat(e.target.value))}
+                            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs font-mono">
+                            <span className="text-slate-400">Exit Target P/E Multiple:</span>
+                            <span className="font-bold text-amber-300">{customExitPe}x</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="8"
+                            max="70"
+                            step="0.5"
+                            value={customExitPe}
+                            onChange={(e) => setCustomExitPe(parseFloat(e.target.value))}
+                            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scenario Description Pill */}
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white">{activeForecastScenario.scenario_name}:</span>
+                      <span className="text-slate-400">{activeForecastScenario.scenario_description}</span>
+                    </div>
+                    <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
+                      <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+                        Growth: {activeForecastScenario.assumed_revenue_growth_pct}%
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                        NPM: {activeForecastScenario.assumed_net_margin_pct}%
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                        Exit P/E: {activeForecastScenario.assumed_exit_pe}x
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3 Horizon Projection Cards (1Y, 2Y, 3Y) */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {activeForecastScenario.projections.map((proj) => (
+                      <div
+                        key={proj.horizon_years}
+                        className={`p-4 rounded-xl border relative overflow-hidden transition-all ${
+                          proj.horizon_years === 3
+                            ? "bg-gradient-to-b from-slate-900/90 to-cyan-950/30 border-cyan-700/80 shadow-lg shadow-cyan-950/30"
+                            : "bg-slate-950/70 border-slate-800/90"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                          <div>
+                            <span className="text-[10px] text-cyan-400 uppercase font-bold tracking-wider">
+                              {proj.horizon_years}-Year Forward Target
+                            </span>
+                            <h4 className="text-sm font-bold text-white font-mono">{proj.year_label}</h4>
+                          </div>
+                          <div className="text-right">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold border ${
+                                proj.implied_return_pct >= 0
+                                ? "bg-emerald-950 text-emerald-300 border-emerald-800"
+                                : "bg-rose-950 text-rose-300 border-rose-800"
+                              }`}
+                            >
+                              {proj.implied_return_pct >= 0 ? "+" : ""}
+                              {proj.implied_return_pct}%
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 space-y-2.5 text-xs font-mono">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400">Projected Revenue:</span>
+                            <span className="font-bold text-slate-100">₹{proj.revenue_cr.toLocaleString("en-IN")} Cr</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400">Projected PAT:</span>
+                            <span className="font-bold text-emerald-400">₹{proj.pat_cr.toLocaleString("en-IN")} Cr</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400">Projected EPS:</span>
+                            <span className="font-bold text-amber-300">₹{proj.eps} / share</span>
+                          </div>
+                          <div className="pt-2 border-t border-slate-800/80 flex justify-between items-center">
+                            <span className="text-slate-300 font-semibold">Implied Target Price:</span>
+                            <span className="font-extrabold text-cyan-300 text-sm">₹{proj.target_price.toLocaleString("en-IN")}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[11px]">
+                            <span className="text-slate-500">Annualized Expected CAGR:</span>
+                            <span
+                              className={`font-bold ${
+                                proj.implied_cagr_pct >= 0 ? "text-emerald-400" : "text-rose-400"
+                              }`}
+                            >
+                              {proj.implied_cagr_pct >= 0 ? "+" : ""}
+                              {proj.implied_cagr_pct}% / yr
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Combined 5Y Historical + 3Y Forward Trajectory Chart */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                        <BarChart3 className="h-4 w-4 text-cyan-400" />
+                        <span>Historical Financials & 3-Year Forward Trajectory (Revenue & PAT in ₹ Cr)</span>
+                      </span>
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono text-slate-400">
+                        <span className="flex items-center gap-1">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-cyan-600 inline-block"></span>
+                          <span>Audited Revenue</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-cyan-400 inline-block border border-dashed border-cyan-200"></span>
+                          <span>Projected Revenue</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block"></span>
+                          <span>Projected PAT</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="h-64 w-full pt-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={forecastChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="forecastRevHistGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#0891b2" stopOpacity={0.8} />
+                              <stop offset="95%" stopColor="#0891b2" stopOpacity={0.3} />
+                            </linearGradient>
+                            <linearGradient id="forecastRevProjGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.9} />
+                              <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.4} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="year" stroke="#475569" fontSize={10} tickLine={false} />
+                          <YAxis
+                            stroke="#475569"
+                            fontSize={10}
+                            tickLine={false}
+                            domain={[0, "auto"]}
+                            tickFormatter={(v) => `₹${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v} Cr`}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "#0f172a",
+                              borderColor: "#334155",
+                              borderRadius: "0.75rem",
+                              color: "#f8fafc",
+                              fontSize: "12px",
+                            }}
+                            formatter={(val: any, name: any) => {
+                              if (!val) return [null, null];
+                              if (name === "revenue_hist") return [`₹${Number(val).toLocaleString("en-IN")} Cr`, "Audited Revenue"];
+                              if (name === "revenue_proj") return [`₹${Number(val).toLocaleString("en-IN")} Cr`, "Projected Revenue"];
+                              if (name === "pat_hist") return [`₹${Number(val).toLocaleString("en-IN")} Cr`, "Audited Net Profit (PAT)"];
+                              if (name === "pat_proj") return [`₹${Number(val).toLocaleString("en-IN")} Cr`, "Projected Net Profit (PAT)"];
+                              return [val, name];
+                            }}
+                            labelFormatter={(label) => `Fiscal Year: ${label}`}
+                          />
+                          <Bar dataKey="revenue_hist" fill="url(#forecastRevHistGrad)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                          <Bar dataKey="revenue_proj" fill="url(#forecastRevProjGrad)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                          <Line
+                            type="monotone"
+                            dataKey="pat_hist"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            dot={{ fill: "#10b981", r: 3 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="pat_proj"
+                            stroke="#34d399"
+                            strokeWidth={2}
+                            strokeDasharray="4 4"
+                            dot={{ fill: "#34d399", r: 4 }}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Driver Attribution Breakdown Callout */}
+                  <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-800/60 flex items-start gap-3">
+                    <Sparkles className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1 text-xs">
+                      <span className="font-bold text-cyan-200">Return Driver Attribution:</span>
+                      <p className="text-slate-300 leading-relaxed font-mono text-[11px]">
+                        {data.forward_estimates.driver_attribution}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Section 2: 8-Quarter Financial Trends & Margin Trajectory */}
               {data.quarterly_financials && (
