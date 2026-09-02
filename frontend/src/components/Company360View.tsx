@@ -900,110 +900,37 @@ export const Company360View: React.FC<Company360ViewProps> = ({
             </p>
           </div>
 
-          {/* Prominent Central Search Bar */}
-          <div ref={heroSearchRef} className="max-w-2xl mx-auto relative">
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 h-5 w-5 text-cyan-400 pointer-events-none" />
-              <input
-                type="text"
-                value={heroSearchQuery}
-                onChange={(e) => setHeroSearchQuery(e.target.value)}
-                onFocus={() => {
-                  if (heroSearchResults.length > 0) setHeroShowDropdown(true);
-                }}
-                onKeyDown={handleHeroKeyDown}
-                placeholder="Enter any NSE/BSE Stock or Mutual Fund to run an Instant Institutional Audit..."
-                className="w-full bg-slate-950/90 border-2 border-cyan-800/60 focus:border-cyan-400 text-white placeholder-slate-500 text-xs sm:text-sm rounded-2xl pl-12 pr-28 py-4 outline-none transition-all shadow-xl shadow-cyan-950/30"
-              />
-              <div className="absolute right-3.5 flex items-center gap-1.5 pointer-events-none">
-                {heroIsSearching ? (
-                  <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />
-                ) : (
-                  <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/80 border border-cyan-800 px-2 py-1 rounded-lg">
-                    Instant Audit ↵
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Live Autocomplete Results Dropdown */}
-            {heroShowDropdown && heroSearchResults.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/98 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 max-h-80 overflow-y-auto divide-y divide-slate-800/70 backdrop-blur-xl text-left">
-                <div className="text-[10px] uppercase font-bold text-slate-500 px-3 py-1.5 flex items-center justify-between">
-                  <span>Direct Matches ({heroSearchResults.length})</span>
-                  <span className="font-mono text-[9px] text-slate-600">Use ↑ ↓ ↵</span>
-                </div>
-                {heroSearchResults.map((item, idx) => (
-                  <button
-                    key={`${item.type}-${item.id}`}
-                    onClick={() => {
-                      setHeroShowDropdown(false);
-                      setHeroSearchQuery("");
-                      handleHeroSelect({ id: item.id, type: item.type as "stock" | "fund" });
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-colors ${
-                      heroSelectedIndex === idx
-                        ? "bg-cyan-950 text-cyan-300 border border-cyan-800"
-                        : "hover:bg-slate-900/90 text-slate-200"
-                    }`}
-                  >
-                    <div className="truncate pr-3">
-                      <div className="font-semibold text-slate-100 text-xs sm:text-sm">{item.name}</div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                        {item.symbol_or_code} • {item.sector_or_category}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${
-                          item.type === "stock"
-                            ? "bg-cyan-950 text-cyan-300 border border-cyan-800"
-                            : "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                        }`}
-                      >
-                        {item.type === "stock" ? "Stock" : "Fund"}
-                      </span>
-                      {item.price_or_nav && (
-                        <span className="block text-[11px] font-mono text-slate-300 mt-0.5">
-                          ₹{item.price_or_nav.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Dynamic Quick-Search Guidance Chips */}
-          <div className="max-w-2xl mx-auto pt-2 space-y-2.5">
+          <div className="max-w-2xl mx-auto space-y-2.5">
             <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider font-semibold block">
-              Quick Instant Search Chips:
+              Trending Quick-Audit Candidates:
             </span>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {QUICK_SEARCH_CHIPS.map((chip) => (
                 <button
                   key={chip.id}
                   onClick={() => handleHeroSelect(chip)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all border flex items-center gap-1.5 ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-mono font-semibold transition-all border flex items-center gap-2 cursor-pointer ${
                     chip.type === "fund"
                       ? "bg-emerald-950/50 text-emerald-300 border-emerald-800/80 hover:bg-emerald-900/60 hover:border-emerald-600 shadow-sm"
                       : "bg-slate-950 text-cyan-300 border-slate-800 hover:border-cyan-700 hover:bg-cyan-950/40 shadow-sm"
                   }`}
                 >
                   {chip.type === "fund" ? (
-                    <TrendingUp className="h-3 w-3 text-emerald-400" />
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
                   ) : (
-                    <Building2 className="h-3 w-3 text-cyan-400" />
+                    <Building2 className="h-3.5 w-3.5 text-cyan-400" />
                   )}
                   <span>{chip.badge}</span>
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800 uppercase font-bold">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 uppercase font-bold">
                     {chip.type === "fund" ? "Fund" : "Stock"}
                   </span>
                 </button>
               ))}
             </div>
           </div>
+
+
 
           {/* Feature Highlights Badges */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto text-left pt-4">
