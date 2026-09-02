@@ -5,10 +5,16 @@ Provides complete essentials, revenue segment mix, forensic health probes,
 """
 
 import math
-from typing import Any, Dict, List, Optional
+import time
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import yfinance as yf
+
+# In-memory TTL caches (10-minute cache to provide instant sub-millisecond responses)
+_COMPANY_360_CACHE: Dict[str, Tuple[float, Any]] = {}
+_HISTORY_CACHE: Dict[str, Tuple[float, Any]] = {}
+CACHE_TTL_SECONDS = 600.0
 
 from app.core.factors import normalize_ticker, safe_float
 from app.core.growth_forecast import calculate_forward_estimates
@@ -1060,6 +1066,12 @@ def extract_historical_price_and_valuation(
 def fetch_company_360(ticker: str) -> Company360Response:
     """Fetch complete institutional 360 overview for Indian stock."""
     clean_sym = ticker.strip().upper().replace(".NS", "").replace(".BO", "")
+    now = time.time()
+    if clean_sym in _COMPANY_360_CACHE:
+        cached_time, cached_res = _COMPANY_360_CACHE[clean_sym]
+        if now - cached_time < CACHE_TTL_SECONDS:
+            return cached_res
+
     norm_ticker = normalize_ticker(clean_sym)
 
     t = yf.Ticker(norm_ticker)
@@ -1355,6 +1367,8 @@ def fetch_company_360(ticker: str) -> Company360Response:
             historical_pe_summary=historical_valuation_summary,
         ),
     )
+    _COMPANY_360_CACHE[clean_sym] = (now, response)
+    return response
 
 
 def fetch_company_forecast(ticker: str) -> ForwardGrowthEstimates:
@@ -1373,6 +1387,13 @@ def fetch_company_forecast(ticker: str) -> ForwardGrowthEstimates:
 def fetch_company_history(ticker: str, timeframe: str = "1y") -> StockHistoryResponse:
     """Fetch dedicated multi-timeframe price and valuation history for a given ticker."""
     clean_sym = ticker.strip().upper().replace(".NS", "").replace(".BO", "")
+    cache_key = f"{clean_sym}:{(timeframe or '1y').lower().strip()}"
+    now = time.time()
+    if cache_key in _HISTORY_CACHE:
+        cached_time, cached_res = _HISTORY_CACHE[cache_key]
+        if now - cached_time < CACHE_TTL_SECONDS:
+            return cached_res
+
     norm_ticker = normalize_ticker(clean_sym)
     t = yf.Ticker(norm_ticker)
     info: Dict[str, Any] = {}
@@ -1392,8 +1413,10 @@ def fetch_company_history(ticker: str, timeframe: str = "1y") -> StockHistoryRes
         except Exception:
             pass
 
-    return extract_historical_price_and_valuation(
+    history_res = extract_historical_price_and_valuation(
         t=t,
         timeframe=timeframe,
         info=info,
     )
+    _HISTORY_CACHE[cache_key] = (now, history_res)
+    return history_res
