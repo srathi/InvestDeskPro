@@ -80,18 +80,15 @@ const QUICK_SEARCH_CHIPS: QuickSearchChip[] = [
 ];
 
 const PRESET_COMPANIES = [
-  { ticker: "RELIANCE", name: "Reliance Ind.", sector: "Oil & Gas / Retail", tag: "Large Cap 🏢" },
-  { ticker: "TCS", name: "TCS", sector: "IT Services", tag: "High ROCE 💎" },
-  { ticker: "HDFCBANK", name: "HDFC Bank", sector: "Banking", tag: "Core Bank 🏦" },
-  { ticker: "TATAMOTORS", name: "Tata Motors", sector: "Automotive", tag: "EV Leader 🚗" },
-  { ticker: "INFY", name: "Infosys", sector: "IT & Cloud", tag: "Tech Bluechip 💻" },
-  { ticker: "PICCADIL", name: "Piccadily Agro", sector: "Distilleries", tag: "Compounder 🚀" },
-  { ticker: "CONFIPET", name: "Confidence Pet.", sector: "LPG Infrastructure", tag: "Small Cap ⚡" },
-  { ticker: "ITC", name: "ITC Ltd.", sector: "FMCG / Cigarettes", tag: "High Dividend 💰" },
-  { ticker: "LT", name: "Larsen & Toubro", sector: "Capital Goods", tag: "Infra Giant 🏗️" },
-  { ticker: "BAJFINANCE", name: "Bajaj Finance", sector: "NBFC / Lending", tag: "Retail Credit 💳" },
-  { ticker: "SUNPHARMA", name: "Sun Pharma", sector: "Healthcare", tag: "Pharma Leader 💊" },
-  { ticker: "TRENT", name: "Trent", sector: "Retail / Apparel", tag: "Retail Alpha ⭐" },
+  { ticker: "RELIANCE", name: "Reliance Ind." },
+  { ticker: "TCS", name: "TCS" },
+  { ticker: "HDFCBANK", name: "HDFC Bank" },
+  { ticker: "TATAMOTORS", name: "Tata Motors" },
+  { ticker: "INFY", name: "Infosys" },
+  { ticker: "PICCADILY", name: "Piccadily Agro" },
+  { ticker: "ITC", name: "ITC Ltd." },
+  { ticker: "TRENT", name: "Trent" },
+  { ticker: "CDSL", name: "CDSL" },
 ];
 
 interface Company360ViewProps {
@@ -191,19 +188,6 @@ export const Company360View: React.FC<Company360ViewProps> = ({
       }
     } else if (e.key === "Escape") {
       setHeroShowDropdown(false);
-    }
-  };
-
-  const handleHeroSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (heroSelectedIndex >= 0 && heroSelectedIndex < heroSearchResults.length) {
-      const selected = heroSearchResults[heroSelectedIndex];
-      handleHeroSelect({ id: selected.id, type: selected.type as "stock" | "fund" });
-    } else if (heroSearchResults.length > 0) {
-      const first = heroSearchResults[0];
-      handleHeroSelect({ id: first.id, type: first.type as "stock" | "fund" });
-    } else if (heroSearchQuery.trim()) {
-      handleHeroSelect({ id: heroSearchQuery.trim().toUpperCase(), type: "stock" });
     }
   };
 
@@ -531,21 +515,21 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const forecastChartData = useMemo(() => {
     if (!data?.financials?.income_statement || !activeForecastScenario) return [];
     const years = data.financials.income_statement.years || [];
-    const revRow = (data.financials.income_statement.rows || []).find(
+    const revRow = data.financials.income_statement.rows.find(
       (r) =>
-        r.metric_name?.toLowerCase().includes("revenue") ||
-        r.metric_name?.toLowerCase().includes("sales")
+        r.metric_name.toLowerCase().includes("revenue") ||
+        r.metric_name.toLowerCase().includes("sales")
     );
-    const patRow = (data.financials.income_statement.rows || []).find(
+    const patRow = data.financials.income_statement.rows.find(
       (r) =>
-        r.metric_name?.toLowerCase().includes("net profit") ||
-        r.metric_name?.toLowerCase().includes("pat")
+        r.metric_name.toLowerCase().includes("net profit") ||
+        r.metric_name.toLowerCase().includes("pat")
     );
 
     const histPoints = years.map((y) => ({
       year: y,
-      revenue_hist: revRow?.values?.[y] ?? null,
-      pat_hist: patRow?.values?.[y] ?? null,
+      revenue_hist: revRow?.values[y] ?? null,
+      pat_hist: patRow?.values[y] ?? null,
       revenue_proj: null as number | null,
       pat_proj: null as number | null,
       is_projection: false,
@@ -558,8 +542,8 @@ export const Company360View: React.FC<Company360ViewProps> = ({
       lastPoint.pat_proj = lastPoint.pat_hist;
     }
 
-    const projPoints = (activeForecastScenario.projections || []).map((p) => ({
-      year: p.year_label?.split(" ")[0] || "FY26",
+    const projPoints = activeForecastScenario.projections.map((p) => ({
+      year: p.year_label.split(" ")[0],
       revenue_hist: null as number | null,
       pat_hist: null as number | null,
       revenue_proj: p.revenue_cr,
@@ -585,7 +569,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     }[] = [];
 
     // 1. Debt-to-Equity Warning (Threshold > 1.5x Critical, > 1.0x Moderate)
-    const de = data.essentials?.debt_to_equity;
+    const de = data.essentials.debt_to_equity;
     if (de !== undefined && de !== null) {
       if (de > 1.5) {
         alerts.push({
@@ -632,7 +616,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
           r.metric_name.toLowerCase().includes("cash from operations") ||
           r.metric_name.toLowerCase().includes("cash from operating")
       );
-      const patRow = data.financials.income_statement?.rows?.find(
+      const patRow = data.financials.income_statement?.rows.find(
         (r) =>
           r.metric_name.toLowerCase().includes("net profit") ||
           r.metric_name.toLowerCase().includes("pat")
@@ -687,7 +671,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     }
 
     // 4. Valuation Stretch vs Historical 5Y Median Benchmark
-    const pe = data.essentials?.pe;
+    const pe = data.essentials.pe;
     const medianPe = data.historical_valuation_summary?.median_pe ?? data.forward_estimates?.median_pe_benchmark;
     if (pe && medianPe && pe > medianPe * 1.45 && pe > 35) {
       alerts.push({
@@ -720,115 +704,48 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 🌟 Top Hero Search & Multiline Suggestions Panel */}
-      <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-4 relative z-30 shadow-2xl backdrop-blur-xl">
-        {/* Full-Width Search Input Bar */}
-        <div ref={heroSearchRef} className="relative w-full">
-          <form onSubmit={handleHeroSearchSubmit} className="relative w-full flex items-center">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-cyan-400 pointer-events-none" />
-            <input
-              type="text"
-              value={heroSearchQuery}
-              onChange={(e) => {
-                setHeroSearchQuery(e.target.value);
-                setHeroShowDropdown(true);
-              }}
-              onFocus={() => {
-                if (heroSearchResults.length > 0) setHeroShowDropdown(true);
-              }}
-              onKeyDown={handleHeroKeyDown}
-              placeholder="Search any Indian Stock or Mutual Fund (e.g. RELIANCE, TCS, PICCADIL, TATAMOTORS, PARAG PARIKH)..."
-              className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-cyan-500 rounded-2xl pl-12 pr-36 py-3.5 text-sm md:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all shadow-inner font-mono uppercase"
-            />
-            {heroIsSearching && (
-              <Loader2 className="absolute right-32 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400 animate-spin" />
-            )}
+      {/* Quick Presets & Global Search Navigation Ribbon */}
+      <div className="glass-panel p-3 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mr-1 shrink-0 flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+            <span>Presets:</span>
+          </span>
+          {PRESET_COMPANIES.map((item) => (
             <button
-              type="submit"
-              disabled={loading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs md:text-sm font-semibold rounded-xl transition-all shadow-md shadow-cyan-950 flex items-center gap-1.5 disabled:opacity-50"
+              key={item.ticker}
+              onClick={() => {
+                setTickerInput(item.ticker);
+                loadCompanyData(item.ticker);
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all whitespace-nowrap ${
+                data?.ticker === item.ticker || tickerInput.toUpperCase().includes(item.ticker)
+                  ? "bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm shadow-cyan-950"
+                  : "bg-slate-900/60 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-700"
+              }`}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span>360° Audit</span>
+              {item.name}
             </button>
-          </form>
-
-          {/* Debounced Autocomplete Dropdown */}
-          {heroShowDropdown && heroSearchResults.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl max-h-80 overflow-y-auto divide-y divide-slate-800/60 z-50">
-              <div className="px-4 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
-                <span>Direct Search Matches ({heroSearchResults.length})</span>
-                <span className="text-[9px] font-mono lowercase">↑↓ navigate • ↵ select • esc close</span>
-              </div>
-              {heroSearchResults.map((item, idx) => (
-                <button
-                  key={`${item.type}-${item.id}`}
-                  type="button"
-                  onClick={() => {
-                    setHeroShowDropdown(false);
-                    setHeroSearchQuery("");
-                    handleHeroSelect({ id: item.id, type: item.type as "stock" | "fund" });
-                  }}
-                  className={`w-full text-left px-4 py-3 flex items-center justify-between text-xs md:text-sm transition-colors ${
-                    idx === heroSelectedIndex ? "bg-cyan-950/70 text-cyan-200" : "hover:bg-slate-900/80 text-slate-200"
-                  }`}
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white font-mono text-sm">{item.symbol_or_code || item.id}</span>
-                      <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${
-                        item.type === "stock" ? "bg-cyan-950 text-cyan-300 border border-cyan-800" : "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                      }`}>
-                        {item.type === "stock" ? "NSE/BSE Equity" : "Mutual Fund"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 font-medium">{item.name}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <ChevronRight className="h-4 w-4 text-slate-600" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          ))}
         </div>
 
-        {/* Multi-line Quick Presets Panel Below Input */}
-        <div className="pt-3 border-t border-slate-800/80 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-              <span>Institutional 360° Watchlist (Instant 1-Click Deep Audit):</span>
-            </span>
-            <span className="text-[10px] text-slate-500 font-normal lowercase hidden sm:inline">click to audit company</span>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            {PRESET_COMPANIES.map((item) => (
-              <button
-                key={item.ticker}
-                onClick={() => {
-                  setTickerInput(item.ticker);
-                  loadCompanyData(item.ticker);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                  data?.ticker === item.ticker || (tickerInput ? tickerInput.toUpperCase().includes(item.ticker) : false)
-                    ? "bg-cyan-950 text-cyan-300 border border-cyan-600 shadow-md shadow-cyan-950 font-semibold"
-                    : "bg-slate-900/70 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 hover:bg-slate-900"
-                }`}
-              >
-                <span className="font-mono font-bold text-white">{item.ticker}</span>
-                <span className="text-slate-400">({item.name})</span>
-                <span className="text-[10px] font-mono text-slate-500 bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-800/80">
-                  {item.sector}
-                </span>
-                <span className="text-[10px] text-cyan-400 font-semibold">
-                  {item.tag}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Global Search Trigger */}
+        <button
+          type="button"
+          onClick={() => {
+            const input = document.querySelector<HTMLInputElement>("header input");
+            input?.focus();
+            input?.select();
+          }}
+          className="text-xs text-slate-400 hover:text-cyan-300 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 hover:border-cyan-800 transition-all flex items-center gap-2 shrink-0 font-mono group"
+          title="Search any stock or fund with Cmd+K"
+        >
+          <Search className="h-3.5 w-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+          <span>Search any stock...</span>
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-slate-500 bg-slate-900 border border-slate-800 rounded font-mono">
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       {error && (
@@ -838,46 +755,12 @@ export const Company360View: React.FC<Company360ViewProps> = ({
         </div>
       )}
 
-      {loading && (
-        <div className="space-y-6 animate-pulse py-4">
-          <div className="glass-panel p-8 rounded-3xl border border-cyan-800/40 text-center space-y-5 my-2 relative overflow-hidden bg-gradient-to-b from-cyan-950/20 to-slate-950/80">
-            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-              <div className="absolute inset-0 rounded-2xl bg-cyan-500/20 animate-ping" />
-              <div className="relative w-14 h-14 rounded-2xl bg-cyan-950 border border-cyan-500/50 flex items-center justify-center text-cyan-400">
-                <Loader2 className="h-7 w-7 animate-spin" />
-              </div>
-            </div>
-            <div className="space-y-2 max-w-lg mx-auto">
-              <h3 className="text-base font-bold text-white tracking-tight">
-                Running Institutional Deep Audit for <span className="text-cyan-400 font-mono uppercase">{tickerInput || "Selected Stock"}</span>
-              </h3>
-              <p className="text-xs text-slate-400 font-mono leading-relaxed">
-                Fetching 12-Factor Fundamental Essentials, Multi-Timeframe Valuation Bands, 1-3Y Forward Growth Forecasts & Forensic Probes...
-              </p>
-            </div>
-            {/* Animated Loading Bar */}
-            <div className="max-w-xs mx-auto h-1.5 bg-slate-900 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-500 animate-pulse w-full" />
-            </div>
-          </div>
-
-          {/* Skeleton Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-24 rounded-2xl bg-slate-900/40 border border-slate-800/60 p-4 space-y-2">
-                <div className="h-3 w-16 bg-slate-800 rounded" />
-                <div className="h-6 w-24 bg-slate-800/80 rounded" />
-              </div>
-            ))}
-          </div>
-
-          {/* Skeleton Chart */}
-          <div className="h-72 rounded-2xl bg-slate-900/30 border border-slate-800/60 p-6 flex items-center justify-center">
-            <div className="text-xs font-mono text-slate-600 flex items-center gap-2">
-              <Activity className="h-4 w-4 animate-pulse" />
-              <span>Synthesizing Multi-Timeframe Valuation Bands & Factor Scores...</span>
-            </div>
-          </div>
+      {loading && !data && (
+        <div className="py-24 flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
+          <p className="text-xs font-mono text-slate-400">
+            Fetching 12-Factor Fundamental Essentials, Segment Mix & Forensic Probes for {tickerInput}...
+          </p>
         </div>
       )}
 
@@ -900,37 +783,110 @@ export const Company360View: React.FC<Company360ViewProps> = ({
             </p>
           </div>
 
+          {/* Prominent Central Search Bar */}
+          <div ref={heroSearchRef} className="max-w-2xl mx-auto relative">
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 h-5 w-5 text-cyan-400 pointer-events-none" />
+              <input
+                type="text"
+                value={heroSearchQuery}
+                onChange={(e) => setHeroSearchQuery(e.target.value)}
+                onFocus={() => {
+                  if (heroSearchResults.length > 0) setHeroShowDropdown(true);
+                }}
+                onKeyDown={handleHeroKeyDown}
+                placeholder="Enter any NSE/BSE Stock or Mutual Fund to run an Instant Institutional Audit..."
+                className="w-full bg-slate-950/90 border-2 border-cyan-800/60 focus:border-cyan-400 text-white placeholder-slate-500 text-xs sm:text-sm rounded-2xl pl-12 pr-28 py-4 outline-none transition-all shadow-xl shadow-cyan-950/30"
+              />
+              <div className="absolute right-3.5 flex items-center gap-1.5 pointer-events-none">
+                {heroIsSearching ? (
+                  <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />
+                ) : (
+                  <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/80 border border-cyan-800 px-2 py-1 rounded-lg">
+                    Instant Audit ↵
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Live Autocomplete Results Dropdown */}
+            {heroShowDropdown && heroSearchResults.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/98 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 max-h-80 overflow-y-auto divide-y divide-slate-800/70 backdrop-blur-xl text-left">
+                <div className="text-[10px] uppercase font-bold text-slate-500 px-3 py-1.5 flex items-center justify-between">
+                  <span>Direct Matches ({heroSearchResults.length})</span>
+                  <span className="font-mono text-[9px] text-slate-600">Use ↑ ↓ ↵</span>
+                </div>
+                {heroSearchResults.map((item, idx) => (
+                  <button
+                    key={`${item.type}-${item.id}`}
+                    onClick={() => {
+                      setHeroShowDropdown(false);
+                      setHeroSearchQuery("");
+                      handleHeroSelect({ id: item.id, type: item.type as "stock" | "fund" });
+                    }}
+                    className={`w-full text-left px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-colors ${
+                      heroSelectedIndex === idx
+                        ? "bg-cyan-950 text-cyan-300 border border-cyan-800"
+                        : "hover:bg-slate-900/90 text-slate-200"
+                    }`}
+                  >
+                    <div className="truncate pr-3">
+                      <div className="font-semibold text-slate-100 text-xs sm:text-sm">{item.name}</div>
+                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                        {item.symbol_or_code} • {item.sector_or_category}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${
+                          item.type === "stock"
+                            ? "bg-cyan-950 text-cyan-300 border border-cyan-800"
+                            : "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                        }`}
+                      >
+                        {item.type === "stock" ? "Stock" : "Fund"}
+                      </span>
+                      {item.price_or_nav && (
+                        <span className="block text-[11px] font-mono text-slate-300 mt-0.5">
+                          ₹{item.price_or_nav.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Dynamic Quick-Search Guidance Chips */}
-          <div className="max-w-2xl mx-auto space-y-2.5">
+          <div className="max-w-2xl mx-auto pt-2 space-y-2.5">
             <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider font-semibold block">
-              Trending Quick-Audit Candidates:
+              Quick Instant Search Chips:
             </span>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {QUICK_SEARCH_CHIPS.map((chip) => (
                 <button
                   key={chip.id}
                   onClick={() => handleHeroSelect(chip)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-mono font-semibold transition-all border flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all border flex items-center gap-1.5 ${
                     chip.type === "fund"
                       ? "bg-emerald-950/50 text-emerald-300 border-emerald-800/80 hover:bg-emerald-900/60 hover:border-emerald-600 shadow-sm"
                       : "bg-slate-950 text-cyan-300 border-slate-800 hover:border-cyan-700 hover:bg-cyan-950/40 shadow-sm"
                   }`}
                 >
                   {chip.type === "fund" ? (
-                    <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+                    <TrendingUp className="h-3 w-3 text-emerald-400" />
                   ) : (
-                    <Building2 className="h-3.5 w-3.5 text-cyan-400" />
+                    <Building2 className="h-3 w-3 text-cyan-400" />
                   )}
                   <span>{chip.badge}</span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 uppercase font-bold">
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800 uppercase font-bold">
                     {chip.type === "fund" ? "Fund" : "Stock"}
                   </span>
                 </button>
               ))}
             </div>
           </div>
-
-
 
           {/* Feature Highlights Badges */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto text-left pt-4">
@@ -1111,11 +1067,11 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   <div className="pt-3 border-t border-slate-800/80 space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="text-slate-400">
-                        52W Low: <strong className="text-slate-200">₹{data.essentials?.low_52w !== undefined && data.essentials?.low_52w !== null ? data.essentials.low_52w.toFixed(2) : "-"}</strong>
+                        52W Low: <strong className="text-slate-200">₹{data.essentials.low_52w.toFixed(2)}</strong>
                       </span>
                       <span className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold">52-Week Range Slider</span>
                       <span className="text-slate-400">
-                        52W High: <strong className="text-slate-200">₹{data.essentials?.high_52w !== undefined && data.essentials?.high_52w !== null ? data.essentials.high_52w.toFixed(2) : "-"}</strong>
+                        52W High: <strong className="text-slate-200">₹{data.essentials.high_52w.toFixed(2)}</strong>
                       </span>
                     </div>
 
@@ -1128,7 +1084,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       <div
                         className="absolute top-0 bottom-0 w-2 bg-white rounded-full shadow-md shadow-white"
                         style={{
-                          left: `${calculate52WPosition(data.essentials?.current_price ?? 0, data.essentials?.low_52w ?? 0, data.essentials?.high_52w ?? 0)}%`,
+                          left: `${calculate52WPosition(data.essentials.current_price, data.essentials.low_52w, data.essentials.high_52w)}%`,
                           transform: "translateX(-50%)",
                         }}
                       />
@@ -1494,14 +1450,14 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       <div className="flex items-center gap-2 text-xs font-mono">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                            valSummary.valuation_verdict?.toLowerCase().includes("undervalued")
+                            valSummary.valuation_verdict.toLowerCase().includes("undervalued")
                               ? "bg-emerald-950 text-emerald-300 border-emerald-800"
-                              : valSummary.valuation_verdict?.toLowerCase().includes("fair")
+                              : valSummary.valuation_verdict.toLowerCase().includes("fair")
                               ? "bg-cyan-950 text-cyan-300 border-cyan-800"
                               : "bg-amber-950 text-amber-300 border-amber-800"
                           }`}
                         >
-                          {valSummary.valuation_verdict || "Valuation Analysis"}
+                          {valSummary.valuation_verdict}
                         </span>
                         {valSummary.period_return_pct !== undefined && valSummary.period_return_pct !== null && (
                           <span
@@ -1522,7 +1478,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono bg-slate-900/30 p-2.5 rounded-xl border border-slate-800/80">
                       <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
                         <span className="text-[10px] text-slate-500 uppercase block font-semibold">Current P/E</span>
-                        <span className="font-bold text-amber-300 text-sm">{valSummary.current_pe || data.essentials?.pe || "N/A"}x</span>
+                        <span className="font-bold text-amber-300 text-sm">{valSummary.current_pe || data.essentials.pe || "N/A"}x</span>
                       </div>
                       <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
                         <span className="text-[10px] text-cyan-400 uppercase block font-semibold">{selectedTimeframe.toUpperCase()} Median P/E</span>
@@ -2006,11 +1962,11 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                         <div className="pt-3 space-y-2.5 text-xs font-mono">
                           <div className="flex justify-between items-center">
                             <span className="text-slate-400">Projected Revenue:</span>
-                            <span className="font-bold text-slate-100">₹{proj.revenue_cr?.toLocaleString("en-IN") ?? "-"} Cr</span>
+                            <span className="font-bold text-slate-100">₹{proj.revenue_cr.toLocaleString("en-IN")} Cr</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-400">Projected PAT:</span>
-                            <span className="font-bold text-emerald-400">₹{proj.pat_cr?.toLocaleString("en-IN") ?? "-"} Cr</span>
+                            <span className="font-bold text-emerald-400">₹{proj.pat_cr.toLocaleString("en-IN")} Cr</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-400">Projected EPS:</span>
@@ -2018,7 +1974,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                           </div>
                           <div className="pt-2 border-t border-slate-800/80 flex justify-between items-center">
                             <span className="text-slate-300 font-semibold">Implied Target Price:</span>
-                            <span className="font-extrabold text-cyan-300 text-sm">₹{proj.target_price?.toLocaleString("en-IN") ?? "-"}</span>
+                            <span className="font-extrabold text-cyan-300 text-sm">₹{proj.target_price.toLocaleString("en-IN")}</span>
                           </div>
                           <div className="flex justify-between items-center text-[11px]">
                             <span className="text-slate-500">Annualized Expected CAGR:</span>
@@ -2358,7 +2314,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
                   {/* Segment Bars */}
                   <div className="space-y-3">
-                    {(data.segments || []).map((seg) => (
+                    {data.segments.map((seg) => (
                       <div key={seg.name} className="space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="font-semibold text-slate-200">{seg.name}</span>
@@ -2387,7 +2343,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       <span>Geographic Distribution</span>
                     </span>
                     <div className="grid grid-cols-2 gap-2">
-                      {(data.geography || []).map((geo) => (
+                      {data.geography.map((geo) => (
                         <div key={geo.region} className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex justify-between items-center text-xs">
                           <span className="text-slate-300 font-medium">{geo.region}</span>
                           <span className="font-bold text-slate-100 font-mono">{geo.percentage}%</span>
@@ -2408,7 +2364,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
 
                   <div className="space-y-2.5">
-                    {(data.forensics || []).map((f) => (
+                    {data.forensics.map((f) => (
                       <div
                         key={f.title}
                         className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-1 hover:border-slate-700 transition-colors"
@@ -2472,7 +2428,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
                     <span className="text-[10px] text-slate-500 uppercase font-semibold block">Current Market Price (CMP)</span>
                     <div className="text-xl font-black text-white font-mono font-tabular">
-                      ₹{data.essentials?.current_price !== undefined && data.essentials?.current_price !== null ? data.essentials.current_price.toFixed(2) : "-"}
+                      ₹{data.essentials.current_price.toFixed(2)}
                     </div>
                     <span className="text-[11px] text-slate-400">Live traded price on exchange</span>
                   </div>
@@ -2548,14 +2504,13 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   <div className="text-xs text-slate-300">
                     Custom Scenario Intrinsic Value:{" "}
                     <strong className="text-white text-sm font-mono">
-                      ₹{calculateDynamic2StageFairValue(data.essentials?.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth)}
+                      ₹{calculateDynamic2StageFairValue(data.essentials.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth)}
                     </strong>
                   </div>
                   <div className="text-xs font-mono">
                     {(() => {
-                      const fv = calculateDynamic2StageFairValue(data.essentials?.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth);
-                      const cmp = data.essentials?.current_price ?? 0;
-                      const mos = Math.round(((fv - cmp) / Math.max(1, fv)) * 1000) / 10;
+                      const fv = calculateDynamic2StageFairValue(data.essentials.eps_ttm || 20.0, dcfGrowth5y, dcfWacc, dcfTerminalGrowth);
+                      const mos = Math.round(((fv - data.essentials.current_price) / Math.max(1, fv)) * 1000) / 10;
                       return (
                         <span className={mos >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
                           Margin of Safety: {mos > 0 ? "+" : ""}{mos}%
@@ -2628,11 +2583,11 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-300 font-semibold">Reverse DCF Implied 5Y Growth:</span>
                     <span className="text-lg font-black text-amber-400 font-mono">
-                      {calculateDynamicImpliedGrowth(data.essentials?.current_price ?? 0, data.essentials?.eps_ttm || 20.0, discountRate, terminalGrowth)}% CAGR
+                      {calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}% CAGR
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    At the current price of ₹{data.essentials?.current_price ?? 0}, the market assumes the company will compound earnings at <strong>{calculateDynamicImpliedGrowth(data.essentials?.current_price ?? 0, data.essentials?.eps_ttm || 20.0, discountRate, terminalGrowth)}% per year</strong> over the next 5 years (at {discountRate}% discount rate and {terminalGrowth}% terminal growth).
+                    At the current price of ₹{data.essentials.current_price}, the market assumes the company will compound earnings at <strong>{calculateDynamicImpliedGrowth(data.essentials.current_price, data.essentials.eps_ttm || 20.0, discountRate, terminalGrowth)}% per year</strong> over the next 5 years (at {discountRate}% discount rate and {terminalGrowth}% terminal growth).
                   </p>
                 </div>
               </div>
@@ -2749,18 +2704,18 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                       {/* Current Company */}
                       <tr className="bg-cyan-950/20 font-bold text-cyan-300">
                         <td className="py-2.5">{data.company_name} (Current)</td>
-                        <td className="py-2.5 text-right font-tabular">₹{data.essentials?.current_price !== undefined && data.essentials?.current_price !== null ? data.essentials.current_price.toFixed(2) : "-"}</td>
-                        <td className="py-2.5 text-right font-tabular">₹{data.essentials?.market_cap_cr?.toLocaleString("en-IN") ?? "-"}</td>
-                        <td className="py-2.5 text-right font-tabular">{data.essentials?.pe ? `${data.essentials.pe}x` : "-"}</td>
-                        <td className="py-2.5 text-right font-tabular">{data.essentials?.pb ? `${data.essentials.pb}x` : "-"}</td>
-                        <td className="py-2.5 text-right font-tabular">{data.essentials?.roe ? `${data.essentials.roe}%` : "-"}</td>
-                        <td className="py-2.5 text-right font-tabular">{data.essentials?.roce ? `${data.essentials.roce}%` : "-"}</td>
-                        <td className="py-2.5 text-right font-tabular">{data.essentials?.opm_pct ? `${data.essentials.opm_pct}%` : "22.4%"}</td>
-                        <td className="py-2.5 text-right font-tabular text-emerald-400">+{data.essentials?.day_change_pct ? data.essentials.day_change_pct : "28.5"}%</td>
+                        <td className="py-2.5 text-right font-tabular">₹{data.essentials.current_price.toFixed(2)}</td>
+                        <td className="py-2.5 text-right font-tabular">₹{data.essentials.market_cap_cr.toLocaleString("en-IN")}</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.pe || "-"}x</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.pb || "-"}x</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.roe || "-"}%</td>
+                        <td className="py-2.5 text-right font-tabular">{data.essentials.roce || "-"}%</td>
+                        <td className="py-2.5 text-right font-tabular">22.4%</td>
+                        <td className="py-2.5 text-right font-tabular text-emerald-400">+28.5%</td>
                       </tr>
 
                       {/* Peers */}
-                      {(data.peers || []).map((peer) => (
+                      {data.peers.map((peer) => (
                         <tr
                           key={peer.ticker}
                           onClick={() => {
@@ -2773,8 +2728,8 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                             <span>{peer.name}</span>
                             <ArrowUpRight className="h-3 w-3 text-slate-500" />
                           </td>
-                          <td className="py-2.5 text-right font-tabular">₹{peer.cmp !== undefined && peer.cmp !== null ? peer.cmp.toFixed(2) : "-"}</td>
-                          <td className="py-2.5 text-right font-tabular text-slate-400">₹{peer.market_cap_cr?.toLocaleString("en-IN") ?? "-"}</td>
+                          <td className="py-2.5 text-right font-tabular">₹{peer.cmp.toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-tabular text-slate-400">₹{peer.market_cap_cr.toLocaleString("en-IN")}</td>
                           <td className="py-2.5 text-right font-tabular">{peer.pe ? `${peer.pe}x` : "-"}</td>
                           <td className="py-2.5 text-right font-tabular">{peer.pb ? `${peer.pb}x` : "-"}</td>
                           <td className="py-2.5 text-right font-tabular text-emerald-400">{peer.roe ? `${peer.roe}%` : "-"}</td>
