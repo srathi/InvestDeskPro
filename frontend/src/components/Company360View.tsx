@@ -313,7 +313,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     if (!symbol.trim()) return;
     setLoading(true);
     setError(null);
-    setShowDropdown(false);
+    setHeroShowDropdown(false);
     try {
       const res = await fetchCompany360(symbol);
       setData(res);
@@ -685,13 +685,13 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
     // 5. Forensic Probe Red-Flags
     if (data.forensics) {
-      const redFlags = data.forensics.filter((f) => f.verdict === "Red Flag");
+      const redFlags = data.forensics.filter((f) => f.status === "flag");
       if (redFlags.length > 0) {
         alerts.push({
           id: "forensic-red-flags",
           title: "Forensic Accounting Probe Flag",
           metric: `${redFlags.length} Red Flag${redFlags.length > 1 ? "s" : ""}`,
-          description: redFlags.map((rf) => `${rf.probe_name}: ${rf.details}`).join(" • "),
+          description: redFlags.map((rf) => `${rf.title}: ${rf.description}`).join(" • "),
           severity: "critical",
           threshold: "Forensic Probe Verdict",
         });
