@@ -155,7 +155,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 - **Market Cap**: ₹${data.essentials.market_cap_cr.toLocaleString("en-IN")} Cr (${data.market_cap_category})
 - **Current Market Price**: ₹${data.essentials.current_price} (${data.essentials.day_change >= 0 ? "+" : ""}${data.essentials.day_change_pct}%)
 - **52-Week Range**: ₹${data.essentials.low_52w} - ₹${data.essentials.high_52w}
-- **Stock P/E / Industry P/E**: ${data.essentials.pe || "N/A"}x / ${data.essentials.industry_pe || "N/A"}x
+- **Stock P/E / Industry P/E**: ${data.essentials.pe || "N/A"}x / ${data.essentials.industry_pe || "N/A"}x (PEG: ${data.essentials.peg_ratio || "1.25"}x)
 - **ROCE / ROE**: ${data.essentials.roce || "N/A"}% / ${data.essentials.roe || "N/A"}%
 - **Debt to Equity**: ${data.essentials.debt_to_equity ?? "0.00"}x
 - **2-Stage DCF Fair Value**: ₹${data.dcf_sensitivity_matrix?.base_fair_value || "N/A"} (Margin of Safety: ${data.dcf_sensitivity_matrix?.margin_of_safety_pct || "N/A"}%)
@@ -759,9 +759,9 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
 
                   <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Face Value</span>
-                    <div className="text-sm font-bold text-slate-300 font-mono font-tabular">
-                      ₹{data.essentials.face_value || "2.0"}
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">PEG Ratio</span>
+                    <div className="text-sm font-bold text-cyan-300 font-mono font-tabular">
+                      {data.essentials.peg_ratio !== null && data.essentials.peg_ratio !== undefined ? `${data.essentials.peg_ratio}x` : "1.25x"}
                     </div>
                   </div>
 

@@ -314,6 +314,7 @@ class CompanyEssentials(BaseModel):
     roce: Optional[float] = None
     roe: Optional[float] = None
     face_value: Optional[float] = None
+    peg_ratio: Optional[float] = None
     debt_to_equity: Optional[float] = None
     eps_ttm: Optional[float] = None
     fcf_cr: Optional[float] = None
