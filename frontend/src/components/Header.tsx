@@ -19,8 +19,8 @@ import {
 import { fetchOmniSearch, OmniSearchResult } from "../lib/api";
 
 interface HeaderProps {
-  activeTab: "company" | "screener" | "bundles" | "quant";
-  setActiveTab: (tab: "company" | "screener" | "bundles" | "quant") => void;
+  activeTab: "company" | "quant";
+  setActiveTab: (tab: "company" | "quant") => void;
   apiOnline: boolean;
   onSelectEntity?: (id: string, type: "stock" | "fund") => void;
   onResetHome?: () => void;
@@ -294,8 +294,8 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* 4 Main Navigation Tabs */}
-        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0 overflow-x-auto">
+        {/* Primary Navigation Tabs */}
+        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0">
           <button
             onClick={() => setActiveTab("company")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -306,30 +306,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Building2 className="h-3.5 w-3.5" />
             <span>Company 360°</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("screener")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === "screener"
-                ? "bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-950"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-            }`}
-          >
-            <Filter className="h-3.5 w-3.5" />
-            <span>Screener</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("bundles")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === "bundles"
-                ? "bg-gradient-to-r from-amber-600 to-yellow-500 text-white shadow-md shadow-amber-950"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-            }`}
-          >
-            <Layers className="h-3.5 w-3.5" />
-            <span>Bundles</span>
           </button>
 
           <button

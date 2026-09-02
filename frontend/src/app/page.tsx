@@ -10,7 +10,7 @@ import { checkApiHealth } from "../lib/api";
 import { ExternalLink, ShieldAlert, Sparkles, Cpu, Layers } from "lucide-react";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"company" | "screener" | "bundles" | "quant">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "quant">("company");
   const [selectedStockTicker, setSelectedStockTicker] = useState<string>("");
   const [selectedFundCode, setSelectedFundCode] = useState<string | undefined>(undefined);
   const [apiOnline, setApiOnline] = useState(false);
@@ -40,11 +40,6 @@ export default function Home() {
     setActiveTab("quant");
   };
 
-  const handleSelectStockFromScreenerOrBundle = (ticker: string) => {
-    setSelectedStockTicker(ticker);
-    setActiveTab("company");
-  };
-
   const handleResetHome = () => {
     setSelectedStockTicker("");
     setSelectedFundCode(undefined);
@@ -71,15 +66,8 @@ export default function Home() {
           <Company360View
             initialTicker={selectedStockTicker}
             onNavigateToQuant={handleNavigateToQuant}
+            onSelectEntity={handleSelectEntity}
           />
-        )}
-
-        {activeTab === "screener" && (
-          <StockScreenerView onSelectStock={handleSelectStockFromScreenerOrBundle} />
-        )}
-
-        {activeTab === "bundles" && (
-          <CuratedBundlesView onSelectStock={handleSelectStockFromScreenerOrBundle} />
         )}
 
         {activeTab === "quant" && (
