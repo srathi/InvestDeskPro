@@ -313,6 +313,7 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     if (!symbol.trim()) return;
     setLoading(true);
     setError(null);
+    setData(null);
     setHeroShowDropdown(false);
     try {
       const res = await fetchCompany360(symbol);
@@ -754,12 +755,46 @@ export const Company360View: React.FC<Company360ViewProps> = ({
         </div>
       )}
 
-      {loading && !data && (
-        <div className="py-24 flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
-          <p className="text-xs font-mono text-slate-400">
-            Fetching 12-Factor Fundamental Essentials, Segment Mix & Forensic Probes for {tickerInput}...
-          </p>
+      {loading && (
+        <div className="space-y-6 animate-pulse py-4">
+          <div className="glass-panel p-8 rounded-3xl border border-cyan-800/40 text-center space-y-5 my-2 relative overflow-hidden bg-gradient-to-b from-cyan-950/20 to-slate-950/80">
+            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-2xl bg-cyan-500/20 animate-ping" />
+              <div className="relative w-14 h-14 rounded-2xl bg-cyan-950 border border-cyan-500/50 flex items-center justify-center text-cyan-400">
+                <Loader2 className="h-7 w-7 animate-spin" />
+              </div>
+            </div>
+            <div className="space-y-2 max-w-lg mx-auto">
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Running Institutional Deep Audit for <span className="text-cyan-400 font-mono uppercase">{tickerInput || "Selected Stock"}</span>
+              </h3>
+              <p className="text-xs text-slate-400 font-mono leading-relaxed">
+                Fetching 12-Factor Fundamental Essentials, Multi-Timeframe Valuation Bands, 1-3Y Forward Growth Forecasts & Forensic Probes...
+              </p>
+            </div>
+            {/* Animated Loading Bar */}
+            <div className="max-w-xs mx-auto h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-500 animate-pulse w-full" />
+            </div>
+          </div>
+
+          {/* Skeleton Cards Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-24 rounded-2xl bg-slate-900/40 border border-slate-800/60 p-4 space-y-2">
+                <div className="h-3 w-16 bg-slate-800 rounded" />
+                <div className="h-6 w-24 bg-slate-800/80 rounded" />
+              </div>
+            ))}
+          </div>
+
+          {/* Skeleton Chart */}
+          <div className="h-72 rounded-2xl bg-slate-900/30 border border-slate-800/60 p-6 flex items-center justify-center">
+            <div className="text-xs font-mono text-slate-600 flex items-center gap-2">
+              <Activity className="h-4 w-4 animate-pulse" />
+              <span>Synthesizing Multi-Timeframe Valuation Bands & Factor Scores...</span>
+            </div>
+          </div>
         </div>
       )}
 

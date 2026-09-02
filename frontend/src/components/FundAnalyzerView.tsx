@@ -95,6 +95,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     if (!code.trim()) return;
     setLoading(true);
     setError(null);
+    setData(null);
     setShowDropdown(false);
     try {
       const res = await fetchFundAnalysis(code);
@@ -332,10 +333,39 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
         </div>
       )}
 
-      {loading && !data && (
-        <div className="py-24 flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-10 w-10 text-emerald-400 animate-spin" />
-          <p className="text-sm font-mono text-slate-400">Computing 1Y/3Y/5Y Rolling Distributions, PowerUp Form Status & Downside Shield...</p>
+      {loading && (
+        <div className="space-y-6 animate-pulse py-4">
+          <div className="glass-panel p-8 rounded-3xl border border-emerald-800/40 text-center space-y-5 my-2 relative overflow-hidden bg-gradient-to-b from-emerald-950/20 to-slate-950/80">
+            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-2xl bg-emerald-500/20 animate-ping" />
+              <div className="relative w-14 h-14 rounded-2xl bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
+                <Loader2 className="h-7 w-7 animate-spin" />
+              </div>
+            </div>
+            <div className="space-y-2 max-w-lg mx-auto">
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Auditing Mutual Fund Scheme <span className="text-emerald-400 font-mono uppercase">{schemeCode ? `#${schemeCode}` : "AMFI"}</span>
+              </h3>
+              <p className="text-xs text-slate-400 font-mono leading-relaxed">
+                Ingesting AMFI Historical NAV, Calculating 1Y/3Y/5Y Rolling Distributions, PowerUp 4-State Form Status & Downside Protection Cushion...
+              </p>
+            </div>
+            {/* Animated Loading Bar */}
+            <div className="max-w-xs mx-auto h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500 animate-pulse w-full" />
+            </div>
+          </div>
+
+          {/* Skeleton Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-44 rounded-2xl bg-slate-900/40 border border-slate-800/60 p-5 space-y-3">
+                <div className="h-4 w-32 bg-slate-800 rounded" />
+                <div className="h-8 w-24 bg-slate-800/80 rounded" />
+                <div className="h-3 w-full bg-slate-800/40 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

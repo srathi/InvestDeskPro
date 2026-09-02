@@ -90,6 +90,7 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
     if (!ticker.trim()) return;
     setLoading(true);
     setError(null);
+    setData(null);
     setShowDropdown(false);
     try {
       const res = await fetchStockScorecard(ticker);
@@ -319,10 +320,39 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
         </div>
       )}
 
-      {loading && !data && (
-        <div className="py-24 flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
-          <p className="text-sm font-mono text-slate-400">Analyzing Financial Statements, Growth & Factor Scorecard...</p>
+      {loading && (
+        <div className="space-y-6 animate-pulse py-4">
+          <div className="glass-panel p-8 rounded-3xl border border-cyan-800/40 text-center space-y-5 my-2 relative overflow-hidden bg-gradient-to-b from-cyan-950/20 to-slate-950/80">
+            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-2xl bg-cyan-500/20 animate-ping" />
+              <div className="relative w-14 h-14 rounded-2xl bg-cyan-950 border border-cyan-500/50 flex items-center justify-center text-cyan-400">
+                <Loader2 className="h-7 w-7 animate-spin" />
+              </div>
+            </div>
+            <div className="space-y-2 max-w-lg mx-auto">
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Computing 0–100 Factor Scorecard for <span className="text-cyan-400 font-mono uppercase">{tickerInput || "Selected Stock"}</span>
+              </h3>
+              <p className="text-xs text-slate-400 font-mono leading-relaxed">
+                Analyzing Financial Statements, Durability-Valuation-Momentum (DVM) Archetypes, Piotroski F-Score & Altman Z-Score Probes...
+              </p>
+            </div>
+            {/* Animated Loading Bar */}
+            <div className="max-w-xs mx-auto h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-500 animate-pulse w-full" />
+            </div>
+          </div>
+
+          {/* Skeleton Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-44 rounded-2xl bg-slate-900/40 border border-slate-800/60 p-5 space-y-3">
+                <div className="h-4 w-28 bg-slate-800 rounded" />
+                <div className="h-8 w-20 bg-slate-800/80 rounded" />
+                <div className="h-3 w-full bg-slate-800/40 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
