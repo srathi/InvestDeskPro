@@ -97,6 +97,11 @@ class StockPricePoint(BaseModel):
     volume: Optional[float] = None
     pe: Optional[float] = None
     pb: Optional[float] = None
+    dma_50: Optional[float] = None
+    dma_200: Optional[float] = None
+    median_pe: Optional[float] = None
+    pe_plus_1sigma: Optional[float] = None
+    pe_minus_1sigma: Optional[float] = None
 
 
 class StockScorecardResponse(BaseModel):
@@ -367,6 +372,31 @@ class InstitutionalDelta(BaseModel):
     net_institutional_sentiment: str
 
 
+class HistoricalValuationSummary(BaseModel):
+    timeframe: str = "1y"
+    current_pe: Optional[float] = None
+    median_pe: Optional[float] = None
+    mean_pe: Optional[float] = None
+    std_pe: Optional[float] = None
+    pe_plus_1sigma: Optional[float] = None
+    pe_minus_1sigma: Optional[float] = None
+    min_pe: Optional[float] = None
+    max_pe: Optional[float] = None
+    current_pb: Optional[float] = None
+    median_pb: Optional[float] = None
+    period_return_pct: Optional[float] = None
+    period_high: Optional[float] = None
+    period_low: Optional[float] = None
+    valuation_verdict: str = "Fair Value (Near Historical Median)"
+
+
+class StockHistoryResponse(BaseModel):
+    ticker: str
+    timeframe: str
+    history: List[StockPricePoint] = Field(default_factory=list)
+    valuation_summary: HistoricalValuationSummary
+
+
 class Company360Response(BaseModel):
     ticker: str
     company_name: str
@@ -390,6 +420,7 @@ class Company360Response(BaseModel):
     institutional_delta: Optional[InstitutionalDelta] = None
     peers: List[PeerComparisonStock] = Field(default_factory=list)
     price_history: List[StockPricePoint] = Field(default_factory=list)
+    historical_valuation_summary: Optional[HistoricalValuationSummary] = None
 
 
 # ---------------------------------------------------------------------------

@@ -110,3 +110,32 @@ def test_omni_search_endpoint():
     assert len(results) >= 1
     assert any(r["type"] == "stock" for r in results)
 
+
+def test_company_history_endpoint():
+    """Verify dedicated multi-timeframe history and valuation summary endpoint."""
+    response = client.get("/api/v1/company/INFY/history?timeframe=1y")
+    assert response.status_code == 200
+    data = response.json()
+    assert "ticker" in data
+    assert "history" in data
+    assert "valuation_summary" in data
+    assert len(data["history"]) >= 50
+    assert data["valuation_summary"]["median_pe"] is not None
+    assert data["valuation_summary"]["valuation_verdict"] is not None
+    # Check DMA and PE in points
+    first_pt = data["history"][0]
+    assert "date" in first_pt
+    assert "close" in first_pt
+    assert "pe" in first_pt
+
+
+def test_company_history_timeframes():
+    """Verify history endpoint supports multiple timeframes (1m, 5y, max)."""
+    for tf in ["1m", "5y", "max"]:
+        response = client.get(f"/api/v1/company/TATAMOTORS/history?timeframe={tf}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["timeframe"] == tf
+        assert len(data["history"]) >= 10
+        assert data["valuation_summary"]["timeframe"] == tf
+

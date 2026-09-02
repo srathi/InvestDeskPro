@@ -33,6 +33,8 @@ import {
   Area,
   BarChart,
   Bar,
+  ComposedChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -43,8 +45,12 @@ import {
 } from "recharts";
 import {
   fetchCompany360,
+  fetchStockHistory,
   searchStocks,
   Company360Response,
+  StockHistoryResponse,
+  HistoricalValuationSummary,
+  StockPricePoint,
   StockSearchResult,
 } from "../lib/api";
 import { useDebounce } from "../hooks/useDebounce";
@@ -79,6 +85,10 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   // Sub-tabs for financial statements and charts
   const [financialTab, setFinancialTab] = useState<"pl" | "bs" | "cf">("pl");
   const [chartView, setChartView] = useState<"price" | "pe" | "pb">("price");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<"1m" | "6m" | "1y" | "3y" | "5y" | "max">("1y");
+  const [showDma, setShowDma] = useState(true);
+  const [historyCache, setHistoryCache] = useState<Record<string, StockHistoryResponse>>({});
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // DCF Interactive State
   const [dcfWacc, setDcfWacc] = useState(12.0);
@@ -251,33 +261,68 @@ export const Company360View: React.FC<Company360ViewProps> = ({
     return Math.round(implied * 1000) / 10.0;
   };
 
-  // Computed chart data with safe PE and 1Y median
-  const { chartData, medianPe } = useMemo(() => {
-    if (!data?.price_history || data.price_history.length === 0) {
-      return { chartData: [], medianPe: 20.0 };
+  // Handle multi-timeframe switching (1M, 6M, 1Y, 3Y, 5Y, MAX)
+  const handleTimeframeChange = async (tf: "1m" | "6m" | "1y" | "3y" | "5y" | "max") => {
+    setSelectedTimeframe(tf);
+    if (!data) return;
+    const cacheKey = `${data.ticker}-${tf}`;
+    if (historyCache[cacheKey]) return;
+
+    setHistoryLoading(true);
+    try {
+      const res = await fetchStockHistory(data.ticker, tf);
+      setHistoryCache((prev) => ({ ...prev, [cacheKey]: res }));
+    } catch {
+      // Keep existing data on error
+    } finally {
+      setHistoryLoading(false);
     }
-    const eps = (data.essentials?.eps_ttm && data.essentials.eps_ttm > 0)
-      ? data.essentials.eps_ttm
-      : (data.essentials?.current_price && data.essentials?.pe)
-        ? (data.essentials.current_price / data.essentials.pe)
-        : 25.0;
+  };
 
-    const peValues = data.price_history.map((p) => {
-      if (p.pe && p.pe > 0) return p.pe;
-      if (eps > 0 && p.close > 0) return Number((p.close / eps).toFixed(2));
-      return Number(data.essentials?.pe || 20.0);
-    });
-
-    const sorted = [...peValues].sort((a, b) => a - b);
-    const median = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : (data.essentials?.pe || 20.0);
-
-    const formatted = data.price_history.map((p, idx) => ({
-      ...p,
-      pe: peValues[idx],
-      median_pe: median,
-    }));
-    return { chartData: formatted, medianPe: median };
+  // Prime 1Y history in cache when data loads
+  useEffect(() => {
+    if (data?.ticker && data?.price_history && data?.price_history.length > 0) {
+      const defaultValSum: HistoricalValuationSummary = data.historical_valuation_summary || {
+        timeframe: "1y",
+        current_pe: data.essentials?.pe,
+        median_pe: data.essentials?.pe || 24.5,
+        valuation_verdict: "Fair Value (Near Historical Median)",
+      };
+      setHistoryCache((prev) => ({
+        ...prev,
+        [`${data.ticker}-1y`]: {
+          ticker: data.ticker,
+          timeframe: "1y",
+          history: data.price_history,
+          valuation_summary: defaultValSum,
+        },
+      }));
+    }
   }, [data]);
+
+  // Active multi-timeframe dataset & valuation summary
+  const activeHistory = useMemo(() => {
+    if (!data) return null;
+    const cacheKey = `${data.ticker}-${selectedTimeframe}`;
+    if (historyCache[cacheKey]) return historyCache[cacheKey];
+    if (selectedTimeframe === "1y" && data.price_history && data.price_history.length > 0) {
+      return {
+        ticker: data.ticker,
+        timeframe: "1y",
+        history: data.price_history,
+        valuation_summary: data.historical_valuation_summary || {
+          timeframe: "1y",
+          current_pe: data.essentials?.pe,
+          median_pe: data.essentials?.pe || 24.5,
+          valuation_verdict: "Fair Value (Near Historical Median)",
+        },
+      };
+    }
+    return null;
+  }, [data, selectedTimeframe, historyCache]);
+
+  const activePoints = activeHistory?.history || data?.price_history || [];
+  const valSummary = activeHistory?.valuation_summary || data?.historical_valuation_summary;
 
   return (
     <div className="space-y-6">
@@ -678,118 +723,384 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
                 </div>
 
-                {/* Interactive Charting Suite (Price & PE Multiple) */}
+                {/* Interactive Charting Suite (Price, Volume, P/E Multiple & Valuation Bands) */}
                 <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
-                    <div>
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  {/* Header & Controls */}
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
                         <BarChart3 className="h-4 w-4 text-cyan-400" />
-                        <span>Historical Price & Valuation Performance</span>
-                      </h3>
-                      {chartView === "pe" ? (
-                        <p className="text-[11px] text-amber-400/90 font-mono flex flex-wrap items-center gap-2 mt-0.5">
-                          <span>1-Year Trailing P/E Multiple Series</span>
-                          <span>•</span>
-                          <span>1Y Median P/E: <strong className="text-white">{medianPe}x</strong></span>
-                          <span>•</span>
-                          <span>Current P/E: <strong className="text-white">{data.essentials.pe || "N/A"}x</strong></span>
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-slate-400 mt-0.5">Daily closes on National Stock Exchange of India (NSE) / BSE</p>
-                      )}
+                        <h3 className="text-sm font-bold text-white">
+                          Historical Price & Valuation Performance
+                        </h3>
+                        {historyLoading && <Loader2 className="h-3.5 w-3.5 text-cyan-400 animate-spin" />}
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Daily closes on National Stock Exchange of India (NSE) / BSE with multi-year valuation multiples
+                      </p>
                     </div>
 
-                    {/* Chart Mode Switcher */}
-                    <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
-                      <button
-                        onClick={() => setChartView("price")}
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                          chartView === "price"
-                            ? "bg-cyan-950 text-cyan-300 border border-cyan-800 shadow"
-                            : "text-slate-400 hover:text-slate-200"
-                        }`}
-                      >
-                        Price & Volume
-                      </button>
-                      <button
-                        onClick={() => setChartView("pe")}
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                          chartView === "pe"
-                            ? "bg-amber-950 text-amber-300 border border-amber-800 shadow"
-                            : "text-slate-400 hover:text-slate-200"
-                        }`}
-                      >
-                        P/E Multiple
-                      </button>
+                    {/* Metric Switcher & DMA Toggle */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {chartView === "price" && (
+                        <button
+                          type="button"
+                          onClick={() => setShowDma((prev) => !prev)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all border ${
+                            showDma
+                              ? "bg-indigo-950 text-indigo-300 border-indigo-700 shadow-sm"
+                              : "bg-slate-950 text-slate-500 border-slate-800 hover:text-slate-300"
+                          }`}
+                          title="Toggle 50-DMA and 200-DMA technical trend lines"
+                        >
+                          {showDma ? "50/200 DMA: ON" : "50/200 DMA: OFF"}
+                        </button>
+                      )}
+
+                      <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+                        <button
+                          onClick={() => setChartView("price")}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            chartView === "price"
+                              ? "bg-cyan-950 text-cyan-300 border border-cyan-800 shadow"
+                              : "text-slate-400 hover:text-slate-200"
+                          }`}
+                        >
+                          Price & Volume
+                        </button>
+                        <button
+                          onClick={() => setChartView("pe")}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            chartView === "pe"
+                              ? "bg-amber-950 text-amber-300 border border-amber-800 shadow"
+                              : "text-slate-400 hover:text-slate-200"
+                          }`}
+                        >
+                          P/E Multiple
+                        </button>
+                        <button
+                          onClick={() => setChartView("pb")}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            chartView === "pb"
+                              ? "bg-purple-950 text-purple-300 border border-purple-800 shadow"
+                              : "text-slate-400 hover:text-slate-200"
+                          }`}
+                        >
+                          P/B Multiple
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="h-64 w-full pt-2">
-                    {chartData && chartData.length > 0 ? (
+                  {/* Timeframe Presets Ribbon */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/60 p-2 rounded-xl border border-slate-800/80">
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 px-1 shrink-0">
+                        Timeframe:
+                      </span>
+                      {(["1m", "6m", "1y", "3y", "5y", "max"] as const).map((tf) => (
+                        <button
+                          key={tf}
+                          onClick={() => handleTimeframeChange(tf)}
+                          disabled={historyLoading}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase transition-all whitespace-nowrap ${
+                            selectedTimeframe === tf
+                              ? "bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-md shadow-cyan-950"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent"
+                          }`}
+                        >
+                          {tf === "max" ? "MAX (Stock Life)" : tf.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Valuation Intelligence Pill */}
+                    {valSummary && (
+                      <div className="flex items-center gap-2 text-xs font-mono">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                            valSummary.valuation_verdict.toLowerCase().includes("undervalued")
+                              ? "bg-emerald-950 text-emerald-300 border-emerald-800"
+                              : valSummary.valuation_verdict.toLowerCase().includes("fair")
+                              ? "bg-cyan-950 text-cyan-300 border-cyan-800"
+                              : "bg-amber-950 text-amber-300 border-amber-800"
+                          }`}
+                        >
+                          {valSummary.valuation_verdict}
+                        </span>
+                        {valSummary.period_return_pct !== undefined && valSummary.period_return_pct !== null && (
+                          <span
+                            className={`font-semibold ${
+                              valSummary.period_return_pct >= 0 ? "text-emerald-400" : "text-rose-400"
+                            }`}
+                          >
+                            {valSummary.period_return_pct >= 0 ? "+" : ""}
+                            {valSummary.period_return_pct}% ({selectedTimeframe.toUpperCase()})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Valuation Statistical Metrics Strip (when in PE mode) */}
+                  {chartView === "pe" && valSummary && (
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono bg-slate-900/30 p-2.5 rounded-xl border border-slate-800/80">
+                      <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
+                        <span className="text-[10px] text-slate-500 uppercase block font-semibold">Current P/E</span>
+                        <span className="font-bold text-amber-300 text-sm">{valSummary.current_pe || data.essentials.pe || "N/A"}x</span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
+                        <span className="text-[10px] text-cyan-400 uppercase block font-semibold">{selectedTimeframe.toUpperCase()} Median P/E</span>
+                        <span className="font-bold text-cyan-300 text-sm">{valSummary.median_pe || "N/A"}x</span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
+                        <span className="text-[10px] text-emerald-400 uppercase block font-semibold">-1σ Undervalued Band</span>
+                        <span className="font-bold text-emerald-300 text-sm">{valSummary.pe_minus_1sigma || "N/A"}x</span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800">
+                        <span className="text-[10px] text-rose-400 uppercase block font-semibold">+1σ Elevated Band</span>
+                        <span className="font-bold text-rose-300 text-sm">{valSummary.pe_plus_1sigma || "N/A"}x</span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 col-span-2 sm:col-span-1">
+                        <span className="text-[10px] text-slate-500 uppercase block font-semibold">Historical Range</span>
+                        <span className="text-slate-300 font-semibold">{valSummary.min_pe || "N/A"}x – {valSummary.max_pe || "N/A"}x</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Chart Container */}
+                  <div className="h-72 w-full pt-2">
+                    {activePoints && activePoints.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="companyPriceGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                              <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
-                            </linearGradient>
-                            <linearGradient id="companyPeGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
-                            </linearGradient>
-                          </defs>
-                          <XAxis
-                            dataKey="date"
-                            stroke="#475569"
-                            fontSize={10}
-                            tickLine={false}
-                            tickFormatter={(v) => v.slice(5)}
-                          />
-                          <YAxis
-                            stroke="#475569"
-                            fontSize={10}
-                            tickLine={false}
-                            domain={["auto", "auto"]}
-                            tickFormatter={(v) => (chartView === "pe" ? `${v}x` : `₹${v}`)}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "#0f172a",
-                              borderColor: "#334155",
-                              borderRadius: "0.75rem",
-                              color: "#f8fafc",
-                              fontSize: "12px",
-                            }}
-                            formatter={(val: any) => {
-                              if (chartView === "pe") {
-                                return [`${Number(val).toFixed(2)}x`, "P/E Multiple"];
-                              }
-                              return [`₹${Number(val).toFixed(2)}`, "Closing Price"];
-                            }}
-                            labelFormatter={(label) => `Date: ${label}`}
-                          />
-                          {chartView === "pe" && medianPe > 0 && (
-                            <ReferenceLine
-                              y={medianPe}
-                              stroke="#94a3b8"
-                              strokeDasharray="4 4"
-                              label={{
-                                value: `Median: ${medianPe}x`,
-                                fill: "#94a3b8",
-                                fontSize: 10,
-                                position: "insideTopRight",
-                              }}
+                        {chartView === "price" ? (
+                          <ComposedChart data={activePoints} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="companyPriceGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                              </linearGradient>
+                            </defs>
+                            <XAxis
+                              dataKey="date"
+                              stroke="#475569"
+                              fontSize={10}
+                              tickLine={false}
+                              tickFormatter={(v) => v.slice(2)}
                             />
-                          )}
-                          <Area
-                            type="monotone"
-                            dataKey={chartView === "pe" ? "pe" : "close"}
-                            stroke={chartView === "pe" ? "#f59e0b" : "#06b6d4"}
-                            strokeWidth={2}
-                            fillOpacity={1}
-                            fill={chartView === "pe" ? "url(#companyPeGrad)" : "url(#companyPriceGrad)"}
-                          />
-                        </AreaChart>
+                            <YAxis
+                              yAxisId="priceAxis"
+                              stroke="#475569"
+                              fontSize={10}
+                              tickLine={false}
+                              domain={["auto", "auto"]}
+                              tickFormatter={(v) => `₹${v}`}
+                            />
+                            <YAxis
+                              yAxisId="volumeAxis"
+                              orientation="right"
+                              stroke="#334155"
+                              fontSize={9}
+                              tickLine={false}
+                              domain={[0, "dataMax * 3.5"]}
+                              hide={true}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "#0f172a",
+                                borderColor: "#334155",
+                                borderRadius: "0.75rem",
+                                color: "#f8fafc",
+                                fontSize: "12px",
+                              }}
+                              formatter={(val: any, name: any) => {
+                                if (name === "close") return [`₹${Number(val).toFixed(2)}`, "Closing Price"];
+                                if (name === "dma_50") return [`₹${Number(val).toFixed(2)}`, "50-DMA"];
+                                if (name === "dma_200") return [`₹${Number(val).toFixed(2)}`, "200-DMA"];
+                                if (name === "volume") return [Number(val).toLocaleString("en-IN"), "Volume"];
+                                return [val, name];
+                              }}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            <Bar
+                              yAxisId="volumeAxis"
+                              dataKey="volume"
+                              fill="#0891b2"
+                              opacity={0.25}
+                              isAnimationActive={false}
+                            />
+                            <Area
+                              yAxisId="priceAxis"
+                              type="monotone"
+                              dataKey="close"
+                              stroke="#06b6d4"
+                              strokeWidth={2}
+                              fillOpacity={1}
+                              fill="url(#companyPriceGrad)"
+                            />
+                            {showDma && (
+                              <>
+                                <Line
+                                  yAxisId="priceAxis"
+                                  type="monotone"
+                                  dataKey="dma_50"
+                                  stroke="#f59e0b"
+                                  strokeWidth={1.5}
+                                  dot={false}
+                                  strokeDasharray="3 3"
+                                />
+                                <Line
+                                  yAxisId="priceAxis"
+                                  type="monotone"
+                                  dataKey="dma_200"
+                                  stroke="#a855f7"
+                                  strokeWidth={1.5}
+                                  dot={false}
+                                  strokeDasharray="4 4"
+                                />
+                              </>
+                            )}
+                          </ComposedChart>
+                        ) : chartView === "pe" ? (
+                          <AreaChart data={activePoints} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="companyPeGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                              </linearGradient>
+                            </defs>
+                            <XAxis
+                              dataKey="date"
+                              stroke="#475569"
+                              fontSize={10}
+                              tickLine={false}
+                              tickFormatter={(v) => v.slice(2)}
+                            />
+                            <YAxis
+                              stroke="#475569"
+                              fontSize={10}
+                              tickLine={false}
+                              domain={["auto", "auto"]}
+                              tickFormatter={(v) => `${v}x`}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "#0f172a",
+                                borderColor: "#334155",
+                                borderRadius: "0.75rem",
+                                color: "#f8fafc",
+                                fontSize: "12px",
+                              }}
+                              formatter={(val: any) => [`${Number(val).toFixed(2)}x`, "P/E Multiple"]}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            {valSummary?.median_pe && valSummary.median_pe > 0 && (
+                              <ReferenceLine
+                                y={valSummary.median_pe}
+                                stroke="#06b6d4"
+                                strokeWidth={2}
+                                strokeDasharray="4 4"
+                                label={{
+                                  value: `Median: ${valSummary.median_pe}x`,
+                                  fill: "#06b6d4",
+                                  fontSize: 10,
+                                  position: "insideTopRight",
+                                }}
+                              />
+                            )}
+                            {valSummary?.pe_plus_1sigma && (
+                              <ReferenceLine
+                                y={valSummary.pe_plus_1sigma}
+                                stroke="#f43f5e"
+                                strokeWidth={1}
+                                strokeDasharray="2 2"
+                                label={{
+                                  value: `+1σ: ${valSummary.pe_plus_1sigma}x`,
+                                  fill: "#f43f5e",
+                                  fontSize: 9,
+                                  position: "insideTopLeft",
+                                }}
+                              />
+                            )}
+                            {valSummary?.pe_minus_1sigma && (
+                              <ReferenceLine
+                                y={valSummary.pe_minus_1sigma}
+                                stroke="#10b981"
+                                strokeWidth={1}
+                                strokeDasharray="2 2"
+                                label={{
+                                  value: `-1σ: ${valSummary.pe_minus_1sigma}x`,
+                                  fill: "#10b981",
+                                  fontSize: 9,
+                                  position: "insideBottomLeft",
+                                }}
+                              />
+                            )}
+                            <Area
+                              type="monotone"
+                              dataKey="pe"
+                              stroke="#f59e0b"
+                              strokeWidth={2}
+                              fillOpacity={1}
+                              fill="url(#companyPeGrad)"
+                            />
+                          </AreaChart>
+                        ) : (
+                          <AreaChart data={activePoints} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="companyPbGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0} />
+                              </linearGradient>
+                            </defs>
+                            <XAxis
+                              dataKey="date"
+                              stroke="#475569"
+                              fontSize={10}
+                              tickLine={false}
+                              tickFormatter={(v) => v.slice(2)}
+                            />
+                            <YAxis
+                              stroke="#475569"
+                              fontSize={10}
+                              tickLine={false}
+                              domain={["auto", "auto"]}
+                              tickFormatter={(v) => `${v}x`}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "#0f172a",
+                                borderColor: "#334155",
+                                borderRadius: "0.75rem",
+                                color: "#f8fafc",
+                                fontSize: "12px",
+                              }}
+                              formatter={(val: any) => [`${Number(val).toFixed(2)}x`, "P/B Multiple"]}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            {valSummary?.median_pb && valSummary.median_pb > 0 && (
+                              <ReferenceLine
+                                y={valSummary.median_pb}
+                                stroke="#a855f7"
+                                strokeWidth={2}
+                                strokeDasharray="4 4"
+                                label={{
+                                  value: `Median P/B: ${valSummary.median_pb}x`,
+                                  fill: "#c084fc",
+                                  fontSize: 10,
+                                  position: "insideTopRight",
+                                }}
+                              />
+                            )}
+                            <Area
+                              type="monotone"
+                              dataKey="pb"
+                              stroke="#a855f7"
+                              strokeWidth={2}
+                              fillOpacity={1}
+                              fill="url(#companyPbGrad)"
+                            />
+                          </AreaChart>
+                        )}
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-slate-500 text-xs font-mono">

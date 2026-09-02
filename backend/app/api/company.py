@@ -4,7 +4,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from app.core.company_deep import fetch_company_360
+from app.core.company_deep import fetch_company_360, fetch_company_history
 from app.core.mf_engine import search_mutual_funds
 from app.core.screener_engine import (
     MASTER_STOCK_UNIVERSE,
@@ -16,6 +16,7 @@ from app.schemas import (
     InvestmentBundleItem,
     ScreenerFilterRequest,
     ScreenerResponse,
+    StockHistoryResponse,
 )
 
 router = APIRouter(tags=["Company & Screener"])
@@ -38,6 +39,15 @@ def get_company_deep(ticker: str):
         return fetch_company_360(ticker)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch Company 360 for {ticker}: {str(e)}")
+
+
+@router.get("/company/{ticker}/history", response_model=StockHistoryResponse)
+def get_company_history(ticker: str, timeframe: str = Query("1y", description="Timeframe: 1m, 6m, 1y, 3y, 5y, max")):
+    """Retrieve multi-timeframe daily prices, moving averages, and P/E valuation trajectories."""
+    try:
+        return fetch_company_history(ticker, timeframe=timeframe)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch price history for {ticker}: {str(e)}")
 
 
 @router.post("/screener/filter", response_model=ScreenerResponse)
