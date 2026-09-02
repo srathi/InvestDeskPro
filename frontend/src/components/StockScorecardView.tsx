@@ -81,6 +81,7 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const isSelectingRef = useRef(false);
 
   // Debounced query for live autocompletion
   const debouncedQuery = useDebounce(tickerInput, 250);
@@ -92,6 +93,7 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
     setError(null);
     setData(null);
     setShowDropdown(false);
+    setSuggestions([]);
     try {
       const res = await fetchStockScorecard(ticker);
       setData(res);
@@ -105,6 +107,13 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
 
   // Fetch live autocomplete suggestions as user types
   useEffect(() => {
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      setShowDropdown(false);
+      setSuggestions([]);
+      return;
+    }
+
     const fetchSuggestions = async () => {
       const clean = debouncedQuery.trim();
       if (clean.length >= 1) {
@@ -142,6 +151,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
   // React to initialTicker prop changes
   useEffect(() => {
     if (initialTicker && initialTicker.trim()) {
+      isSelectingRef.current = true;
+      setShowDropdown(false);
+      setSuggestions([]);
       setTickerInput(initialTicker);
       loadScorecard(initialTicker);
     }
@@ -149,6 +161,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    isSelectingRef.current = true;
+    setShowDropdown(false);
+    setSuggestions([]);
     if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
       const selected = suggestions[selectedIndex];
       setTickerInput(selected.ticker.replace(".NS", "").replace(".BO", ""));
@@ -178,9 +193,11 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
   };
 
   const selectSuggestion = (item: StockSearchResult) => {
+    isSelectingRef.current = true;
+    setShowDropdown(false);
+    setSuggestions([]);
     setTickerInput(item.ticker.replace(".NS", "").replace(".BO", ""));
     loadScorecard(item.ticker);
-    setShowDropdown(false);
   };
 
   const getScoreColor = (score: number) => {
@@ -217,6 +234,7 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
               type="text"
               value={tickerInput}
               onChange={(e) => {
+                isSelectingRef.current = false;
                 setTickerInput(e.target.value);
                 setShowDropdown(true);
               }}

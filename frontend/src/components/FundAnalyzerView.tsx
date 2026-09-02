@@ -79,6 +79,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
   const [activeChartTab, setActiveChartTab] = useState<"rolling_alpha" | "underwater_drawdown">("rolling_alpha");
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const isSelectingRef = useRef(false);
 
   // Debounce search query by 300ms
   const debouncedQuery = useDebounce(searchQuery, 300);
@@ -86,6 +87,9 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
   useEffect(() => {
     if (initialSchemeCode && initialSchemeCode.trim()) {
       const cleanCode = initialSchemeCode.replace("AMFI #", "").trim();
+      isSelectingRef.current = true;
+      setShowDropdown(false);
+      setSearchResults([]);
       setSchemeCode(cleanCode);
       loadFund(cleanCode);
     }
@@ -97,6 +101,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     setError(null);
     setData(null);
     setShowDropdown(false);
+    setSearchResults([]);
     try {
       const res = await fetchFundAnalysis(code);
       setData(res);
@@ -111,6 +116,13 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
   // Debounced auto-search for matching AMFI schemes
   useEffect(() => {
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      setShowDropdown(false);
+      setSearchResults([]);
+      return;
+    }
+
     const fetchMatchingFunds = async () => {
       const clean = debouncedQuery.trim();
       if (clean.length >= 2) {
@@ -150,6 +162,10 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     const clean = searchQuery.trim();
     if (!clean) return;
 
+    isSelectingRef.current = true;
+    setShowDropdown(false);
+    setSearchResults([]);
+
     if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
       const selected = searchResults[selectedIndex];
       setSchemeCode(selected.scheme_code);
@@ -159,6 +175,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
       const first = searchResults[0];
       setSchemeCode(first.scheme_code);
       loadFund(first.scheme_code);
+      setSearchQuery(first.scheme_name);
     } else {
       const digits = clean.replace(/[^0-9]/g, "");
       if (digits) {
@@ -183,10 +200,12 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
   };
 
   const selectFund = (fund: FundSearchResult) => {
+    isSelectingRef.current = true;
+    setShowDropdown(false);
+    setSearchResults([]);
     setSchemeCode(fund.scheme_code);
     loadFund(fund.scheme_code);
     setSearchQuery(fund.scheme_name);
-    setShowDropdown(false);
   };
 
   // Helper for PowerUp Form Status styling
@@ -236,6 +255,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => {
+                isSelectingRef.current = false;
                 setSearchQuery(e.target.value);
                 setShowDropdown(true);
               }}

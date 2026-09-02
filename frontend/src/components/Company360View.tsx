@@ -115,16 +115,24 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   const [heroShowDropdown, setHeroShowDropdown] = useState(false);
   const [heroSelectedIndex, setHeroSelectedIndex] = useState(-1);
   const heroSearchRef = useRef<HTMLDivElement>(null);
+  const isSelectingRef = useRef(false);
 
   // Debounced search for hero search bar
   useEffect(() => {
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      setHeroShowDropdown(false);
+      setHeroSearchResults([]);
+      return;
+    }
+
     const timer = setTimeout(async () => {
       if (heroSearchQuery.trim().length >= 1) {
         setHeroIsSearching(true);
         try {
           const res = await fetchOmniSearch(heroSearchQuery);
           setHeroSearchResults(res);
-          setHeroShowDropdown(true);
+          setHeroShowDropdown(res.length > 0);
           setHeroSelectedIndex(-1);
         } catch {
           setHeroSearchResults([]);
@@ -152,7 +160,9 @@ export const Company360View: React.FC<Company360ViewProps> = ({
   }, []);
 
   const handleHeroSelect = (item: { id: string; type: "stock" | "fund" }) => {
+    isSelectingRef.current = true;
     setHeroShowDropdown(false);
+    setHeroSearchResults([]);
     setHeroSearchQuery("");
     if (item.type === "stock") {
       setTickerInput(item.id);

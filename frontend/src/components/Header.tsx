@@ -40,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isSelectingRef = useRef(false);
 
   // Global Cmd+K / Ctrl+K / '/' shortcut listener
   useEffect(() => {
@@ -58,13 +59,20 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   useEffect(() => {
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      setShowDropdown(false);
+      setSearchResults([]);
+      return;
+    }
+
     const delayDebounce = setTimeout(async () => {
       if (searchQuery.trim().length >= 1) {
         setIsSearching(true);
         try {
           const res = await fetchOmniSearch(searchQuery);
           setSearchResults(res);
-          setShowDropdown(true);
+          setShowDropdown(res.length > 0);
           setSelectedIndex(-1);
         } catch {
           setSearchResults([]);
@@ -92,8 +100,11 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const handleSelect = (item: OmniSearchResult) => {
+    isSelectingRef.current = true;
     setShowDropdown(false);
+    setSearchResults([]);
     setSearchQuery("");
+    inputRef.current?.blur();
     if (onSelectEntity) {
       const targetId = item.type === "fund" ? item.id : (item.symbol_or_code || item.id);
       onSelectEntity(targetId, item.type);
@@ -118,11 +129,15 @@ export const Header: React.FC<HeaderProps> = ({
       } else if (searchResults.length > 0) {
         handleSelect(searchResults[0]);
       } else if (searchQuery.trim()) {
+        isSelectingRef.current = true;
         setShowDropdown(false);
-        if (onSelectEntity) {
-          onSelectEntity(searchQuery.trim().toUpperCase(), "stock");
-        }
+        setSearchResults([]);
+        const query = searchQuery.trim().toUpperCase();
         setSearchQuery("");
+        inputRef.current?.blur();
+        if (onSelectEntity) {
+          onSelectEntity(query, "stock");
+        }
       }
     } else if (e.key === "Escape") {
       setShowDropdown(false);
