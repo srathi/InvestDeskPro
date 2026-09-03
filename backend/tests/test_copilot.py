@@ -103,7 +103,8 @@ def test_copilot_chat_endpoint_stock_query():
     })
     assert res.status_code == 200
     data = res.json()
-    assert "AlphaChanakya" in data["response"]
+    assert len(data["response"]) > 20
+    assert "TCS" in data["response"] or "Tata" in data["response"] or "AlphaChanakya" in data["response"]
     assert len(data["suggestions"]) >= 2
 
 

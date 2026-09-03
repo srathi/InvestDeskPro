@@ -435,6 +435,65 @@ class AlphaChanakyaEngine:
         msg_lower = user_message.lower()
         tool_calls = []
 
+        # 0. Sector Valuation & Capex Cycle Radar Query
+        if any(w in msg_lower for w in ["sector", "industry", "capex", "heatmap", "undervalued sector", "harvest phase", "operating leverage", "nifty it", "nifty auto", "nifty bank", "defence", "capital goods"]):
+            sec_target = None
+            for s_key in ["nifty_it", "nifty_auto", "nifty_bank", "nifty_pharma", "nifty_metal", "nifty_realty", "defence", "capital_goods", "nifty_energy", "chemicals", "telecom", "consumer_durables"]:
+                if s_key.replace("_", " ") in msg_lower or s_key in msg_lower:
+                    sec_target = s_key
+                    break
+
+            radar_res = await execute_copilot_tool("tool_sector_radar", {"sector_name": sec_target})
+            tool_calls.append({"tool": "tool_sector_radar", "arguments": {"sector_name": sec_target}, "result": radar_res})
+
+            if sec_target and "constituents" in radar_res:
+                response = f"""✨ **AlphaChanakya Quantitative Sector Diagnostic: {radar_res.get('name')}**
+
+- **Valuation Zone**: **`{radar_res.get('zone_badge')}`** ({radar_res.get('valuation_percentile')}% percentile)
+- **Current P/E**: **`{radar_res.get('current_pe')}x`** vs **5Y Median `{radar_res.get('pe_5y_median')}x`**
+- **Capex Lifecycle**: **`{radar_res.get('capex_phase')}`** (Gross Block YoY: `+{radar_res.get('gross_block_growth_yoy')}%`)
+- **Relative Strength (1Y vs Nifty)**: **`{'+' if radar_res.get('relative_strength', {}).get('rs_1y', 0) > 0 else ''}{radar_res.get('relative_strength', {}).get('rs_1y')}%`**
+
+#### 🔬 Key Constituent Divergences:
+| Stock | CMP (₹) | P/E | vs Sector Median | RoCE % |
+| :--- | :--- | :--- | :--- | :--- |
+"""
+                for c in radar_res.get("constituents", [])[:5]:
+                    response += f"| **{c['ticker']}** | ₹{c['cmp']:,.1f} | {c['pe']}x | **{c['divergence_vs_sector_pct']:+.1f}%** | {c['roce_pct']}% |\n"
+
+                response += f"\n💡 **Chanakya's Strategic Guidance**: *{radar_res.get('capex_commentary')}*"
+                suggestions = [
+                    f"Audit {radar_res.get('constituents', [{}])[0].get('ticker', 'RELIANCE')}",
+                    "Check Capex Harvest Phase Leaders",
+                    "Compare 16 Sectors Heatmap"
+                ]
+                return {"response": response, "tool_calls_executed": tool_calls, "suggestions": suggestions}
+            else:
+                heatmap = radar_res.get("heatmap", {})
+                macro = heatmap.get("macro_summary", {})
+                sectors = heatmap.get("sectors", [])
+                
+                response = f"""✨ **AlphaChanakya Macro Sector & Industry Radar**
+
+- **Nifty 50 Trailing P/E**: **`{macro.get('nifty50_pe')}x`** ({macro.get('nifty50_pe_percentile')}th percentile)
+- **Market Valuation Distribution**: **{macro.get('undervalued_count')} Undervalued** | **{macro.get('fair_value_count')} Fair Value** | **{macro.get('overvalued_count')} Extended**
+- **1Y Sector Momentum Leader**: **`{macro.get('leading_sector')}`**
+
+#### 🧭 16-Sector Valuation Ranking (Cheapest to Most Extended):
+| Sector | Trailing P/E | 5Y Median | Percentile | Capex Phase |
+| :--- | :--- | :--- | :--- | :--- |
+"""
+                for s in sectors[:6]:
+                    response += f"| **{s['name']}** | {s['current_multiple']}x | {s['historical_median']}x | **{s['percentile']}% ({s['zone_code']})** | {s['capex_phase'].split(':')[1] if ':' in s['capex_phase'] else s['capex_phase']} |\n"
+
+                response += "\n💡 **Chanakya's Macro Principle**: *'Deploy capital where high asset turnover meets historical multiple compression.'*"
+                suggestions = [
+                    "Audit Nifty Auto",
+                    "Audit Nifty IT",
+                    "Explain Capex Reinvestment Phase 3"
+                ]
+                return {"response": response, "tool_calls_executed": tool_calls, "suggestions": suggestions}
+
         # 1. Mutual Fund Overlap Query
         if any(w in msg_lower for w in ["overlap", "duplicate", "compare fund", "vs"]) and any(w in msg_lower for w in ["fund", "flexi", "small", "mid", "large", "ppfas", "hdfc", "mirae", "quant"]):
             # Extract fund codes or names

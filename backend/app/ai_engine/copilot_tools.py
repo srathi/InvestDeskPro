@@ -155,6 +155,27 @@ COPILOT_TOOL_DECLARATIONS = [
             },
             "required": ["term_key"]
         }
+    },
+    {
+        "name": "tool_sector_radar",
+        "description": "Analyzes Indian macro sector and industry valuation percentiles (P/E, P/B, EV/EBITDA), Capex cycle lifecycle phase (Initiation, Execution, Operating Harvest), and constituent stock valuation divergence vs sector median.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "sector_name": {
+                    "type": "STRING",
+                    "description": "Optional sector name or ID, e.g. 'nifty_it', 'nifty_auto', 'nifty_bank', 'defence', 'capital_goods', 'nifty_pharma', 'nifty_realty', 'chemicals', 'nifty_energy'."
+                },
+                "metric": {
+                    "type": "STRING",
+                    "description": "Valuation metric: 'pe', 'pb', 'ev_ebitda', or 'div_yield' (default 'pe')."
+                },
+                "phase_filter": {
+                    "type": "STRING",
+                    "description": "Optional capex phase filter: 'all', 'phase_1', 'phase_2', or 'phase_3'."
+                }
+            }
+        }
     }
 ]
 
@@ -280,6 +301,24 @@ async def execute_copilot_tool(tool_name: str, arguments: Dict[str, Any]) -> Dic
                 "term": term_key,
                 "def": f"Quantitative concept relating to {term_key} across InvestDeskPro analytics.",
                 "importance": "Enables rigorous data-driven decision making."
+            }
+
+        elif tool_name == "tool_sector_radar":
+            from app.core.sector_radar import get_sector_radar_heatmap, get_sector_deep_dive, get_capex_cycle_matrix
+            sector_name = arguments.get("sector_name")
+            metric = arguments.get("metric", "pe")
+            phase_filter = arguments.get("phase_filter", "all")
+
+            if sector_name:
+                detail = get_sector_deep_dive(sector_name)
+                if detail:
+                    return detail
+
+            heatmap = get_sector_radar_heatmap(metric=metric, phase_filter=phase_filter)
+            capex = get_capex_cycle_matrix()
+            return {
+                "heatmap": heatmap,
+                "capex_summary": capex
             }
 
         else:

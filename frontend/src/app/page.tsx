@@ -129,6 +129,10 @@ export default function Home() {
           <QuantDeskView
             initialStockTicker={selectedStockTicker}
             initialFundCode={selectedFundCode}
+            onSelectStockTicker={(sym) => {
+              setSelectedStockTicker(sym);
+              setActiveTab("company");
+            }}
           />
         )}
       </main>
