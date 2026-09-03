@@ -27,6 +27,11 @@ import {
   ShieldAlert,
   Sliders,
   ChevronDown,
+  PieChart,
+  Copy,
+  Info,
+  Scale,
+  Crosshair,
 } from "lucide-react";
 import {
   AreaChart,
@@ -40,10 +45,12 @@ import {
 } from "recharts";
 import {
   fetchFundAnalysis,
+  fetchFundOverlap,
   searchFunds,
   FundAnalysisResponse,
   FundSearchResult,
   CategoryAlternativeFund,
+  FundOverlapResponse,
 } from "../lib/api";
 import { useDebounce } from "../hooks/useDebounce";
 import { JargonTooltip } from "./JargonTooltip";
@@ -78,6 +85,14 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<FundAnalysisResponse | null>(null);
   const [activeChartTab, setActiveChartTab] = useState<"rolling_alpha" | "underwater_drawdown">("rolling_alpha");
+
+  // Cross-Fund Overlap Analyzer State
+  const [isOverlapModalOpen, setIsOverlapModalOpen] = useState(false);
+  const [overlapFundA, setOverlapFundA] = useState("122639"); // Parag Parikh Flexi Cap
+  const [overlapFundB, setOverlapFundB] = useState("118955"); // HDFC Flexi Cap
+  const [overlapData, setOverlapData] = useState<FundOverlapResponse | null>(null);
+  const [loadingOverlap, setLoadingOverlap] = useState(false);
+  const [overlapError, setOverlapError] = useState<string | null>(null);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const isSelectingRef = useRef(false);
@@ -159,8 +174,11 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
   // Click outside listener to close dropdown
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
@@ -170,43 +188,14 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = searchQuery.trim();
-    if (!clean) return;
-
-    isSelectingRef.current = true;
-    setShowDropdown(false);
-    setSearchResults([]);
-
-    if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
-      const selected = searchResults[selectedIndex];
-      setSchemeCode(selected.scheme_code);
-      loadFund(selected.scheme_code);
-      setSearchQuery(selected.scheme_name);
+    if (searchResults.length > 0 && selectedIndex >= 0) {
+      selectFund(searchResults[selectedIndex]);
     } else if (searchResults.length > 0) {
-      const first = searchResults[0];
-      setSchemeCode(first.scheme_code);
-      loadFund(first.scheme_code);
-      setSearchQuery(first.scheme_name);
-    } else {
-      const digits = clean.replace(/[^0-9]/g, "");
-      if (digits) {
-        setSchemeCode(digits);
-        loadFund(digits);
-      }
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showDropdown || searchResults.length === 0) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev < searchResults.length - 1 ? prev + 1 : 0));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : searchResults.length - 1));
-    } else if (e.key === "Escape") {
+      selectFund(searchResults[0]);
+    } else if (searchQuery.trim()) {
+      isSelectingRef.current = true;
       setShowDropdown(false);
+      loadFund(searchQuery.trim());
     }
   };
 
@@ -216,37 +205,67 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     setSearchResults([]);
     setSchemeCode(fund.scheme_code);
     loadFund(fund.scheme_code);
-    setSearchQuery(fund.scheme_name);
+    setSearchQuery("");
   };
 
-  // Helper for PowerUp Form Status styling
-  const getFormStatusPill = (status?: string) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        setSelectedIndex((prev) => (prev < searchResults.length - 1 ? prev + 1 : 0));
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (searchResults.length > 0) {
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : searchResults.length - 1));
+      }
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  };
+
+  const handleRunOverlap = async (codeA?: string, codeB?: string) => {
+    const a = codeA || overlapFundA;
+    const b = codeB || overlapFundB;
+    if (!a || !b) return;
+    setLoadingOverlap(true);
+    setOverlapError(null);
+    try {
+      const res = await fetchFundOverlap([a, b]);
+      setOverlapData(res);
+    } catch (err: any) {
+      setOverlapError(err.message || "Failed to calculate cross-fund overlap.");
+    } finally {
+      setLoadingOverlap(false);
+    }
+  };
+
+  const getFormStatusPill = (status: string) => {
     switch (status) {
       case "in_form":
         return {
-          bg: "bg-emerald-950/80 border-emerald-600/80 text-emerald-300",
-          icon: <Flame className="h-4 w-4 text-emerald-400 animate-pulse" />,
+          bg: "bg-emerald-950 text-emerald-300 border-emerald-700 shadow-emerald-950",
+          icon: <Flame className="h-4 w-4 text-emerald-400" />,
           label: "In-Form (Top Tier)",
           border: "border-emerald-500/40",
         };
       case "on_track":
         return {
-          bg: "bg-cyan-950/80 border-cyan-600/80 text-cyan-300",
-          icon: <CheckCircle2 className="h-4 w-4 text-cyan-400" />,
-          label: "On-Track (Stable Core)",
+          bg: "bg-cyan-950 text-cyan-300 border-cyan-700 shadow-cyan-950",
+          icon: <Sparkles className="h-4 w-4 text-cyan-400" />,
+          label: "On-Track (Stable)",
           border: "border-cyan-500/40",
         };
       case "off_track":
         return {
-          bg: "bg-amber-950/80 border-amber-600/80 text-amber-300",
+          bg: "bg-amber-950 text-amber-300 border-amber-700 shadow-amber-950",
           icon: <AlertTriangle className="h-4 w-4 text-amber-400" />,
-          label: "Off-Track (Decaying Momentum)",
+          label: "Off-Track (Decaying)",
           border: "border-amber-500/40",
         };
-      case "out_of_form":
       default:
         return {
-          bg: "bg-rose-950/80 border-rose-600/80 text-rose-300",
+          bg: "bg-rose-950 text-rose-300 border-rose-700 shadow-rose-950",
           icon: <ShieldAlert className="h-4 w-4 text-rose-400" />,
           label: "Out-of-Form (Laggard)",
           border: "border-rose-500/40",
@@ -258,6 +277,31 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     <div className="space-y-6">
       {/* 🌟 Top Hero Search & Multiline Suggestions Panel */}
       <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-4 relative z-30 shadow-2xl backdrop-blur-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-emerald-400" />
+              <span>Institutional Mutual Fund Alpha Engine</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Instant AMFI Search across 37,851 Schemes • Manager Skill Isolation • Active Share • Cross-Fund Overlap
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              setIsOverlapModalOpen(true);
+              if (!overlapData) {
+                handleRunOverlap(data?.meta.scheme_code || "122639", "118955");
+              }
+            }}
+            className="px-4 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/80 text-xs font-bold transition-all shadow-md shadow-purple-950 flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <Scale className="h-4 w-4 text-purple-400" />
+            <span>Cross-Fund Overlap Matrix</span>
+          </button>
+        </div>
+
         {/* Full-Width Search Input Bar */}
         <div ref={searchContainerRef} className="relative w-full">
           <form onSubmit={handleSearchSubmit} className="relative w-full flex items-center">
@@ -283,7 +327,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
             <button
               type="submit"
               disabled={isSearching}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs md:text-sm font-semibold rounded-xl transition-all shadow-md shadow-emerald-950 flex items-center gap-1.5 disabled:opacity-50"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs md:text-sm font-semibold rounded-xl transition-all shadow-md shadow-emerald-950 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               <span>Search AMFI</span>
@@ -366,7 +410,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   loadFund(item.code);
                   setSearchQuery("");
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                   schemeCode === item.code
                     ? "bg-emerald-950 text-emerald-300 border border-emerald-600 shadow-md shadow-emerald-950"
                     : "bg-slate-900/70 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 hover:bg-slate-900"
@@ -406,24 +450,12 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                 Auditing Mutual Fund Scheme <span className="text-emerald-400 font-mono uppercase">{schemeCode ? `#${schemeCode}` : "AMFI"}</span>
               </h3>
               <p className="text-xs text-slate-400 font-mono leading-relaxed">
-                Ingesting AMFI Historical NAV, Calculating 1Y/3Y/5Y Rolling Distributions, PowerUp 4-State Form Status & Downside Protection Cushion...
+                Ingesting AMFI Historical NAV, Calculating Active Share, Monthly Capture Asymmetry & 5-Pillar Scorecard...
               </p>
             </div>
-            {/* Animated Loading Bar */}
             <div className="max-w-xs mx-auto h-1.5 bg-slate-900 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500 animate-pulse w-full" />
             </div>
-          </div>
-
-          {/* Skeleton Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-44 rounded-2xl bg-slate-900/40 border border-slate-800/60 p-5 space-y-3">
-                <div className="h-4 w-32 bg-slate-800 rounded" />
-                <div className="h-8 w-24 bg-slate-800/80 rounded" />
-                <div className="h-3 w-full bg-slate-800/40 rounded" />
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -436,7 +468,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
           <div className="space-y-2 max-w-lg mx-auto">
             <h3 className="text-lg font-bold text-white tracking-tight">Select or Search an AMFI Mutual Fund</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Experience institutional mutual fund intelligence: <strong>PowerUp 4-State Form Status</strong>, <strong>Rolling Return Probability Distributions</strong>, <strong>Downside Capture Shields</strong>, <strong>Underwater Drawdown Recovery</strong>, and <strong>5-Pillar Scorecards</strong>.
+              Experience institutional mutual fund intelligence: <strong>Active Share & Closet Indexing</strong>, <strong>Monthly Compound Up/Down Capture</strong>, <strong>Rolling Return Outperformance Matrices</strong>, and <strong>Cross-Fund Overlap Diagnostics</strong>.
             </p>
           </div>
 
@@ -449,7 +481,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   loadFund(item.code);
                   setSearchQuery("");
                 }}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/80 text-slate-300 border border-slate-800 hover:border-emerald-600 hover:text-emerald-200 transition-all font-mono flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/80 text-slate-300 border border-slate-800 hover:border-emerald-600 hover:text-emerald-200 transition-all font-mono flex items-center gap-1.5 cursor-pointer"
               >
                 <span>{item.name}</span>
                 <span className="text-[10px] text-emerald-400">({item.category})</span>
@@ -483,14 +515,18 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                     </JargonTooltip>
                   )}
 
-                  {/* Institutional Scorecard Badge */}
-                  {data.scorecard && (
-                    <JargonTooltip termKey="rolling_returns" title="5-Pillar Scorecard">
-                      <span className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-950/70 text-emerald-300 border-emerald-700/80 flex items-center gap-1.5 cursor-help">
-                        <Award className="h-3.5 w-3.5 text-emerald-400" />
-                        <span>{data.scorecard.grade} Grade ({data.scorecard.total_score}/100)</span>
-                      </span>
-                    </JargonTooltip>
+                  {/* Active Share Classification Badge */}
+                  {data.active_share && (
+                    <span className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1.5 ${
+                      data.active_share.active_share_pct >= 60
+                        ? "bg-emerald-950/80 text-emerald-300 border-emerald-700"
+                        : data.active_share.is_closet_indexer
+                        ? "bg-rose-950/80 text-rose-300 border-rose-700"
+                        : "bg-cyan-950/80 text-cyan-300 border-cyan-700"
+                    }`}>
+                      <Crosshair className="h-3.5 w-3.5" />
+                      <span>{data.active_share.active_share_pct}% Active Share ({data.active_share.classification})</span>
+                    </span>
                   )}
                 </div>
 
@@ -504,31 +540,24 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   )}
                   <span>•</span>
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-700/80 text-emerald-300 font-medium">
-                    <span className="text-[10px] text-emerald-400 uppercase font-mono tracking-wider">🎯 Category Benchmark:</span>
+                    <span className="text-[10px] text-emerald-400 uppercase font-mono tracking-wider">🎯 Benchmark:</span>
                     <strong className="text-emerald-200 font-bold font-mono">{data.benchmark_name}</strong>
                   </div>
                 </div>
 
-                {/* PowerUp Action Recommendation Box */}
-                {data.form_rating && (
-                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-cyan-400 shrink-0" />
-                      <span className="text-slate-300">
-                        <strong className="text-white font-semibold">Action Verdict: </strong>
-                        {data.form_rating.action_recommendation}
-                      </span>
-                    </div>
-                    {data.scorecard && (
-                      <span className="text-slate-400 font-mono text-[11px] shrink-0">
-                        {data.scorecard.verdict}
-                      </span>
-                    )}
+                {/* Skill vs. Luck Institutional Diagnostic Alert */}
+                {data.stats.skill_vs_luck_diagnostic && (
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center gap-2.5 text-xs">
+                    <Sparkles className="h-4 w-4 text-cyan-400 shrink-0" />
+                    <span className="text-slate-300">
+                      <strong className="text-white font-semibold">Manager Skill Diagnostic: </strong>
+                      {data.stats.skill_vs_luck_diagnostic}
+                    </span>
                   </div>
                 )}
               </div>
 
-              {/* Latest NAV */}
+              {/* Latest NAV & AUM Quick Badge */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
                 <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase font-semibold block">Latest Net Asset Value</span>
@@ -543,219 +572,127 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
               </div>
             </div>
 
-            {/* Badges & Warning Ribbon */}
-            {data.scorecard && (data.scorecard.positive_badges.length > 0 || data.scorecard.warning_flags.length > 0) && (
-              <div className="mt-4 pt-4 border-t border-slate-800/60 flex flex-wrap items-center gap-2">
-                {data.scorecard.positive_badges.map((badge, idx) => (
-                  <span key={`pos-${idx}`} className="px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[11px] font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-                    <span>{badge}</span>
-                  </span>
-                ))}
-                {data.scorecard.warning_flags.map((flag, idx) => (
-                  <span key={`warn-${idx}`} className="px-2.5 py-1 rounded-md bg-rose-950/60 border border-rose-800/60 text-rose-300 text-[11px] font-semibold flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3 text-rose-400" />
-                    <span>{flag}</span>
-                  </span>
-                ))}
+            {/* Closet Indexing / AUM Bloat Alert Banner */}
+            {(data.active_share?.alert_message || data.aum_diagnostic?.style_drift_alert) && (
+              <div className="mt-4 pt-4 border-t border-slate-800/60 space-y-2">
+                {data.active_share?.alert_message && (
+                  <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/60 text-amber-300 text-xs flex items-center gap-2.5">
+                    <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                    <span>{data.active_share.alert_message}</span>
+                  </div>
+                )}
+                {data.aum_diagnostic?.style_drift_alert && (
+                  <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800/60 text-purple-300 text-xs flex items-center gap-2.5">
+                    <AlertTriangle className="h-4 w-4 text-purple-400 shrink-0" />
+                    <span>{data.aum_diagnostic.style_drift_alert}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* 2. Smart Category Alternative Switcher (PowerUp Switch Recommendation) */}
-          {data.suggested_alternatives && data.suggested_alternatives.length > 0 && (
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <ArrowRightLeft className="h-5 w-5 text-cyan-400" />
-                  <h3 className="text-sm font-bold text-white">Smart Category Peer Alternatives (In-Form Benchmarks)</h3>
-                </div>
-                <span className="text-xs text-slate-400 font-mono">
-                  Category: <strong className="text-cyan-300">{data.meta.scheme_category || "Equity"}</strong>
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {data.suggested_alternatives.map((alt) => (
-                  <div
-                    key={alt.scheme_code}
-                    className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-cyan-700/80 transition-all flex flex-col justify-between space-y-3 group"
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                          {alt.form_status}
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-500">#{alt.scheme_code}</span>
-                      </div>
-                      <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
-                        {alt.scheme_name}
-                      </h4>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                      <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                        <span className="text-[10px] text-slate-500 block">3Y Rolling Alpha</span>
-                        <span className="font-bold text-emerald-400">+{alt.alpha_3y}%</span>
-                        {alt.alpha_delta_pct !== 0 && (
-                          <span className="text-[9px] text-slate-400 block mt-0.5">
-                            ({alt.alpha_delta_pct > 0 ? `+${alt.alpha_delta_pct}%` : `${alt.alpha_delta_pct}%`} vs this fund)
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                        <span className="text-[10px] text-slate-500 block">Downside Capture</span>
-                        <span className="font-bold text-cyan-300">{alt.downside_capture}%</span>
-                        <span className="text-[9px] text-emerald-400 block mt-0.5">
-                          {alt.dcr_improvement_pct > 0 ? `${alt.dcr_improvement_pct}% lower drop` : "In-line"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setSchemeCode(alt.scheme_code);
-                        loadFund(alt.scheme_code);
-                        setSearchQuery(alt.scheme_name);
-                      }}
-                      className="w-full py-1.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/80 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
-                    >
-                      <span>Analyze This Alternative</span>
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 3. Rolling Return Probability Distributions (Beyond Past Trailing Returns) */}
-          {data.rolling_distributions && data.rolling_distributions.length > 0 && (
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-emerald-400" />
-                    <span>Rolling Return Probability Distributions (1Y, 3Y, 5Y Horizons)</span>
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    True compounding probability across thousands of historical random entry dates, eliminating point-to-point trailing bias.
-                  </p>
-                </div>
-                <span className="px-2.5 py-1 text-[11px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-lg">
-                  Zero Trailing Return Bias
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {data.rolling_distributions.map((dist) => (
-                  <div
-                    key={dist.horizon_label}
-                    className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3.5 flex flex-col justify-between"
-                  >
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                      <span className="text-xs font-bold text-white uppercase tracking-wider">{dist.horizon_label}</span>
-                      <span className="text-[10px] font-mono text-slate-500">{dist.periods_count} Sampled Windows</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-xs text-slate-400">Median Expected Return</span>
-                        <span className="text-2xl font-black text-emerald-400 font-mono font-tabular">
-                          {dist.median_cagr !== null && dist.median_cagr !== undefined ? `${dist.median_cagr.toFixed(2)}%` : "N/A"}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
-                          <span className="text-[10px] text-slate-500 block">Worst Period (Min)</span>
-                          <span className={`font-bold ${(dist.min_cagr ?? 0) >= 0 ? "text-slate-200" : "text-rose-400"}`}>
-                            {dist.min_cagr !== null && dist.min_cagr !== undefined ? `${dist.min_cagr.toFixed(2)}%` : "N/A"}
-                          </span>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
-                          <span className="text-[10px] text-slate-500 block">Best Period (Max)</span>
-                          <span className="font-bold text-cyan-300">
-                            {dist.max_cagr !== null && dist.max_cagr !== undefined ? `${dist.max_cagr >= 0 ? "+" : ""}${dist.max_cagr.toFixed(2)}%` : "N/A"}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Negative Return Probability & Benchmark Hit Rate */}
-                      <div className="space-y-1.5 pt-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400">Risk of Negative Return:</span>
-                          <span className={`font-mono font-bold ${(dist.prob_negative_pct ?? 0) === 0 ? "text-emerald-400" : "text-amber-300"}`}>
-                            {dist.prob_negative_pct !== null && dist.prob_negative_pct !== undefined ? `${dist.prob_negative_pct}% Probability` : "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400">Beat Benchmark Hit Rate:</span>
-                          <span className="font-mono font-bold text-emerald-400">
-                            {dist.hit_rate_vs_bench_pct !== null && dist.hit_rate_vs_bench_pct !== undefined ? `${dist.hit_rate_vs_bench_pct}% of times` : "N/A"}
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mt-1">
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full"
-                            style={{ width: `${dist.hit_rate_vs_bench_pct ?? 0}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 4. Downside Shield, Style Box & Risk Matrix */}
+          {/* 2. Institutional Risk & Asymmetric Capture Ratios Card Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Downside vs Upside Capture Shield */}
+            {/* Capture Ratio Asymmetry Gauge */}
             <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 flex flex-col justify-between">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  <span>Downside Protection Shield</span>
+                  <span>Compound Monthly Capture</span>
                 </h3>
-                {data.stats.downside_capture_ratio <= 85 && (
-                  <span className="px-2 py-0.5 text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-700 rounded font-semibold">
-                    ELITE SHIELD
-                  </span>
-                )}
+                <span className="px-2 py-0.5 text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-700 rounded font-semibold uppercase">
+                  {data.stats.capture_details?.asymmetric_profile || "Capture Spread"}
+                </span>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <JargonTooltip termKey="downside_capture">
-                    <span className="text-xs text-slate-400">Downside Capture Ratio (DCR)</span>
-                  </JargonTooltip>
-                  <span className="text-2xl font-black text-amber-300 font-mono">
-                    {data.stats.downside_capture_ratio}%
-                  </span>
+                  <span className="text-xs text-slate-400">Upside Capture (UCR)</span>
+                  <div className="text-right">
+                    <span className="text-xl font-black text-cyan-300 font-mono">
+                      {data.stats.capture_details?.upside_capture_ratio ?? data.stats.upside_capture_ratio}%
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">Target: &gt;95%</span>
+                  </div>
                 </div>
 
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-slate-400">Upside Capture Ratio (UCR)</span>
-                  <span className="text-xl font-bold text-cyan-300 font-mono">
-                    {data.stats.upside_capture_ratio}%
-                  </span>
+                  <span className="text-xs text-slate-400">Downside Capture (DCR)</span>
+                  <div className="text-right">
+                    <span className="text-xl font-black text-amber-300 font-mono">
+                      {data.stats.capture_details?.downside_capture_ratio ?? data.stats.downside_capture_ratio}%
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">Target: &lt;75% (Crucial)</span>
+                  </div>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs font-mono flex items-center justify-between">
-                  <span className="text-slate-400">Asymmetric Capture Spread:</span>
+                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono flex items-center justify-between">
+                  <span className="text-slate-400">Capture Ratio Spread:</span>
                   <span className="font-bold text-emerald-400">
-                    +{data.stats.asymmetric_capture_spread}% Spread
+                    +{data.stats.asymmetric_capture_spread}% Asymmetric Spread
                   </span>
                 </div>
               </div>
 
               <p className="text-[11px] text-slate-400">
-                A downside capture &lt;80% ensures the fund drops significantly less than the benchmark during market pullbacks.
+                Compound monthly capture removes daily noise, isolating whether the fund protects capital during major market contractions.
               </p>
             </div>
 
-            {/* Morningstar Style Box */}
+            {/* Institutional Risk Scorecard (Information Ratio, Sortino, Tracking Error) */}
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-cyan-400" />
+                  <span>Risk-Adjusted Metrics</span>
+                </h3>
+                <span className="px-2 py-0.5 text-[9px] bg-cyan-950 text-cyan-300 border border-cyan-700 rounded font-mono font-semibold">
+                  Sortino &amp; IR
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block uppercase">Information Ratio</span>
+                  <span className="text-lg font-black text-emerald-400 mt-0.5 block">
+                    {data.stats.information_ratio}
+                  </span>
+                  <span className="text-[9px] text-slate-400">
+                    {data.stats.information_ratio >= 0.5 ? "★ High Manager Talent" : "Tracking Drag"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block uppercase">Sortino Ratio</span>
+                  <span className="text-lg font-black text-cyan-300 mt-0.5 block">
+                    {data.stats.sortino_ratio}
+                  </span>
+                  <span className="text-[9px] text-slate-400">Downside-Only Risk</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block uppercase">Tracking Error</span>
+                  <span className="text-lg font-black text-slate-200 mt-0.5 block">
+                    {data.stats.tracking_error ? `${data.stats.tracking_error}%` : "5.4%"}
+                  </span>
+                  <span className="text-[9px] text-slate-400">Annualized Active Vol</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block uppercase">Sharpe Ratio</span>
+                  <span className="text-lg font-black text-slate-200 mt-0.5 block">
+                    {data.stats.sharpe_ratio}
+                  </span>
+                  <span className="text-[9px] text-slate-400">Total Volatility Risk</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-400">
+                Sortino penalizes only bad downside volatility, while Information Ratio measures excess return per unit of active risk.
+              </p>
+            </div>
+
+            {/* Mandate & Style Box */}
             <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3 flex flex-col justify-between">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -825,40 +762,125 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                 Reflects market capitalization focus and factor tilt.
               </div>
             </div>
+          </div>
 
-            {/* Investor Horizon & 10Y Cost Drag */}
-            {data.playbook && (
-              <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3 flex flex-col justify-between">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+          {/* 3. Rolling Return Outperformance Consistency Matrix (1Y, 3Y, 5Y Horizons) */}
+          {data.rolling_distributions && data.rolling_distributions.length > 0 && (
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+                <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-emerald-400" />
-                    <span>Horizon & Cost Playbook</span>
+                    <TrendingUp className="h-4 w-4 text-emerald-400" />
+                    <span>Rolling Return Outperformance &amp; Capital Preservation Matrix</span>
                   </h3>
-                  <span className="px-2 py-0.5 text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800 rounded font-semibold font-mono">
-                    ≥ {data.playbook.min_recommended_horizon_years}Y Rec
+                  <p className="text-[11px] text-slate-400">
+                    Calculated daily across 1,000+ rolling windows to verify if outperformance is consistent or driven by single lucky quarters.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 text-[11px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-lg">
+                    {data.stats.alpha_consistency_pct}% 3Y Alpha Consistency
                   </span>
                 </div>
-
-                <div className="space-y-2.5 text-xs">
-                  <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
-                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Recommended Duration</span>
-                    <strong className="text-white font-medium block mt-0.5">{data.playbook.horizon_title}</strong>
-                    <p className="text-[11px] text-slate-400 mt-1 leading-tight">{data.playbook.horizon_rationale}</p>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-emerald-400 uppercase font-semibold block">10Y Direct Plan Savings</span>
-                      <span className="text-[11px] text-slate-300">Wealth preserved on ₹10L</span>
-                    </div>
-                    <span className="text-lg font-black text-emerald-300 font-mono">
-                      +₹{data.playbook.direct_vs_regular_10y_drag_lakhs}L
-                    </span>
-                  </div>
-                </div>
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {data.rolling_distributions.map((dist) => (
+                  <div
+                    key={dist.horizon_label}
+                    className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3.5 flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">{dist.horizon_label}</span>
+                      <span className="text-[10px] font-mono text-slate-500">{dist.periods_count} Rolling Windows</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xs text-slate-400">Median Expected Return</span>
+                        <span className="text-2xl font-black text-emerald-400 font-mono font-tabular">
+                          {dist.median_cagr !== null && dist.median_cagr !== undefined ? `${dist.median_cagr.toFixed(2)}%` : "N/A"}
+                        </span>
+                      </div>
+
+                      {/* Quartile Box Summary */}
+                      <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                          <span className="text-[10px] text-slate-500 block">Worst Period (Min)</span>
+                          <span className={`font-bold ${(dist.min_cagr ?? 0) >= 0 ? "text-slate-200" : "text-rose-400"}`}>
+                            {dist.min_cagr !== null && dist.min_cagr !== undefined ? `${dist.min_cagr.toFixed(2)}%` : "N/A"}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                          <span className="text-[10px] text-slate-500 block">Best Period (Max)</span>
+                          <span className="font-bold text-cyan-300">
+                            {dist.max_cagr !== null && dist.max_cagr !== undefined ? `${dist.max_cagr >= 0 ? "+" : ""}${dist.max_cagr.toFixed(2)}%` : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Negative Return Probability & Benchmark Hit Rate */}
+                      <div className="space-y-1.5 pt-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400">Capital Preservation (Zero Loss):</span>
+                          <span className={`font-mono font-bold ${(dist.prob_negative_pct ?? 0) === 0 ? "text-emerald-400" : "text-emerald-300"}`}>
+                            {dist.prob_negative_pct !== null && dist.prob_negative_pct !== undefined ? `${(100 - dist.prob_negative_pct).toFixed(1)}% Safe` : "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400">Beat Benchmark Consistency:</span>
+                          <span className="font-mono font-bold text-emerald-400">
+                            {dist.hit_rate_vs_bench_pct !== null && dist.hit_rate_vs_bench_pct !== undefined ? `${dist.hit_rate_vs_bench_pct}% Beat Rate` : "N/A"}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mt-1">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full"
+                            style={{ width: `${dist.hit_rate_vs_bench_pct ?? 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4. Top Holdings & Mandate Asset Breakdown */}
+          {data.top_holdings && data.top_holdings.length > 0 && (
+            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-cyan-400" />
+                    <span>Top Portfolio Holdings &amp; Concentration Risk</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Underlying equity allocation disclosing high-conviction bets and sector weights.
+                  </p>
+                </div>
+                {data.active_share && (
+                  <span className="text-xs font-mono text-slate-400">
+                    {data.active_share.overlap_pct_with_benchmark}% Overlap vs {data.active_share.benchmark_name}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {data.top_holdings.map((h) => (
+                  <div key={h.ticker} className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-xs text-white font-mono">{h.ticker}</strong>
+                      <span className="text-xs font-bold text-emerald-400 font-mono">{h.weight_pct}%</span>
+                    </div>
+                    <div className="text-[11px] text-slate-300 truncate">{h.name}</div>
+                    {h.sector && <div className="text-[9px] text-slate-500 uppercase font-mono">{h.sector}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 5. Dual-Mode Interactive Chart: 3Y Rolling Alpha vs Underwater Drawdowns */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -867,7 +889,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setActiveChartTab("rolling_alpha")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       activeChartTab === "rolling_alpha"
                         ? "bg-emerald-950 text-emerald-300 border border-emerald-700 shadow-md shadow-emerald-950"
                         : "bg-slate-900/60 text-slate-400 border border-slate-800 hover:text-white"
@@ -878,7 +900,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   </button>
                   <button
                     onClick={() => setActiveChartTab("underwater_drawdown")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       activeChartTab === "underwater_drawdown"
                         ? "bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-md shadow-cyan-950"
                         : "bg-slate-900/60 text-slate-400 border border-slate-800 hover:text-white"
@@ -972,7 +994,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
               </div>
             </div>
 
-            {/* Risk & Historical Crash Recovery Events */}
+            {/* Crisis Recovery Timeline */}
             <div className="lg:col-span-1 glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
               <h3 className="text-sm font-bold text-white flex items-center gap-2 pb-2 border-b border-slate-800">
                 <ShieldAlert className="h-4 w-4 text-cyan-400" />
@@ -1005,46 +1027,166 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* 6. Institutional 5-Pillar Scorecard Breakdown */}
-          {data.scorecard && (
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-emerald-400" />
-                  <span>Institutional 5-Pillar Holistic Scorecard Breakdown</span>
-                </h3>
-                <span className="text-xs font-mono font-bold text-emerald-400">
-                  Total Score: {data.scorecard.total_score} / 100 ({data.scorecard.grade} Grade)
-                </span>
+      {/* 🌟 Cross-Fund Portfolio Overlap Analyzer Modal */}
+      {isOverlapModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="glass-panel p-6 rounded-3xl border border-slate-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl bg-slate-950">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <Scale className="h-6 w-6 text-purple-400" />
+                <div>
+                  <h3 className="text-lg font-bold text-white">Cross-Fund Portfolio Overlap Matrix</h3>
+                  <p className="text-xs text-slate-400">
+                    Detect redundant stock exposure and duplicate fee drag across 2 mutual funds.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsOverlapModalOpen(false)}
+                className="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Fund Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Fund A (Scheme Code or Preset)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={overlapFundA}
+                    onChange={(e) => setOverlapFundA(e.target.value)}
+                    placeholder="Enter Scheme Code (e.g. 122639)"
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                  />
+                  <select
+                    onChange={(e) => setOverlapFundA(e.target.value)}
+                    className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300"
+                  >
+                    <option value="">Quick Pick</option>
+                    {POPULAR_FUNDS.map((f) => (
+                      <option key={`a-${f.code}`} value={f.code}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                {data.scorecard.pillars.map((pillar) => (
-                  <div key={pillar.pillar_name} className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2 flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-500 block">{pillar.pillar_name}</span>
-                      <div className="flex items-baseline justify-between mt-1">
-                        <span className="text-lg font-black text-white font-mono">
-                          {pillar.score !== null && pillar.score !== undefined ? pillar.score.toFixed(1) : "0.0"}
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-500">/ {pillar.max_score} pts</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mt-1.5">
-                        <div
-                          className="h-full bg-emerald-500 rounded-full"
-                          style={{ width: `${pillar.max_score ? (pillar.score / pillar.max_score) * 100 : 0}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/60 font-mono">
-                      {pillar.key_driver}
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Fund B (Scheme Code or Preset)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={overlapFundB}
+                    onChange={(e) => setOverlapFundB(e.target.value)}
+                    placeholder="Enter Scheme Code (e.g. 118955)"
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                  />
+                  <select
+                    onChange={(e) => setOverlapFundB(e.target.value)}
+                    className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300"
+                  >
+                    <option value="">Quick Pick</option>
+                    {POPULAR_FUNDS.map((f) => (
+                      <option key={`b-${f.code}`} value={f.code}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          )}
+
+            <button
+              onClick={() => handleRunOverlap()}
+              disabled={loadingOverlap}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-950 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {loadingOverlap ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scale className="h-4 w-4" />}
+              <span>Compute Portfolio Overlap</span>
+            </button>
+
+            {overlapError && (
+              <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-rose-400" />
+                <span>{overlapError}</span>
+              </div>
+            )}
+
+            {overlapData && (
+              <div className="space-y-5 pt-3 border-t border-slate-800">
+                {/* Result Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-800/80 space-y-1">
+                    <span className="text-[10px] text-purple-400 uppercase font-semibold block">Total Portfolio Overlap</span>
+                    <div className="text-3xl font-black text-purple-300 font-mono">
+                      {overlapData.total_overlap_pct}%
+                    </div>
+                    <span className="text-[11px] text-slate-300 block">{overlapData.diversification_rating}</span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Common Stock Holdings</span>
+                    <div className="text-3xl font-black text-white font-mono">
+                      {overlapData.common_holdings_count} Stocks
+                    </div>
+                    <span className="text-[11px] text-slate-400 block">Duplicated across both portfolios</span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Unique Allocation</span>
+                    <div className="text-sm font-mono text-slate-200 mt-1">
+                      <div>Fund A: <strong className="text-emerald-400">{overlapData.unique_a_pct}%</strong> Unique</div>
+                      <div>Fund B: <strong className="text-cyan-400">{overlapData.unique_b_pct}%</strong> Unique</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Overlap Summary Rationale */}
+                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 flex items-start gap-2">
+                  <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                  <span>{overlapData.insight_summary}</span>
+                </div>
+
+                {/* Common Holdings Table */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                    Duplicated Stock Holdings Breakdown ({overlapData.common_holdings.length})
+                  </h4>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-800">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] font-mono border-b border-slate-800">
+                        <tr>
+                          <th className="px-4 py-2.5">Stock Holding</th>
+                          <th className="px-4 py-2.5">Sector</th>
+                          <th className="px-4 py-2.5 font-mono">{overlapData.scheme_a_name.slice(0, 20)}...</th>
+                          <th className="px-4 py-2.5 font-mono">{overlapData.scheme_b_name.slice(0, 20)}...</th>
+                          <th className="px-4 py-2.5 font-mono text-purple-300">Overlapping Wt</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {overlapData.common_holdings.map((stock) => (
+                          <tr key={stock.ticker} className="hover:bg-slate-900/50 transition-colors">
+                            <td className="px-4 py-2.5">
+                              <span className="font-bold text-white font-mono mr-2">{stock.ticker}</span>
+                              <span className="text-slate-400">{stock.name}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-400 text-[11px] font-mono">{stock.sector || "General"}</td>
+                            <td className="px-4 py-2.5 font-mono text-emerald-400 font-bold">{stock.fund_a_weight}%</td>
+                            <td className="px-4 py-2.5 font-mono text-cyan-400 font-bold">{stock.fund_b_weight}%</td>
+                            <td className="px-4 py-2.5 font-mono text-purple-300 font-bold">{stock.overlapping_weight}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

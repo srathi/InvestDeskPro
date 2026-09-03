@@ -1,0 +1,318 @@
+{
+  "indices": {
+    "NIFTY_50": {
+      "name": "Nifty 50 TRI",
+      "holdings": [
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 11.6, "sector": "Financial Services"},
+        {"ticker": "RELIANCE", "name": "Reliance Industries Ltd", "weight_pct": 9.7, "sector": "Energy"},
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 7.8, "sector": "Financial Services"},
+        {"ticker": "INFY", "name": "Infosys Ltd", "weight_pct": 5.7, "sector": "Information Technology"},
+        {"ticker": "ITC", "name": "ITC Ltd", "weight_pct": 4.3, "sector": "FMCG"},
+        {"ticker": "TCS", "name": "Tata Consultancy Services Ltd", "weight_pct": 3.9, "sector": "Information Technology"},
+        {"ticker": "LT", "name": "Larsen & Toubro Ltd", "weight_pct": 3.8, "sector": "Construction"},
+        {"ticker": "BHARTIARTL", "name": "Bharti Airtel Ltd", "weight_pct": 3.6, "sector": "Telecommunication"},
+        {"ticker": "AXISBANK", "name": "Axis Bank Ltd", "weight_pct": 3.1, "sector": "Financial Services"},
+        {"ticker": "SBIN", "name": "State Bank of India", "weight_pct": 2.9, "sector": "Financial Services"},
+        {"ticker": "KOTAKBANK", "name": "Kotak Mahindra Bank", "weight_pct": 2.7, "sector": "Financial Services"},
+        {"ticker": "BAJFINANCE", "name": "Bajaj Finance Ltd", "weight_pct": 2.4, "sector": "Financial Services"},
+        {"ticker": "M&M", "name": "Mahindra & Mahindra Ltd", "weight_pct": 2.2, "sector": "Automobile"},
+        {"ticker": "HINDUNILVR", "name": "Hindustan Unilever Ltd", "weight_pct": 1.9, "sector": "FMCG"},
+        {"ticker": "MARUTI", "name": "Maruti Suzuki India Ltd", "weight_pct": 1.7, "sector": "Automobile"},
+        {"ticker": "SUNPHARMA", "name": "Sun Pharmaceutical Industries", "weight_pct": 1.6, "sector": "Healthcare"},
+        {"ticker": "TATAMOTORS", "name": "Tata Motors Ltd", "weight_pct": 1.5, "sector": "Automobile"},
+        {"ticker": "NTPC", "name": "NTPC Ltd", "weight_pct": 1.4, "sector": "Power"},
+        {"ticker": "TITAN", "name": "Titan Company Ltd", "weight_pct": 1.3, "sector": "Consumer Durables"},
+        {"ticker": "POWERGRID", "name": "Power Grid Corporation of India", "weight_pct": 1.2, "sector": "Power"},
+        {"ticker": "ULTRACEMCO", "name": "UltraTech Cement Ltd", "weight_pct": 1.2, "sector": "Construction Materials"},
+        {"ticker": "TATASTEEL", "name": "Tata Steel Ltd", "weight_pct": 1.1, "sector": "Metals & Mining"},
+        {"ticker": "ASIANPAINT", "name": "Asian Paints Ltd", "weight_pct": 1.0, "sector": "Consumer Durables"}
+      ]
+    },
+    "NIFTY_500": {
+      "name": "Nifty 500 TRI",
+      "holdings": [
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 7.8, "sector": "Financial Services"},
+        {"ticker": "RELIANCE", "name": "Reliance Industries Ltd", "weight_pct": 6.5, "sector": "Energy"},
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 5.2, "sector": "Financial Services"},
+        {"ticker": "INFY", "name": "Infosys Ltd", "weight_pct": 3.8, "sector": "Information Technology"},
+        {"ticker": "ITC", "name": "ITC Ltd", "weight_pct": 2.9, "sector": "FMCG"},
+        {"ticker": "TCS", "name": "Tata Consultancy Services Ltd", "weight_pct": 2.6, "sector": "Information Technology"},
+        {"ticker": "LT", "name": "Larsen & Toubro Ltd", "weight_pct": 2.5, "sector": "Construction"},
+        {"ticker": "BHARTIARTL", "name": "Bharti Airtel Ltd", "weight_pct": 2.4, "sector": "Telecommunication"},
+        {"ticker": "AXISBANK", "name": "Axis Bank Ltd", "weight_pct": 2.1, "sector": "Financial Services"},
+        {"ticker": "SBIN", "name": "State Bank of India", "weight_pct": 1.9, "sector": "Financial Services"},
+        {"ticker": "BAJFINANCE", "name": "Bajaj Finance Ltd", "weight_pct": 1.6, "sector": "Financial Services"},
+        {"ticker": "TRENT", "name": "Trent Ltd", "weight_pct": 1.2, "sector": "Consumer Services"},
+        {"ticker": "BEL", "name": "Bharat Electronics Ltd", "weight_pct": 1.1, "sector": "Capital Goods"},
+        {"ticker": "HAL", "name": "Hindustan Aeronautics Ltd", "weight_pct": 1.0, "sector": "Capital Goods"},
+        {"ticker": "ZOMATO", "name": "Zomato Ltd", "weight_pct": 0.9, "sector": "Consumer Services"},
+        {"ticker": "JIOFIN", "name": "Jio Financial Services", "weight_pct": 0.8, "sector": "Financial Services"}
+      ]
+    },
+    "NIFTY_MIDCAP_150": {
+      "name": "Nifty Midcap 150 TRI",
+      "holdings": [
+        {"ticker": "MAXHEALTH", "name": "Max Healthcare Institute", "weight_pct": 2.4, "sector": "Healthcare"},
+        {"ticker": "INDIANB", "name": "Indian Bank", "weight_pct": 2.1, "sector": "Financial Services"},
+        {"ticker": "PERSISTENT", "name": "Persistent Systems Ltd", "weight_pct": 1.9, "sector": "Information Technology"},
+        {"ticker": "DIXON", "name": "Dixon Technologies Ltd", "weight_pct": 1.8, "sector": "Consumer Durables"},
+        {"ticker": "CUMMINSIND", "name": "Cummins India Ltd", "weight_pct": 1.7, "sector": "Capital Goods"},
+        {"ticker": "POLYCAB", "name": "Polycab India Ltd", "weight_pct": 1.7, "sector": "Capital Goods"},
+        {"ticker": "AUBANK", "name": "AU Small Finance Bank", "weight_pct": 1.6, "sector": "Financial Services"},
+        {"ticker": "FEDERALBNK", "name": "Federal Bank Ltd", "weight_pct": 1.5, "sector": "Financial Services"},
+        {"ticker": "COFORGE", "name": "Coforge Ltd", "weight_pct": 1.5, "sector": "Information Technology"},
+        {"ticker": "SUPREMEIND", "name": "Supreme Industries Ltd", "weight_pct": 1.4, "sector": "Capital Goods"},
+        {"ticker": "ASHOKLEY", "name": "Ashok Leyland Ltd", "weight_pct": 1.3, "sector": "Automobile"}
+      ]
+    },
+    "NIFTY_SMALLCAP_250": {
+      "name": "Nifty Smallcap 250 TRI",
+      "holdings": [
+        {"ticker": "KAYNES", "name": "Kaynes Technology India", "weight_pct": 1.6, "sector": "Capital Goods"},
+        {"ticker": "BLUESTARCO", "name": "Blue Star Ltd", "weight_pct": 1.5, "sector": "Consumer Durables"},
+        {"ticker": "CDSL", "name": "Central Depository Services", "weight_pct": 1.4, "sector": "Financial Services"},
+        {"ticker": "ANGELONE", "name": "Angel One Ltd", "weight_pct": 1.4, "sector": "Financial Services"},
+        {"ticker": "RADICO", "name": "Radico Khaitan Ltd", "weight_pct": 1.3, "sector": "FMCG"},
+        {"ticker": "SUZLON", "name": "Suzlon Energy Ltd", "weight_pct": 1.3, "sector": "Capital Goods"},
+        {"ticker": "KARURVYSYA", "name": "Karur Vysya Bank Ltd", "weight_pct": 1.2, "sector": "Financial Services"},
+        {"ticker": "SONACOMS", "name": "Sona BLW Precision", "weight_pct": 1.2, "sector": "Automobile"},
+        {"ticker": "JBCHEPHARM", "name": "JB Chemicals & Pharma", "weight_pct": 1.1, "sector": "Healthcare"},
+        {"ticker": "APARINDS", "name": "Apar Industries Ltd", "weight_pct": 1.1, "sector": "Capital Goods"}
+      ]
+    }
+  },
+  "schemes": {
+    "122639": {
+      "name": "Parag Parikh Flexi Cap Fund",
+      "category": "Flexi Cap",
+      "aum_cr": 76840,
+      "cash_pct": 15.4,
+      "large_cap_pct": 58.2,
+      "mid_cap_pct": 9.4,
+      "small_cap_pct": 4.6,
+      "foreign_equity_pct": 12.4,
+      "holdings": [
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 8.4, "sector": "Financial Services"},
+        {"ticker": "BAJFINANCE", "name": "Bajaj Finance Ltd", "weight_pct": 6.8, "sector": "Financial Services"},
+        {"ticker": "ITC", "name": "ITC Ltd", "weight_pct": 6.2, "sector": "FMCG"},
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 5.9, "sector": "Financial Services"},
+        {"ticker": "TCS", "name": "Tata Consultancy Services Ltd", "weight_pct": 4.8, "sector": "Information Technology"},
+        {"ticker": "INFY", "name": "Infosys Ltd", "weight_pct": 4.5, "sector": "Information Technology"},
+        {"ticker": "POWERGRID", "name": "Power Grid Corp of India", "weight_pct": 4.1, "sector": "Power"},
+        {"ticker": "COALINDIA", "name": "Coal India Ltd", "weight_pct": 3.9, "sector": "Energy"},
+        {"ticker": "HCLTECH", "name": "HCL Technologies Ltd", "weight_pct": 3.6, "sector": "Information Technology"},
+        {"ticker": "MARUTI", "name": "Maruti Suzuki India", "weight_pct": 3.2, "sector": "Automobile"},
+        {"ticker": "AXISBANK", "name": "Axis Bank Ltd", "weight_pct": 3.0, "sector": "Financial Services"},
+        {"ticker": "CDSL", "name": "Central Depository Services", "weight_pct": 2.8, "sector": "Financial Services"},
+        {"ticker": "MSFT", "name": "Microsoft Corp", "weight_pct": 4.6, "sector": "Global Tech"},
+        {"ticker": "GOOGL", "name": "Alphabet Inc", "weight_pct": 4.2, "sector": "Global Tech"},
+        {"ticker": "AMZN", "name": "Amazon.com Inc", "weight_pct": 3.5, "sector": "Global Tech"},
+        {"ticker": "META", "name": "Meta Platforms Inc", "weight_pct": 3.4, "sector": "Global Tech"}
+      ]
+    },
+    "118955": {
+      "name": "HDFC Flexi Cap Fund",
+      "category": "Flexi Cap",
+      "aum_cr": 64200,
+      "cash_pct": 6.8,
+      "large_cap_pct": 74.5,
+      "mid_cap_pct": 12.2,
+      "small_cap_pct": 6.5,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 9.4, "sector": "Financial Services"},
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 8.9, "sector": "Financial Services"},
+        {"ticker": "INFY", "name": "Infosys Ltd", "weight_pct": 6.5, "sector": "Information Technology"},
+        {"ticker": "BHARTIARTL", "name": "Bharti Airtel Ltd", "weight_pct": 5.8, "sector": "Telecommunication"},
+        {"ticker": "HCLTECH", "name": "HCL Technologies Ltd", "weight_pct": 4.8, "sector": "Information Technology"},
+        {"ticker": "SBIN", "name": "State Bank of India", "weight_pct": 4.6, "sector": "Financial Services"},
+        {"ticker": "AXISBANK", "name": "Axis Bank Ltd", "weight_pct": 4.2, "sector": "Financial Services"},
+        {"ticker": "NTPC", "name": "NTPC Ltd", "weight_pct": 3.9, "sector": "Power"},
+        {"ticker": "LT", "name": "Larsen & Toubro Ltd", "weight_pct": 3.6, "sector": "Construction"},
+        {"ticker": "CIPLA", "name": "Cipla Ltd", "weight_pct": 3.2, "sector": "Healthcare"},
+        {"ticker": "RELIANCE", "name": "Reliance Industries Ltd", "weight_pct": 3.1, "sector": "Energy"},
+        {"ticker": "SUNPHARMA", "name": "Sun Pharmaceutical Industries", "weight_pct": 2.8, "sector": "Healthcare"},
+        {"ticker": "ITC", "name": "ITC Ltd", "weight_pct": 2.6, "sector": "FMCG"}
+      ]
+    },
+    "118825": {
+      "name": "Mirae Asset Large Cap Fund",
+      "category": "Large Cap",
+      "aum_cr": 38900,
+      "cash_pct": 3.5,
+      "large_cap_pct": 88.6,
+      "mid_cap_pct": 7.9,
+      "small_cap_pct": 0.0,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 10.2, "sector": "Financial Services"},
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 8.8, "sector": "Financial Services"},
+        {"ticker": "RELIANCE", "name": "Reliance Industries Ltd", "weight_pct": 8.1, "sector": "Energy"},
+        {"ticker": "INFY", "name": "Infosys Ltd", "weight_pct": 6.2, "sector": "Information Technology"},
+        {"ticker": "TCS", "name": "Tata Consultancy Services Ltd", "weight_pct": 5.1, "sector": "Information Technology"},
+        {"ticker": "LT", "name": "Larsen & Toubro Ltd", "weight_pct": 4.6, "sector": "Construction"},
+        {"ticker": "AXISBANK", "name": "Axis Bank Ltd", "weight_pct": 4.1, "sector": "Financial Services"},
+        {"ticker": "BHARTIARTL", "name": "Bharti Airtel Ltd", "weight_pct": 3.9, "sector": "Telecommunication"},
+        {"ticker": "SBIN", "name": "State Bank of India", "weight_pct": 3.5, "sector": "Financial Services"},
+        {"ticker": "ITC", "name": "ITC Ltd", "weight_pct": 3.2, "sector": "FMCG"},
+        {"ticker": "BAJFINANCE", "name": "Bajaj Finance Ltd", "weight_pct": 2.9, "sector": "Financial Services"},
+        {"ticker": "KOTAKBANK", "name": "Kotak Mahindra Bank", "weight_pct": 2.6, "sector": "Financial Services"},
+        {"ticker": "MARUTI", "name": "Maruti Suzuki India", "weight_pct": 2.4, "sector": "Automobile"},
+        {"ticker": "M&M", "name": "Mahindra & Mahindra Ltd", "weight_pct": 2.2, "sector": "Automobile"}
+      ]
+    },
+    "120828": {
+      "name": "Quant Small Cap Fund",
+      "category": "Small Cap",
+      "aum_cr": 23400,
+      "cash_pct": 12.8,
+      "large_cap_pct": 22.4,
+      "mid_cap_pct": 11.2,
+      "small_cap_pct": 53.6,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "RELIANCE", "name": "Reliance Industries Ltd", "weight_pct": 8.5, "sector": "Energy"},
+        {"ticker": "JIOFIN", "name": "Jio Financial Services", "weight_pct": 6.2, "sector": "Financial Services"},
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 5.8, "sector": "Financial Services"},
+        {"ticker": "BIOCON", "name": "Biocon Ltd", "weight_pct": 4.1, "sector": "Healthcare"},
+        {"ticker": "SAIL", "name": "Steel Authority of India Ltd", "weight_pct": 3.8, "sector": "Metals & Mining"},
+        {"ticker": "IRB", "name": "IRB Infrastructure Developers", "weight_pct": 3.6, "sector": "Construction"},
+        {"ticker": "HINDCOPPER", "name": "Hindustan Copper Ltd", "weight_pct": 3.4, "sector": "Metals & Mining"},
+        {"ticker": "HFCL", "name": "HFCL Ltd", "weight_pct": 3.2, "sector": "Telecommunication"},
+        {"ticker": "PNB", "name": "Punjab National Bank", "weight_pct": 3.1, "sector": "Financial Services"},
+        {"ticker": "HUDCO", "name": "Housing & Urban Development Corp", "weight_pct": 2.9, "sector": "Financial Services"},
+        {"ticker": "NATIONALUM", "name": "National Aluminium Co", "weight_pct": 2.8, "sector": "Metals & Mining"}
+      ]
+    },
+    "118778": {
+      "name": "Nippon India Small Cap Fund",
+      "category": "Small Cap",
+      "aum_cr": 58900,
+      "cash_pct": 7.4,
+      "large_cap_pct": 12.8,
+      "mid_cap_pct": 14.2,
+      "small_cap_pct": 65.6,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 3.2, "sector": "Financial Services"},
+        {"ticker": "TUBEINVEST", "name": "Tube Investments of India", "weight_pct": 2.4, "sector": "Automobile"},
+        {"ticker": "APARINDS", "name": "Apar Industries Ltd", "weight_pct": 2.1, "sector": "Capital Goods"},
+        {"ticker": "KPRMILL", "name": "K.P.R. Mill Ltd", "weight_pct": 1.9, "sector": "Textiles"},
+        {"ticker": "ELGIEQUIP", "name": "Elgi Equipments Ltd", "weight_pct": 1.8, "sector": "Capital Goods"},
+        {"ticker": "VOLTAS", "name": "Voltas Ltd", "weight_pct": 1.7, "sector": "Consumer Durables"},
+        {"ticker": "CREDITACC", "name": "CreditAccess Grameen", "weight_pct": 1.6, "sector": "Financial Services"},
+        {"ticker": "CARBORUNIV", "name": "Carborundum Universal", "weight_pct": 1.5, "sector": "Capital Goods"},
+        {"ticker": "KAYNES", "name": "Kaynes Technology India", "weight_pct": 1.5, "sector": "Capital Goods"},
+        {"ticker": "CYIENT", "name": "Cyient Ltd", "weight_pct": 1.4, "sector": "Information Technology"}
+      ]
+    },
+    "125497": {
+      "name": "SBI Small Cap Fund",
+      "category": "Small Cap",
+      "aum_cr": 31200,
+      "cash_pct": 9.2,
+      "large_cap_pct": 6.5,
+      "mid_cap_pct": 18.2,
+      "small_cap_pct": 66.1,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "BLUESTARCO", "name": "Blue Star Ltd", "weight_pct": 4.1, "sector": "Consumer Durables"},
+        {"ticker": "CARBORUNIV", "name": "Carborundum Universal", "weight_pct": 3.8, "sector": "Capital Goods"},
+        {"ticker": "KALPATPOWR", "name": "Kalpataru Projects International", "weight_pct": 3.5, "sector": "Capital Goods"},
+        {"ticker": "LEMONTree", "name": "Lemon Tree Hotels Ltd", "weight_pct": 3.2, "sector": "Consumer Services"},
+        {"ticker": "FINCABLES", "name": "Finolex Cables Ltd", "weight_pct": 3.1, "sector": "Capital Goods"},
+        {"ticker": "CHOLAHLDNG", "name": "Cholamandalam Financial Holdings", "weight_pct": 2.9, "sector": "Financial Services"},
+        {"ticker": "TRITURBINE", "name": "Triveni Turbine Ltd", "weight_pct": 2.8, "sector": "Capital Goods"},
+        {"ticker": "VGUARD", "name": "V-Guard Industries Ltd", "weight_pct": 2.6, "sector": "Consumer Durables"},
+        {"ticker": "SHEELA", "name": "Sheela Foam Ltd", "weight_pct": 2.5, "sector": "Consumer Durables"}
+      ]
+    },
+    "120505": {
+      "name": "Axis Midcap Fund",
+      "category": "Mid Cap",
+      "aum_cr": 29800,
+      "cash_pct": 8.5,
+      "large_cap_pct": 24.2,
+      "mid_cap_pct": 64.5,
+      "small_cap_pct": 2.8,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "CHOLAFIN", "name": "Cholamandalam Investment & Fin", "weight_pct": 5.2, "sector": "Financial Services"},
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 4.8, "sector": "Financial Services"},
+        {"ticker": "TRENT", "name": "Trent Ltd", "weight_pct": 4.5, "sector": "Consumer Services"},
+        {"ticker": "ASTRAL", "name": "Astral Ltd", "weight_pct": 4.1, "sector": "Capital Goods"},
+        {"ticker": "POLYCAB", "name": "Polycab India Ltd", "weight_pct": 3.9, "sector": "Capital Goods"},
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 3.8, "sector": "Financial Services"},
+        {"ticker": "COFORGE", "name": "Coforge Ltd", "weight_pct": 3.5, "sector": "Information Technology"},
+        {"ticker": "SUPREMEIND", "name": "Supreme Industries Ltd", "weight_pct": 3.2, "sector": "Capital Goods"},
+        {"ticker": "PERSISTENT", "name": "Persistent Systems Ltd", "weight_pct": 3.0, "sector": "Information Technology"},
+        {"ticker": "CUMMINSIND", "name": "Cummins India Ltd", "weight_pct": 2.9, "sector": "Capital Goods"}
+      ]
+    },
+    "127042": {
+      "name": "Motilal Oswal Midcap Fund",
+      "category": "Mid Cap",
+      "aum_cr": 19600,
+      "cash_pct": 5.2,
+      "large_cap_pct": 18.5,
+      "mid_cap_pct": 69.8,
+      "small_cap_pct": 6.5,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "PERSISTENT", "name": "Persistent Systems Ltd", "weight_pct": 8.4, "sector": "Information Technology"},
+        {"ticker": "POLYCAB", "name": "Polycab India Ltd", "weight_pct": 7.6, "sector": "Capital Goods"},
+        {"ticker": "DIXON", "name": "Dixon Technologies Ltd", "weight_pct": 6.8, "sector": "Consumer Durables"},
+        {"ticker": "CUMMINSIND", "name": "Cummins India Ltd", "weight_pct": 6.2, "sector": "Capital Goods"},
+        {"ticker": "KPITTECH", "name": "KPIT Technologies Ltd", "weight_pct": 5.8, "sector": "Information Technology"},
+        {"ticker": "COFORGE", "name": "Coforge Ltd", "weight_pct": 5.4, "sector": "Information Technology"},
+        {"ticker": "PRESTIGE", "name": "Prestige Estates Projects", "weight_pct": 4.9, "sector": "Realty"},
+        {"ticker": "MAXHEALTH", "name": "Max Healthcare Institute", "weight_pct": 4.5, "sector": "Healthcare"},
+        {"ticker": "BSE", "name": "BSE Ltd", "weight_pct": 4.1, "sector": "Financial Services"}
+      ]
+    },
+    "119835": {
+      "name": "SBI Contra Fund",
+      "category": "Value / Contra",
+      "aum_cr": 36800,
+      "cash_pct": 9.4,
+      "large_cap_pct": 52.4,
+      "mid_cap_pct": 24.1,
+      "small_cap_pct": 14.1,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 4.8, "sector": "Financial Services"},
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 4.5, "sector": "Financial Services"},
+        {"ticker": "GAIL", "name": "GAIL (India) Ltd", "weight_pct": 3.9, "sector": "Gas Utilities"},
+        {"ticker": "COALINDIA", "name": "Coal India Ltd", "weight_pct": 3.6, "sector": "Energy"},
+        {"ticker": "NTPC", "name": "NTPC Ltd", "weight_pct": 3.4, "sector": "Power"},
+        {"ticker": "SBIN", "name": "State Bank of India", "weight_pct": 3.2, "sector": "Financial Services"},
+        {"ticker": "TECHM", "name": "Tech Mahindra Ltd", "weight_pct": 3.1, "sector": "Information Technology"},
+        {"ticker": "OIL", "name": "Oil India Ltd", "weight_pct": 2.9, "sector": "Energy"},
+        {"ticker": "HINDCOPPER", "name": "Hindustan Copper Ltd", "weight_pct": 2.7, "sector": "Metals & Mining"},
+        {"ticker": "ITC", "name": "ITC Ltd", "weight_pct": 2.5, "sector": "FMCG"}
+      ]
+    },
+    "120465": {
+      "name": "ICICI Prudential Bluechip Fund",
+      "category": "Large Cap",
+      "aum_cr": 56400,
+      "cash_pct": 4.6,
+      "large_cap_pct": 89.4,
+      "mid_cap_pct": 6.0,
+      "small_cap_pct": 0.0,
+      "foreign_equity_pct": 0.0,
+      "holdings": [
+        {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 9.8, "sector": "Financial Services"},
+        {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 9.1, "sector": "Financial Services"},
+        {"ticker": "RELIANCE", "name": "Reliance Industries Ltd", "weight_pct": 8.4, "sector": "Energy"},
+        {"ticker": "INFY", "name": "Infosys Ltd", "weight_pct": 6.8, "sector": "Information Technology"},
+        {"ticker": "LT", "name": "Larsen & Toubro Ltd", "weight_pct": 5.4, "sector": "Construction"},
+        {"ticker": "BHARTIARTL", "name": "Bharti Airtel Ltd", "weight_pct": 4.5, "sector": "Telecommunication"},
+        {"ticker": "AXISBANK", "name": "Axis Bank Ltd", "weight_pct": 4.2, "sector": "Financial Services"},
+        {"ticker": "TCS", "name": "Tata Consultancy Services Ltd", "weight_pct": 4.1, "sector": "Information Technology"},
+        {"ticker": "MARUTI", "name": "Maruti Suzuki India", "weight_pct": 3.2, "sector": "Automobile"},
+        {"ticker": "SUNPHARMA", "name": "Sun Pharmaceutical Industries", "weight_pct": 2.9, "sector": "Healthcare"}
+      ]
+    }
+  }
+}

@@ -270,14 +270,81 @@ class InvestorHorizonPlaybook(BaseModel):
     direct_vs_regular_10y_drag_lakhs: float
 
 
+class FundHoldingItem(BaseModel):
+    ticker: str
+    name: str
+    weight_pct: float
+    sector: Optional[str] = None
+
+
+class FundCaptureRatioDetails(BaseModel):
+    upside_capture_ratio: float = Field(..., description="Compound monthly upside capture (%)")
+    downside_capture_ratio: float = Field(..., description="Compound monthly downside capture (%)")
+    capture_ratio_spread: float = Field(..., description="UCR - DCR spread (%)")
+    asymmetric_profile: str = Field(..., description="e.g. Asymmetric Compounder, High-Beta Passenger, Downside Bleeder")
+    up_months_count: int = 0
+    down_months_count: int = 0
+
+
+class FundActiveShareInfo(BaseModel):
+    active_share_pct: float = Field(..., description="Active Share divergence score (%)")
+    benchmark_name: str
+    overlap_pct_with_benchmark: float
+    is_closet_indexer: bool
+    classification: str = Field(..., description="Truly Active High-Conviction, Moderate Active Tilt, Closet Indexer")
+    alert_message: Optional[str] = None
+
+
+class AumScaleDiagnostic(BaseModel):
+    aum_cr: Optional[float] = None
+    cash_pct: Optional[float] = None
+    large_cap_pct: Optional[float] = None
+    mid_cap_pct: Optional[float] = None
+    small_cap_pct: Optional[float] = None
+    is_bloated: bool = False
+    style_drift_alert: Optional[str] = None
+
+
+class CommonStockOverlap(BaseModel):
+    ticker: str
+    name: str
+    fund_a_weight: float
+    fund_b_weight: float
+    overlapping_weight: float
+    sector: Optional[str] = None
+
+
+class FundOverlapRequest(BaseModel):
+    scheme_codes: List[str] = Field(..., min_length=2, max_length=4)
+
+
+class FundOverlapResponse(BaseModel):
+    scheme_a_code: str
+    scheme_a_name: str
+    scheme_b_code: str
+    scheme_b_name: str
+    total_overlap_pct: float
+    unique_a_pct: float
+    unique_b_pct: float
+    common_holdings_count: int
+    common_holdings: List[CommonStockOverlap] = Field(default_factory=list)
+    diversification_rating: str = Field(..., description="High Diversification, Moderate Overlap, High Overlap / Fee Drag")
+    insight_summary: str
+
+
 class FundRiskStats(BaseModel):
     mean_3y_rolling_alpha: float = Field(..., description="Average 3-Year rolling alpha (%)")
     current_3y_alpha: float = Field(..., description="Latest 3-Year rolling alpha (%)")
     alpha_consistency_pct: float = Field(..., description="Percentage of 3Y rolling windows with positive alpha")
     information_ratio: float = Field(..., description="Active return over tracking error")
-    downside_capture_ratio: float = Field(..., description="Downside capture ratio vs Nifty 50 TRI (%)")
-    upside_capture_ratio: float = Field(..., description="Upside capture ratio vs Nifty 50 TRI (%)")
+    tracking_error: Optional[float] = Field(None, description="Annualized Tracking Error (%)")
+    downside_capture_ratio: float = Field(..., description="Downside capture ratio vs Category Benchmark (%)")
+    upside_capture_ratio: float = Field(..., description="Upside capture ratio vs Category Benchmark (%)")
     asymmetric_capture_spread: float = Field(0.0, description="UCR - DCR capture advantage (%)")
+    capture_details: Optional[FundCaptureRatioDetails] = None
+    capital_preservation_rate_3y: Optional[float] = Field(None, description="% of 3Y windows with zero loss")
+    capital_preservation_rate_5y: Optional[float] = Field(None, description="% of 5Y windows with zero loss")
+    skill_vs_luck_diagnostic: Optional[str] = None
     sharpe_ratio: float = Field(..., description="Annualized Sharpe Ratio")
     sortino_ratio: float = Field(..., description="Annualized Sortino Ratio")
     max_drawdown_pct: float = Field(..., description="Maximum drawdown percentage over historical period")
@@ -305,6 +372,9 @@ class FundAnalysisResponse(BaseModel):
     rolling_series: List[FundRollingDataPoint] = Field(default_factory=list)
     latest_nav: float
     latest_nav_date: str
+    active_share: Optional[FundActiveShareInfo] = None
+    aum_diagnostic: Optional[AumScaleDiagnostic] = None
+    top_holdings: List[FundHoldingItem] = Field(default_factory=list)
 
 
 class FundSearchResult(BaseModel):

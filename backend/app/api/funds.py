@@ -2,8 +2,8 @@
 
 from typing import List
 from fastapi import APIRouter, HTTPException, Query
-from app.core.mf_engine import analyze_mutual_fund, search_mutual_funds
-from app.schemas import FundAnalysisResponse, FundSearchResult
+from app.core.mf_engine import analyze_mutual_fund, calculate_cross_fund_overlap, search_mutual_funds
+from app.schemas import FundAnalysisResponse, FundOverlapRequest, FundOverlapResponse, FundSearchResult
 
 router = APIRouter(prefix="/funds", tags=["Mutual Funds"])
 
@@ -16,6 +16,20 @@ async def search_funds(q: str = Query(..., min_length=1, description="Fund schem
         return results
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Mutual fund search failed: {str(exc)}")
+
+
+@router.post("/overlap", response_model=FundOverlapResponse)
+def get_funds_overlap(req: FundOverlapRequest):
+    """Calculate portfolio overlap %, common holdings, and diversification score between mutual funds."""
+    try:
+        return calculate_cross_fund_overlap(req.scheme_codes)
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to calculate fund portfolio overlap: {str(exc)}",
+        )
 
 
 @router.get("/{scheme_code}", response_model=FundAnalysisResponse)

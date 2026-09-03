@@ -108,3 +108,47 @@ def test_category_aware_dynamic_benchmarks():
     assert "50" in name or "100" in name
 
 
+def test_mutual_fund_active_share_and_capture_ratios():
+    from app.core.mf_engine import analyze_mutual_fund
+    res = asyncio.run(analyze_mutual_fund("122639"))
+    
+    # Active Share & Closet Indexing
+    assert res.active_share is not None
+    assert 20.0 <= res.active_share.active_share_pct <= 98.0
+    assert res.active_share.classification in ["Truly Active High-Conviction", "Moderate Active Tilt", "Closet Indexer"]
+    
+    # Holdings
+    assert len(res.top_holdings) > 0
+    assert any(h.ticker == "HDFCBANK" for h in res.top_holdings)
+    
+    # Capture Ratios
+    assert res.stats.capture_details is not None
+    assert res.stats.capture_details.upside_capture_ratio > 0
+    assert res.stats.capture_details.downside_capture_ratio > 0
+    assert res.stats.capture_details.asymmetric_profile in [
+        "Asymmetric Alpha Compounder",
+        "High-Beta Market Passenger",
+        "Downside Bleeder",
+        "Balanced Market Compounder",
+    ]
+    
+    # Skill vs Luck Diagnostic & Capital Preservation
+    assert res.stats.skill_vs_luck_diagnostic is not None
+    assert res.stats.capital_preservation_rate_3y is not None
+    assert 0.0 <= res.stats.capital_preservation_rate_3y <= 100.0
+
+
+def test_cross_fund_overlap_api():
+    # Parag Parikh Flexi Cap (122639) vs HDFC Flexi Cap (118955)
+    resp = client.post("/api/v1/funds/overlap", json={"scheme_codes": ["122639", "118955"]})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "scheme_a_name" in data
+    assert "scheme_b_name" in data
+    assert 10.0 <= data["total_overlap_pct"] <= 90.0
+    assert data["common_holdings_count"] > 0
+    assert len(data["common_holdings"]) > 0
+    assert any(h["ticker"] in ["HDFCBANK", "ICICIBANK", "ITC", "INFY"] for h in data["common_holdings"])
+
+
+
