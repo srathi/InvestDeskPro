@@ -59,7 +59,7 @@ export function AlphaChanakyaDrawer({
     {
       id: "welcome",
       sender: "bot",
-      text: `🏛️ **Pranāma! I am AlphaChanakya**, your AI quantitative equity and mutual fund strategist for **InvestDeskPro**.
+      text: `✨ **Pranāma! I am AlphaChanakya**, your AI quantitative equity and mutual fund strategist for **InvestDeskPro**.
 
 I am equipped with direct access to:
 - **Stock Intelligence**: 360° Forensics, Reverse DCF Implied Growth, Forward EPS Estimates, and Forensic Probes (*Altman Z, Beneish M, Piotroski F*).
@@ -185,7 +185,7 @@ I am equipped with direct access to:
       {
         id: "welcome-reset",
         sender: "bot",
-        text: "🏛️ **Chat reset.** What stock forensic audit, mutual fund rolling alpha, or risk allocation shall we analyze now?",
+        text: "✨ **Chat reset.** What stock forensic audit, mutual fund rolling alpha, or risk allocation shall we analyze now?",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         suggestions: dynamicStarterChips,
       },
@@ -369,8 +369,8 @@ I am equipped with direct access to:
         {/* Header Bar */}
         <div className="p-4 border-b border-slate-800/80 bg-gradient-to-r from-[#0c1427] via-[#091122] to-[#080d1a] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600/40 via-amber-500/20 to-indigo-600/30 border border-cyan-400/50 flex items-center justify-center text-xl shadow-lg shadow-cyan-500/10">
-              🏛️
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500/30 via-cyan-600/30 to-indigo-600/30 border border-amber-500/50 flex items-center justify-center text-amber-300 shadow-lg shadow-amber-500/10">
+              <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -445,8 +445,15 @@ I am equipped with direct access to:
               >
                 {/* Message Header */}
                 <div className="flex items-center justify-between gap-4 mb-2 pb-1.5 border-b border-white/10 text-[10px] font-mono">
-                  <span className="font-bold flex items-center gap-1 text-cyan-300">
-                    {msg.sender === "user" ? "You (Allocator)" : "🏛️ AlphaChanakya"}
+                  <span className="font-bold flex items-center gap-1.5 text-cyan-300">
+                    {msg.sender === "user" ? (
+                      "You"
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span>AlphaChanakya</span>
+                      </>
+                    )}
                   </span>
                   <div className="flex items-center gap-2 text-slate-400">
                     <span>{msg.timestamp}</span>
@@ -510,8 +517,8 @@ I am equipped with direct access to:
           {/* Real-time Tool Calling Loading State */}
           {loading && (
             <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-cyan-500/40 flex items-center justify-center text-sm shrink-0 shadow-lg">
-                🏛️
+              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0 shadow-lg">
+                <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
               </div>
               <div className="p-3 rounded-2xl bg-slate-900/90 border border-cyan-500/30 text-xs font-mono text-cyan-300 flex items-center gap-2.5 shadow-xl animate-pulse">
                 <Activity className="w-4 h-4 animate-spin text-cyan-400" />

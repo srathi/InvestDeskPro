@@ -25,9 +25,9 @@ export function FloatingChatButton({ onClick, isOpen }: FloatingChatButtonProps)
           <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
         </span>
 
-        <span className="text-base group-hover:rotate-12 transition-transform duration-300">
-          🏛️
-        </span>
+        <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shadow-inner group-hover:scale-110 transition-transform duration-300">
+          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+        </div>
 
         <div className="text-left">
           <div className="text-xs font-extrabold text-white tracking-tight flex items-center gap-1.5 font-sans">

@@ -44,11 +44,11 @@ FINANCIAL_KEYWORDS = {
 }
 
 NON_FINANCIAL_DEFLECTIONS = [
-    "🏛️ **AlphaChanakya says:** *'My neural weights are strictly allocated to Indian Equities, AMFI Mutual Funds, and Reverse DCF mathematics—not culinary recipes or cinema! Let us return to finding undervalued compounders with durable moats.'*",
-    "🏛️ **AlphaChanakya says:** *'A wealth allocator distracted by off-topic pursuits is like buying a high-debt company with 80% promoter pledging—bound for severe capital erosion! Ask me about 3Y Rolling Alpha, Active Share, or Forward EPS forecasts instead.'*",
-    "🏛️ **AlphaChanakya says:** *'I am calibrated for Margin of Safety and Risk-Parity allocation, not poetry! As Chanakya taught: focus your intellect where the economic yield is highest. What stock or fund shall we audit today?'*",
-    "🏛️ **AlphaChanakya says:** *'That query yields 0.00% statistical alpha in the financial markets! Let us re-anchor to something actionable: Ask me to run a 360° Forensic Audit or analyze Cross-Fund Overlap.'*",
-    "🏛️ **AlphaChanakya says:** *'My fiduciary protocol strictly limits me to financial analysis, valuation models, and portfolio risk management! Ask me about India VIX regimes, Reverse DCF implied growth, or Sortino ratios.'*"
+    "✨ **AlphaChanakya says:** *'My neural weights are strictly allocated to Indian Equities, AMFI Mutual Funds, and Reverse DCF mathematics—not culinary recipes or cinema! Let us return to finding undervalued compounders with durable moats.'*",
+    "✨ **AlphaChanakya says:** *'A wealth allocator distracted by off-topic pursuits is like buying a high-debt company with 80% promoter pledging—bound for severe capital erosion! Ask me about 3Y Rolling Alpha, Active Share, or Forward EPS forecasts instead.'*",
+    "✨ **AlphaChanakya says:** *'I am calibrated for Margin of Safety and Risk-Parity allocation, not poetry! As Chanakya taught: focus your intellect where the economic yield is highest. What stock or fund shall we audit today?'*",
+    "✨ **AlphaChanakya says:** *'That query yields 0.00% statistical alpha in the financial markets! Let us re-anchor to something actionable: Ask me to run a 360° Forensic Audit or analyze Cross-Fund Overlap.'*",
+    "✨ **AlphaChanakya says:** *'My fiduciary protocol strictly limits me to financial analysis, valuation models, and portfolio risk management! Ask me about India VIX regimes, Reverse DCF implied growth, or Sortino ratios.'*"
 ]
 
 # --- QUANTITATIVE KNOWLEDGE BASE CORPUS ---
@@ -454,7 +454,7 @@ class AlphaChanakyaEngine:
             overlap_pct = overlap_res.get("total_overlap_pct", 0.0)
             rating = overlap_res.get("diversification_rating", "Moderate")
 
-            response = f"""🏛️ **AlphaChanakya Quantitative Verdict: Cross-Fund Overlap**
+            response = f"""✨ **AlphaChanakya Quantitative Verdict: Cross-Fund Overlap**
 
 ### Comparison: **{overlap_res.get('scheme_a_name')}** vs. **{overlap_res.get('scheme_b_name')}**
 
@@ -493,7 +493,7 @@ class AlphaChanakyaEngine:
             stats = fund_res.get("stats") or {}
             form = fund_res.get("form_rating") or {}
 
-            response = f"""🏛️ **AlphaChanakya Institutional Audit: {fund_res.get('scheme_name')} (AMFI #{fund_res.get('scheme_code')})**
+            response = f"""✨ **AlphaChanakya Institutional Audit: {fund_res.get('scheme_name')} (AMFI #{fund_res.get('scheme_code')})**
 
 - **Category Benchmark**: `{fund_res.get('benchmark_name')}`
 - **PowerUp Form Status**: **`{form.get('status_title', 'On-Track')}`** — {form.get('action_recommendation', 'Maintain Allocation')}
@@ -532,7 +532,7 @@ class AlphaChanakyaEngine:
             bull_p = bull.get("projections", [{}])[-1] if bull.get("projections") else {}
             bear_p = bear.get("projections", [{}])[-1] if bear.get("projections") else {}
 
-            response = f"""🏛️ **AlphaChanakya Forward Growth & Earnings Projections: {ticker}**
+            response = f"""✨ **AlphaChanakya Forward Growth & Earnings Projections: {ticker}**
 
 **Current Market Price (CMP)**: `₹{forecast_res.get('base_cmp', 0):,.2f}` | **Historical Median P/E**: `{forecast_res.get('median_pe_benchmark', 0):.1f}x`
 
@@ -567,7 +567,7 @@ class AlphaChanakyaEngine:
         dcf = stock_res.get("reverse_dcf", {})
         probes = stock_res.get("forensic_probes", {})
 
-        response = f"""🏛️ **AlphaChanakya 360° Forensic Diagnostic: {stock_res.get('name')} ({ticker})**
+        response = f"""✨ **AlphaChanakya 360° Forensic Diagnostic: {stock_res.get('name')} ({ticker})**
 
 - **Sector / Industry**: `{stock_res.get('sector')} • {stock_res.get('industry')}`
 - **CMP / Market Cap**: **`₹{stock_res.get('cmp', 0):,.2f}`** | `₹{stock_res.get('market_cap_cr', 0):,.0f} Cr`
