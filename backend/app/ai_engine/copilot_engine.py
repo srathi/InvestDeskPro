@@ -17,6 +17,12 @@ import random
 from typing import Dict, Any, List, Optional
 import httpx
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from app.ai_engine.copilot_tools import COPILOT_TOOL_DECLARATIONS, execute_copilot_tool
 
 

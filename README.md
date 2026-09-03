@@ -11,7 +11,7 @@ Powered by [rupeemap.in](https://rupeemap.in) and engineered by **Sandesh Rathi*
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
 [![Render](https://img.shields.io/badge/Deploy-Render_Blueprint-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com)
-[![Pytest](https://img.shields.io/badge/Tests-37_Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![Pytest](https://img.shields.io/badge/Tests-46_Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
 
 ---
 
@@ -22,8 +22,9 @@ Powered by [rupeemap.in](https://rupeemap.in) and engineered by **Sandesh Rathi*
   - [1. Stock Intelligence (360° Forensics)](#1-stock-intelligence-360-forensics)
   - [2. Fund Alpha Engine (AMFI Analytics)](#2-fund-alpha-engine-amfi-analytics)
   - [3. Quant & Stress Lab (Risk Parity & Historical Crash Replays)](#3-quant--stress-lab-risk-parity--historical-crash-replays)
-  - [4. Universal OmniSearch & Real-Time Market Ribbon](#4-universal-omnisearch--real-time-market-ribbon)
-  - [5. Contextual Page Guide & Financial Jargon Playbook](#5-contextual-page-guide--financial-jargon-playbook)
+  - [4. AlphaChanakya AI Quantitative Copilot (Tool Calling & Macro Intelligence)](#4-alphachanakya-ai-quantitative-copilot)
+  - [5. Universal OmniSearch & Real-Time Market Ribbon](#5-universal-omnisearch--real-time-market-ribbon)
+  - [6. Contextual Page Guide & Financial Jargon Playbook](#6-contextual-page-guide--financial-jargon-playbook)
 - [🏛️ System Architecture & Data Flow](#-system-architecture--data-flow)
 - [🧠 Quantitative & Mathematical Formulations](#-quantitative--mathematical-formulations)
   - [A. Active Share & Closet Indexing Detection](#a-active-share--closet-indexing-detection)
@@ -143,13 +144,30 @@ Traditional retail platforms often suffer from structural flaws:
 
 ---
 
-### 4. Universal OmniSearch & Real-Time Market Ribbon
+### 4. AlphaChanakya AI Quantitative Copilot
+- **Witty, Disciplined Institutional Persona**: Combines Chanakya's ancient strategic wisdom with modern factor modeling and valuation discipline.
+- **Strict Financial Guardrails**: Automatically detects and wittily deflects non-financial inquiries, keeping the user focused on high-expectancy capital allocation.
+- **8 Native Function Calling Tools**:
+  1. `tool_audit_stock`: 360° Forensics, CMP, P/E, ROCE, D/E, Reverse DCF Implied Growth, and Forensic Probes (*Altman Z, Beneish M, Piotroski F*).
+  2. `tool_forecast_growth`: 1Y–3Y forward EPS, target prices, and return driver attribution.
+  3. `tool_audit_mutual_fund`: 3Y Rolling Alpha, Active Share % & Closet Indexing alert, Compound Monthly UCR/DCR, and 5-Pillar Scorecard.
+  4. `tool_cross_fund_overlap`: Common duplicated holdings, overlap %, unique exposures, and fee drag diagnosis.
+  5. `tool_optimize_portfolio`: Inverse-volatility risk-parity weights and Marginal Risk Contribution (MRC).
+  6. `tool_stress_test_portfolio`: Historical crash replays (COVID-19, Rate Hikes, Smallcap Liquidity Squeeze).
+  7. `tool_get_market_overview`: Live benchmark quotes (Nifty 50, Sensex, Bank Nifty, India VIX, Crude) and FII/DII daily cash flows.
+  8. `tool_explain_jargon`: Exact mathematical formulas and playbook interpretations from the Page Guide.
+- **Dual-Engine LLM with Local Fallback**: Supports **Google Gemini 1.5/2.5 Flash** and **Groq Llama-3.3-70B** with an intelligent local quantitative fallback ensuring 100% platform uptime.
+- **Slide-Over Terminal UI**: Features active viewport telemetry, animated tool execution badges, dynamic follow-up chips, and `Cmd+J` / `Ctrl+J` shortcut.
+
+---
+
+### 5. Universal OmniSearch & Real-Time Market Ribbon
 - **Unified Global OmniSearch**: Searches NSE/BSE equities, tickers, ISINs, and AMFI mutual funds in a single input. Supports global shortcut keys (`Cmd+K`, `Ctrl+K`, `/`).
 - **Live Market Ribbon**: Real-time tracking of NIFTY 50, SENSEX, NIFTY BANK, INDIA VIX, and BRENT CRUDE with live FII / DII institutional net flow updates.
 
 ---
 
-### 5. Contextual Page Guide & Financial Jargon Playbook
+### 6. Contextual Page Guide & Financial Jargon Playbook
 - Accessible via the **Floating Action Badge (FAB)** or hotkey `?`.
 - Provides definitions, mathematical formulas, and practical interpretation for all financial metrics (Active Share, Information Ratio, Capture Ratios, Reverse DCF, Risk Parity, Piotroski, Beneish, Altman Z).
 
