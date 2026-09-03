@@ -46,6 +46,7 @@ import {
   CategoryAlternativeFund,
 } from "../lib/api";
 import { useDebounce } from "../hooks/useDebounce";
+import { JargonTooltip } from "./JargonTooltip";
 
 const POPULAR_FUNDS = [
   { code: "122639", name: "Parag Parikh Flexi Cap", category: "Flexi Cap", tag: "In-Form 🔥" },
@@ -449,18 +450,22 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
                   {/* PowerUp 4-State Form Pill */}
                   {data.form_rating && (
-                    <div className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold ${getFormStatusPill(data.form_rating.status).bg}`}>
-                      {getFormStatusPill(data.form_rating.status).icon}
-                      <span>{data.form_rating.status_title}</span>
-                    </div>
+                    <JargonTooltip termKey="powerup_form_rating">
+                      <div className={`px-3 py-1 rounded-lg border flex items-center gap-1.5 text-xs font-bold cursor-help ${getFormStatusPill(data.form_rating.status).bg}`}>
+                        {getFormStatusPill(data.form_rating.status).icon}
+                        <span>{data.form_rating.status_title}</span>
+                      </div>
+                    </JargonTooltip>
                   )}
 
                   {/* Institutional Scorecard Badge */}
                   {data.scorecard && (
-                    <span className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-950/70 text-emerald-300 border-emerald-700/80 flex items-center gap-1.5">
-                      <Award className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>{data.scorecard.grade} Grade ({data.scorecard.total_score}/100)</span>
-                    </span>
+                    <JargonTooltip termKey="rolling_returns" title="5-Pillar Scorecard">
+                      <span className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-950/70 text-emerald-300 border-emerald-700/80 flex items-center gap-1.5 cursor-help">
+                        <Award className="h-3.5 w-3.5 text-emerald-400" />
+                        <span>{data.scorecard.grade} Grade ({data.scorecard.total_score}/100)</span>
+                      </span>
+                    </JargonTooltip>
                   )}
                 </div>
 
@@ -694,7 +699,9 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-slate-400">Downside Capture Ratio (DCR)</span>
+                  <JargonTooltip termKey="downside_capture">
+                    <span className="text-xs text-slate-400">Downside Capture Ratio (DCR)</span>
+                  </JargonTooltip>
                   <span className="text-2xl font-black text-amber-300 font-mono">
                     {data.stats.downside_capture_ratio}%
                   </span>

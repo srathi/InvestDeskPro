@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Sparkles,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import { fetchOmniSearch, OmniSearchResult } from "../lib/api";
 
@@ -24,6 +25,7 @@ interface HeaderProps {
   apiOnline: boolean;
   onSelectEntity?: (id: string, type: "stock" | "fund") => void;
   onResetHome?: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   apiOnline,
   onSelectEntity,
   onResetHome,
+  onOpenGuide,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OmniSearchResult[]>([]);
@@ -42,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const isSelectingRef = useRef(false);
 
-  // Global Cmd+K / Ctrl+K / '/' shortcut listener
+  // Global Cmd+K / Ctrl+K / '/' / '?' shortcut listener
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -52,11 +55,14 @@ export const Header: React.FC<HeaderProps> = ({
       } else if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
         e.preventDefault();
         inputRef.current?.focus();
+      } else if ((e.key === "?" || (e.shiftKey && e.key === "/")) && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        onOpenGuide?.();
       }
     };
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, []);
+  }, [onOpenGuide]);
 
   useEffect(() => {
     if (isSelectingRef.current) {
@@ -309,31 +315,46 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Primary Navigation Tabs */}
-        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0">
+        {/* Primary Navigation Tabs & Page Guide Button */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => setActiveTab("company")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === "company"
-                ? "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-md shadow-cyan-950"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-            }`}
+            type="button"
+            onClick={onOpenGuide}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-gradient-to-r from-cyan-950/70 to-blue-950/50 hover:from-cyan-900/90 hover:to-blue-900/70 text-cyan-300 border border-cyan-700/60 hover:border-cyan-400 rounded-xl text-xs font-semibold shadow-sm transition-all group cursor-pointer"
+            title="Open Page Guide & Financial Jargon Playbook (or press '?')"
           >
-            <Building2 className="h-3.5 w-3.5" />
-            <span>Company 360°</span>
+            <BookOpen className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+            <span className="hidden sm:inline">Page Guide</span>
+            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-700 hidden md:inline">
+              ?
+            </span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("quant")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === "quant"
-                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-950"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-            }`}
-          >
-            <Cpu className="h-3.5 w-3.5" />
-            <span>Quant Desk</span>
-          </button>
+          <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setActiveTab("company")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === "company"
+                  ? "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-md shadow-cyan-950"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Company 360°</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("quant")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === "quant"
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-950"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+              }`}
+            >
+              <Cpu className="h-3.5 w-3.5" />
+              <span>Quant Desk</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>

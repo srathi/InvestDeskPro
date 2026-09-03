@@ -6,6 +6,7 @@ import { Company360View } from "../components/Company360View";
 import { StockScreenerView } from "../components/StockScreenerView";
 import { CuratedBundlesView } from "../components/CuratedBundlesView";
 import { QuantDeskView } from "../components/QuantDeskView";
+import { PageGuideDrawer } from "../components/PageGuideDrawer";
 import { checkApiHealth } from "../lib/api";
 import { ExternalLink, ShieldAlert, Sparkles, Cpu, Layers } from "lucide-react";
 
@@ -14,6 +15,8 @@ export default function Home() {
   const [selectedStockTicker, setSelectedStockTicker] = useState<string>("");
   const [selectedFundCode, setSelectedFundCode] = useState<string | undefined>(undefined);
   const [apiOnline, setApiOnline] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [guideInitialTerm, setGuideInitialTerm] = useState<string | null>(null);
 
   useEffect(() => {
     const check = async () => {
@@ -49,6 +52,11 @@ export default function Home() {
     }
   };
 
+  const handleOpenGuide = (term?: string) => {
+    setGuideInitialTerm(term || null);
+    setIsGuideOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-100 selection:bg-cyan-500 selection:text-slate-950 font-sans">
       {/* Top Navbar with Omni Search & Market Ribbon */}
@@ -58,6 +66,7 @@ export default function Home() {
         apiOnline={apiOnline}
         onSelectEntity={handleSelectEntity}
         onResetHome={handleResetHome}
+        onOpenGuide={() => handleOpenGuide()}
       />
 
       {/* Main Content Area */}
@@ -77,6 +86,17 @@ export default function Home() {
           />
         )}
       </main>
+
+      {/* Contextual Page Guide & Financial Jargon Playbook Drawer */}
+      <PageGuideDrawer
+        isOpen={isGuideOpen}
+        onClose={() => {
+          setIsGuideOpen(false);
+          setGuideInitialTerm(null);
+        }}
+        activeView={activeTab}
+        initialTerm={guideInitialTerm}
+      />
 
       {/* Rupeemap Ecosystem Institutional Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/90 py-6 mt-12">

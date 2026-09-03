@@ -31,6 +31,7 @@ import {
   Target,
   Calculator,
 } from "lucide-react";
+import { JargonTooltip } from "./JargonTooltip";
 import {
   AreaChart,
   Area,
@@ -2428,7 +2429,9 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                 {/* Valuation Metric Summary Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Intrinsic Fair Value (Base Case)</span>
+                    <JargonTooltip termKey="dcf">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Intrinsic Fair Value (Base Case)</span>
+                    </JargonTooltip>
                     <div className="text-xl font-black text-purple-300 font-mono font-tabular">
                       ₹{data.dcf_sensitivity_matrix?.base_fair_value ? data.dcf_sensitivity_matrix.base_fair_value.toFixed(2) : "N/A"}
                     </div>
@@ -2444,7 +2447,9 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                   </div>
 
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Margin of Safety</span>
+                    <JargonTooltip termKey="margin_of_safety">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Margin of Safety</span>
+                    </JargonTooltip>
                     <div className={`text-xl font-black font-mono font-tabular ${
                       (data.dcf_sensitivity_matrix?.margin_of_safety_pct || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
                     }`}>
@@ -2462,7 +2467,9 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-950/90 border border-slate-800">
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Discount Rate (WACC):</span>
+                      <JargonTooltip termKey="wacc">
+                        <span className="text-slate-400">Discount Rate (WACC):</span>
+                      </JargonTooltip>
                       <span className="font-bold text-cyan-400 font-mono">{dcfWacc}%</span>
                     </div>
                     <input
@@ -2494,7 +2501,9 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Terminal Growth Rate:</span>
+                      <JargonTooltip termKey="terminal_growth">
+                        <span className="text-slate-400">Terminal Growth Rate:</span>
+                      </JargonTooltip>
                       <span className="font-bold text-amber-400 font-mono">{dcfTerminalGrowth}%</span>
                     </div>
                     <input

@@ -68,6 +68,7 @@ import {
   StockSearchResult,
 } from "../lib/api";
 import { useDebounce } from "../hooks/useDebounce";
+import { JargonTooltip } from "./JargonTooltip";
 
 const PRESET_TICKERS = [
   { ticker: "RELIANCE", name: "Reliance Ind.", sector: "Oil & Gas / Retail", tag: "Large Cap 🏢" },
@@ -681,10 +682,12 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                 </div>
               </div>
 
-              {/* Trendlyne DVM 3-Pillar Score Badges */}
+              {/* Trendlyne DVM 3-Pillar Score Badges with Interactive Help */}
               <div className="flex items-center gap-3 bg-slate-950/80 p-3 rounded-2xl border border-slate-800">
                 <div className="text-center px-3 py-1 border-r border-slate-800">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Durability</span>
+                  <JargonTooltip termKey="dvm" title="Durability (Quality)">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Durability</span>
+                  </JargonTooltip>
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <span className={`px-2 py-0.5 text-xs font-black rounded font-mono ${getDvmBg(data.dvm.durability)}`}>
                       {data.dvm.durability}
@@ -694,7 +697,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                 </div>
 
                 <div className="text-center px-3 py-1 border-r border-slate-800">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Valuation</span>
+                  <JargonTooltip termKey="dvm" title="Valuation Multiple">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Valuation</span>
+                  </JargonTooltip>
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <span className={`px-2 py-0.5 text-xs font-black rounded font-mono ${getDvmBg(data.dvm.valuation)}`}>
                       {data.dvm.valuation}
@@ -704,7 +709,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                 </div>
 
                 <div className="text-center px-3 py-1">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Momentum</span>
+                  <JargonTooltip termKey="dvm" title="Price & Earnings Momentum">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Momentum</span>
+                  </JargonTooltip>
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <span className={`px-2 py-0.5 text-xs font-black rounded font-mono ${getDvmBg(data.dvm.momentum)}`}>
                       {data.dvm.momentum}
@@ -1171,21 +1178,27 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
 
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 font-mono">
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                <span className="text-[10px] text-slate-500 uppercase block">ROE</span>
+                <JargonTooltip termKey="roe">
+                  <span className="text-[10px] text-slate-500 uppercase block">ROE</span>
+                </JargonTooltip>
                 <span className="text-sm font-bold text-emerald-400 mt-1 block">
                   {data.fundamentals.roe !== null && data.fundamentals.roe !== undefined ? `${data.fundamentals.roe}%` : "N/A"}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                <span className="text-[10px] text-slate-500 uppercase block">ROCE / ROA</span>
+                <JargonTooltip termKey="roce">
+                  <span className="text-[10px] text-slate-500 uppercase block">ROCE / ROA</span>
+                </JargonTooltip>
                 <span className="text-sm font-bold text-cyan-400 mt-1 block">
                   {data.fundamentals.roce !== null && data.fundamentals.roce !== undefined ? `${data.fundamentals.roce}%` : "N/A"}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                <span className="text-[10px] text-slate-500 uppercase block">Debt to Equity</span>
+                <JargonTooltip termKey="altman_z_score" title="Debt to Equity Ratio">
+                  <span className="text-[10px] text-slate-500 uppercase block">Debt to Equity</span>
+                </JargonTooltip>
                 <span className="text-sm font-bold text-slate-200 mt-1 block">
                   {data.fundamentals.debt_to_equity !== null && data.fundamentals.debt_to_equity !== undefined
                     ? `${data.fundamentals.debt_to_equity}`
@@ -1194,14 +1207,18 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
               </div>
 
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                <span className="text-[10px] text-slate-500 uppercase block">Trailing P/E</span>
+                <JargonTooltip termKey="pe_corridor" title="Trailing P/E Ratio">
+                  <span className="text-[10px] text-slate-500 uppercase block">Trailing P/E</span>
+                </JargonTooltip>
                 <span className="text-sm font-bold text-slate-200 mt-1 block">
                   {data.fundamentals.trailing_pe ? `${data.fundamentals.trailing_pe.toFixed(1)}x` : "N/A"}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                <span className="text-[10px] text-slate-500 uppercase block">PEG Ratio</span>
+                <JargonTooltip termKey="peg_ratio">
+                  <span className="text-[10px] text-slate-500 uppercase block">PEG Ratio</span>
+                </JargonTooltip>
                 <span className={`text-sm font-bold mt-1 block ${getPegColor(data.fundamentals.peg_ratio)}`}>
                   {data.fundamentals.peg_ratio ? `${data.fundamentals.peg_ratio.toFixed(2)}` : "N/A"}
                 </span>
