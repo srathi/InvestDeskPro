@@ -600,3 +600,22 @@ class InvestmentBundleItem(BaseModel):
     description: str
     tickers: List[str]
     sample_stocks: List[ScreenerStockItem] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Market Indices Ribbon Models
+# ---------------------------------------------------------------------------
+
+class MarketIndexQuote(BaseModel):
+    symbol: str
+    name: str
+    price: float
+    change: float
+    change_pct: float
+    updated_at: str
+
+
+class MarketIndicesResponse(BaseModel):
+    indices: List[MarketIndexQuote]
+    status: str = "ok"
+

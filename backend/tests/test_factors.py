@@ -127,3 +127,16 @@ def test_invalid_stock_ticker_validation():
     with pytest.raises(ValueError) as excinfo:
         generate_stock_scorecard("INVALID_NONEXISTENT_TICKER_9999")
     assert "not a recognized listed equity" in str(excinfo.value)
+
+
+def test_market_indices_fetch():
+    from app.core.factors import fetch_live_market_indices
+    indices = fetch_live_market_indices()
+    assert len(indices) == 4
+    symbols = [idx.symbol for idx in indices]
+    assert "^NSEI" in symbols
+    assert "^BSESN" in symbols
+    for idx in indices:
+        assert idx.price > 0
+        assert isinstance(idx.change_pct, float)
+

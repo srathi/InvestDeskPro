@@ -2,10 +2,24 @@
 
 from typing import List
 from fastapi import APIRouter, HTTPException, Query
-from app.core.factors import generate_stock_scorecard, search_indian_stocks
-from app.schemas import StockScorecardResponse, StockSearchResult
+from app.core.factors import fetch_live_market_indices, generate_stock_scorecard, search_indian_stocks
+from app.schemas import MarketIndicesResponse, StockScorecardResponse, StockSearchResult
 
 router = APIRouter(prefix="/stocks", tags=["Stocks"])
+
+
+@router.get("/indices", response_model=MarketIndicesResponse)
+@router.get("/market-indices", response_model=MarketIndicesResponse)
+def get_market_indices():
+    """Retrieve live / latest market quotes for major Indian benchmark indices (Nifty, Sensex, Bank Nifty, India VIX)."""
+    try:
+        indices = fetch_live_market_indices()
+        return MarketIndicesResponse(indices=indices, status="ok")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch live market indices: {str(exc)}",
+        )
 
 
 @router.get("/search", response_model=List[StockSearchResult])

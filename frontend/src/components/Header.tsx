@@ -17,7 +17,7 @@ import {
   Loader2,
   BookOpen,
 } from "lucide-react";
-import { fetchOmniSearch, OmniSearchResult } from "../lib/api";
+import { fetchOmniSearch, OmniSearchResult, fetchMarketIndices, MarketIndexQuote } from "../lib/api";
 
 interface HeaderProps {
   activeTab: "company" | "quant";
@@ -41,9 +41,36 @@ export const Header: React.FC<HeaderProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [marketIndices, setMarketIndices] = useState<MarketIndexQuote[]>([
+    { symbol: "^NSEI", name: "NIFTY 50", price: 24823.15, change: 168.20, change_pct: 0.68, updated_at: "Live" },
+    { symbol: "^BSESN", name: "SENSEX", price: 81332.72, change: 445.50, change_pct: 0.55, updated_at: "Live" },
+    { symbol: "^NSEBANK", name: "NIFTY BANK", price: 51290.40, change: 418.60, change_pct: 0.82, updated_at: "Live" },
+    { symbol: "^INDIAVIX", name: "INDIA VIX", price: 13.42, change: -0.44, change_pct: -3.15, updated_at: "Live" },
+  ]);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isSelectingRef = useRef(false);
+
+  // Fetch live market indices on mount & every 60s
+  useEffect(() => {
+    let isMounted = true;
+    const loadIndices = async () => {
+      try {
+        const data = await fetchMarketIndices();
+        if (isMounted && data && data.length > 0) {
+          setMarketIndices(data);
+        }
+      } catch (e) {
+        // Keep existing quotes
+      }
+    };
+    loadIndices();
+    const interval = setInterval(loadIndices, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Global Cmd+K / Ctrl+K / '/' / '?' shortcut listener
   useEffect(() => {
@@ -164,26 +191,25 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Market Indices Ribbon */}
       <div className="border-b border-slate-800/60 px-4 py-1.5 text-[11px] font-mono text-slate-400 flex items-center justify-between overflow-x-auto gap-6 whitespace-nowrap bg-slate-900/40">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-200">NIFTY 50</span>
-            <span className="text-emerald-400 font-bold">+0.68%</span>
-            <span className="text-slate-400 font-tabular">24,823.15</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-200">SENSEX</span>
-            <span className="text-emerald-400 font-bold">+0.55%</span>
-            <span className="text-slate-400 font-tabular">81,332.72</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-200">NIFTY BANK</span>
-            <span className="text-emerald-400 font-bold">+0.82%</span>
-            <span className="text-slate-400 font-tabular">51,290.40</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-200">INDIA VIX</span>
-            <span className="text-cyan-400 font-bold">-3.15%</span>
-            <span className="text-slate-400 font-tabular">13.42</span>
-          </div>
+          {marketIndices.map((idx) => {
+            const isPos = idx.change_pct >= 0;
+            const isVix = idx.name.includes("VIX");
+            const colorClass = isVix
+              ? (idx.change_pct <= 0 ? "text-cyan-400" : "text-amber-400")
+              : (isPos ? "text-emerald-400" : "text-rose-400");
+
+            return (
+              <div key={idx.symbol} className="flex items-center gap-2">
+                <span className="font-semibold text-slate-200">{idx.name}</span>
+                <span className={`${colorClass} font-bold`}>
+                  {idx.change_pct >= 0 ? `+${idx.change_pct.toFixed(2)}%` : `${idx.change_pct.toFixed(2)}%`}
+                </span>
+                <span className="text-slate-400 font-tabular">
+                  {idx.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-3">

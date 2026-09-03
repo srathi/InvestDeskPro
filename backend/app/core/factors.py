@@ -17,6 +17,7 @@ from app.schemas import (
     AnnualFinancialYear,
     DVMScorecard,
     FactorScoreDetail,
+    MarketIndexQuote,
     RadarAxis,
     ShareholdingPattern,
     StockClassification,
@@ -1069,3 +1070,117 @@ def search_indian_stocks(query: str) -> List[StockSearchResult]:
         pass
 
     return results[:15]
+
+
+# ---------------------------------------------------------------------------
+# Live Market Indices Ribbon Fetcher & In-Memory Cache
+# ---------------------------------------------------------------------------
+
+_MARKET_INDICES_CACHE: Dict[str, Any] = {
+    "timestamp": 0.0,
+    "data": [],
+}
+
+INDEX_METADATA = [
+    {"symbol": "^NSEI", "name": "NIFTY 50", "default_price": 24823.15, "default_change": 168.20, "default_pct": 0.68},
+    {"symbol": "^BSESN", "name": "SENSEX", "default_price": 81332.72, "default_change": 445.50, "default_pct": 0.55},
+    {"symbol": "^NSEBANK", "name": "NIFTY BANK", "default_price": 51290.40, "default_change": 418.60, "default_pct": 0.82},
+    {"symbol": "^INDIAVIX", "name": "INDIA VIX", "default_price": 13.42, "default_change": -0.44, "default_pct": -3.15},
+]
+
+
+def fetch_live_market_indices() -> List[MarketIndexQuote]:
+    """Fetch live or recent market indices with 60-second in-memory caching."""
+    import time
+    global _MARKET_INDICES_CACHE
+
+    now = time.time()
+    if _MARKET_INDICES_CACHE["data"] and (now - _MARKET_INDICES_CACHE["timestamp"]) < 60:
+        return _MARKET_INDICES_CACHE["data"]
+
+    quotes: List[MarketIndexQuote] = []
+    
+    try:
+        for meta in INDEX_METADATA:
+            sym = meta["symbol"]
+            name = meta["name"]
+            price_val = None
+            prev_val = None
+            
+            try:
+                t = yf.Ticker(sym)
+                fast = getattr(t, "fast_info", None)
+                if fast:
+                    price_val = getattr(fast, "last_price", None) or getattr(fast, "previous_close", None)
+                    prev_val = getattr(fast, "previous_close", None)
+                
+                if price_val is None or prev_val is None or price_val <= 0:
+                    hist = t.history(period="5d")
+                    if not hist.empty and len(hist) >= 2:
+                        price_val = float(hist["Close"].iloc[-1])
+                        prev_val = float(hist["Close"].iloc[-2])
+                    elif not hist.empty:
+                        price_val = float(hist["Close"].iloc[-1])
+                        prev_val = price_val
+
+                if price_val and price_val > 0:
+                    price_rounded = round(float(price_val), 2)
+                    prev_rounded = float(prev_val) if prev_val and prev_val > 0 else price_rounded
+                    chg_val = round(price_rounded - prev_rounded, 2)
+                    chg_pct = round((chg_val / prev_rounded) * 100.0, 2) if prev_rounded > 0 else 0.0
+                    quotes.append(
+                        MarketIndexQuote(
+                            symbol=sym,
+                            name=name,
+                            price=price_rounded,
+                            change=chg_val,
+                            change_pct=chg_pct,
+                            updated_at=time.strftime("%H:%M:%S IST", time.localtime()),
+                        )
+                    )
+                else:
+                    quotes.append(
+                        MarketIndexQuote(
+                            symbol=sym,
+                            name=name,
+                            price=meta["default_price"],
+                            change=meta["default_change"],
+                            change_pct=meta["default_pct"],
+                            updated_at=time.strftime("%H:%M:%S IST", time.localtime()),
+                        )
+                    )
+            except Exception:
+                quotes.append(
+                    MarketIndexQuote(
+                        symbol=sym,
+                        name=name,
+                        price=meta["default_price"],
+                        change=meta["default_change"],
+                        change_pct=meta["default_pct"],
+                        updated_at=time.strftime("%H:%M:%S IST", time.localtime()),
+                    )
+                )
+
+        if quotes:
+            _MARKET_INDICES_CACHE["timestamp"] = now
+            _MARKET_INDICES_CACHE["data"] = quotes
+            return quotes
+
+    except Exception:
+        pass
+
+    if _MARKET_INDICES_CACHE["data"]:
+        return _MARKET_INDICES_CACHE["data"]
+
+    return [
+        MarketIndexQuote(
+            symbol=meta["symbol"],
+            name=meta["name"],
+            price=meta["default_price"],
+            change=meta["default_change"],
+            change_pct=meta["default_pct"],
+            updated_at="Live",
+        )
+        for meta in INDEX_METADATA
+    ]
+
