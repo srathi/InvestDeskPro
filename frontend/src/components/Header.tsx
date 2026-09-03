@@ -451,30 +451,6 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
           </button>
-
-          {/* Vertical Separator */}
-          <div className="h-6 w-px bg-slate-800 my-auto hidden sm:block" />
-
-          {/* Tab 4: AlphaChanakya AI Copilot Trigger */}
-          <button
-            type="button"
-            onClick={onOpenCopilot}
-            className="flex items-center gap-2 px-3.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 via-amber-600/20 to-cyan-500/15 hover:from-amber-500/25 hover:to-cyan-500/25 text-amber-300 border border-amber-500/40 hover:border-amber-400 shadow-md shadow-amber-950/40 transition-all cursor-pointer h-10 group"
-            title="Open AlphaChanakya AI Quantitative Copilot (Press 'Cmd+J')"
-          >
-            <span className="text-sm group-hover:rotate-12 transition-transform duration-300">🏛️</span>
-            <div className="text-left flex flex-col justify-center">
-              <div className="flex items-center gap-1 leading-tight">
-                <span className="text-xs font-extrabold text-white group-hover:text-amber-200">AlphaChanakya</span>
-                <span className="px-1 text-[8px] font-mono font-bold rounded bg-amber-500/30 text-amber-300 border border-amber-500/40">
-                  AI
-                </span>
-              </div>
-              <span className="text-[10px] leading-tight font-mono text-cyan-300/80 font-medium">
-                Copilot (⌘J)
-              </span>
-            </div>
-          </button>
         </div>
       </div>
     </header>
