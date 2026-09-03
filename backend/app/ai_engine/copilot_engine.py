@@ -265,9 +265,10 @@ class AlphaChanakyaEngine:
         history: List[Dict[str, str]],
         context: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        """Invokes Google Gemini 1.5/2.5 Flash via REST API with Function Calling."""
+        """Invokes Google Gemini 2.5 Flash via REST API with Function Calling."""
         api_key = self.gemini_api_key
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        if not api_key:
+            return None
 
         # Convert tool declarations to Gemini format
         gemini_tools = [
@@ -295,77 +296,89 @@ class AlphaChanakyaEngine:
             "system_instruction": {"parts": [{"text": self.build_system_prompt(context)}]},
             "contents": contents,
             "tools": gemini_tools,
-            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1024}
+            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1500}
         }
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            res = await client.post(url, json=payload)
-            if res.status_code != 200:
-                return None
-            data = res.json()
+        # Try gemini-2.5-flash then fallback to gemini-2.5-flash-lite
+        for model in ["gemini-2.5-flash", "gemini-2.5-flash-lite"]:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    res = await client.post(url, json=payload)
+                    if res.status_code != 200:
+                        continue
+                    data = res.json()
 
-        candidates = data.get("candidates", [])
-        if not candidates:
-            return None
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    continue
 
-        first_cand = candidates[0]
-        parts = first_cand.get("content", {}).get("parts", [])
-        
-        tool_calls_executed = []
-        text_response = ""
+                first_cand = candidates[0]
+                parts = first_cand.get("content", {}).get("parts", [])
 
-        for part in parts:
-            if "text" in part:
-                text_response += part["text"]
-            elif "functionCall" in part:
-                fn_call = part["functionCall"]
-                fn_name = fn_call.get("name")
-                fn_args = fn_call.get("args", {})
-                tool_result = await execute_copilot_tool(fn_name, fn_args)
-                tool_calls_executed.append({
-                    "tool": fn_name,
-                    "arguments": fn_args,
-                    "result": tool_result
-                })
+                tool_calls_executed = []
+                text_response = ""
 
-        # If a tool was called, run a second turn to synthesize the final answer
-        if tool_calls_executed:
-            followup_contents = list(contents)
-            followup_contents.append(first_cand.get("content", {}))
-            
-            tool_responses = []
-            for tc in tool_calls_executed:
-                tool_responses.append({
-                    "functionResponse": {
-                        "name": tc["tool"],
-                        "response": {"output": tc["result"]}
+                for part in parts:
+                    if "text" in part:
+                        text_response += part["text"]
+                    elif "functionCall" in part:
+                        fn_call = part["functionCall"]
+                        fn_name = fn_call.get("name")
+                        fn_args = fn_call.get("args", {})
+                        tool_result = await execute_copilot_tool(fn_name, fn_args)
+                        tool_calls_executed.append({
+                            "tool": fn_name,
+                            "arguments": fn_args,
+                            "result": tool_result
+                        })
+
+                # If a tool was called, run a second turn to synthesize the final answer
+                if tool_calls_executed:
+                    followup_contents = list(contents)
+                    followup_contents.append(first_cand.get("content", {}))
+
+                    for tc in tool_calls_executed:
+                        followup_contents.append({
+                            "role": "user",
+                            "parts": [{
+                                "functionResponse": {
+                                    "name": tc["tool"],
+                                    "response": {
+                                        "name": tc["tool"],
+                                        "content": tc["result"]
+                                    }
+                                }
+                            }]
+                        })
+
+                    payload_2 = {
+                        "system_instruction": {"parts": [{"text": self.build_system_prompt(context)}]},
+                        "contents": followup_contents,
+                        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1500}
                     }
-                })
 
-            followup_contents.append({"role": "function", "parts": tool_responses})
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        res_2 = await client.post(url, json=payload_2)
+                        if res_2.status_code == 200:
+                            data_2 = res_2.json()
+                            cands_2 = data_2.get("candidates", [])
+                            if cands_2:
+                                synth_parts = cands_2[0].get("content", {}).get("parts", [])
+                                text_response = "".join([p.get("text", "") for p in synth_parts])
 
-            payload_2 = {
-                "system_instruction": {"parts": [{"text": self.build_system_prompt(context)}]},
-                "contents": followup_contents,
-                "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1024}
-            }
+                if text_response:
+                    suggestions = self._generate_follow_up_suggestions(user_message, tool_calls_executed)
+                    return {
+                        "response": text_response,
+                        "tool_calls_executed": tool_calls_executed,
+                        "suggestions": suggestions
+                    }
+            except Exception as e:
+                print(f"[AlphaChanakya] Gemini ({model}) error: {e}")
+                continue
 
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                res_2 = await client.post(url, json=payload_2)
-                if res_2.status_code == 200:
-                    data_2 = res_2.json()
-                    cands_2 = data_2.get("candidates", [])
-                    if cands_2:
-                        synth_parts = cands_2[0].get("content", {}).get("parts", [])
-                        text_response = "".join([p.get("text", "") for p in synth_parts])
-
-        suggestions = self._generate_follow_up_suggestions(user_message, tool_calls_executed)
-
-        return {
-            "response": text_response or "🏛️ **AlphaChanakya:** *Analysis completed based on quantitative terminal data.*",
-            "tool_calls_executed": tool_calls_executed,
-            "suggestions": suggestions
-        }
+        return None
 
     async def _call_groq(
         self,
