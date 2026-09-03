@@ -39,6 +39,7 @@ from app.schemas import (
     FundStyleBox,
     InvestorHorizonPlaybook,
     RollingHorizonDistribution,
+    SectorOverlapItem,
 )
 
 
@@ -975,12 +976,112 @@ async def analyze_mutual_fund(scheme_code: str) -> FundAnalysisResponse:
 
 
 def _generate_synthetic_holdings(scheme_name: str, category: str) -> Dict[str, Any]:
-    """Generate realistic holdings distribution for unsaved AMFI schemes based on SEBI category."""
-    cat_lower = (category or "").lower()
-    if "small" in cat_lower:
+    """Generate realistic holdings distribution for unsaved AMFI schemes based on SEBI category and thematic keywords."""
+    cat_lower = f"{category or ''} {scheme_name or ''}".lower()
+
+    if any(k in cat_lower for k in ["tech", "digital", "software", "it fund"]):
         return {
             "name": scheme_name,
-            "category": category,
+            "category": "Sectoral - Technology",
+            "aum_cr": 12500.0,
+            "cash_pct": 4.5,
+            "large_cap_pct": 72.0,
+            "mid_cap_pct": 22.0,
+            "small_cap_pct": 1.5,
+            "holdings": [
+                {"ticker": "INFY", "name": "Infosys Ltd", "weight_pct": 18.2, "sector": "Information Technology"},
+                {"ticker": "TCS", "name": "Tata Consultancy Services Ltd", "weight_pct": 16.5, "sector": "Information Technology"},
+                {"ticker": "HCLTECH", "name": "HCL Technologies Ltd", "weight_pct": 11.2, "sector": "Information Technology"},
+                {"ticker": "TECHM", "name": "Tech Mahindra Ltd", "weight_pct": 8.4, "sector": "Information Technology"},
+                {"ticker": "WIPRO", "name": "Wipro Ltd", "weight_pct": 6.5, "sector": "Information Technology"},
+                {"ticker": "LTIM", "name": "LTIMindtree Ltd", "weight_pct": 5.8, "sector": "Information Technology"},
+                {"ticker": "PERSISTENT", "name": "Persistent Systems Ltd", "weight_pct": 5.2, "sector": "Information Technology"},
+                {"ticker": "COFORGE", "name": "Coforge Ltd", "weight_pct": 4.9, "sector": "Information Technology"},
+            ],
+        }
+    elif any(k in cat_lower for k in ["bank", "finan", "psu bank"]):
+        return {
+            "name": scheme_name,
+            "category": "Sectoral - Banking & Financial Services",
+            "aum_cr": 18200.0,
+            "cash_pct": 3.8,
+            "large_cap_pct": 82.0,
+            "mid_cap_pct": 14.2,
+            "small_cap_pct": 0.0,
+            "holdings": [
+                {"ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "weight_pct": 24.5, "sector": "Financial Services"},
+                {"ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "weight_pct": 21.8, "sector": "Financial Services"},
+                {"ticker": "SBIN", "name": "State Bank of India", "weight_pct": 11.2, "sector": "Financial Services"},
+                {"ticker": "AXISBANK", "name": "Axis Bank Ltd", "weight_pct": 9.5, "sector": "Financial Services"},
+                {"ticker": "KOTAKBANK", "name": "Kotak Mahindra Bank", "weight_pct": 8.4, "sector": "Financial Services"},
+                {"ticker": "BAJFINANCE", "name": "Bajaj Finance Ltd", "weight_pct": 6.8, "sector": "Financial Services"},
+                {"ticker": "CHOLAFIN", "name": "Cholamandalam Investment & Fin", "weight_pct": 3.9, "sector": "Financial Services"},
+                {"ticker": "FEDERALBNK", "name": "Federal Bank Ltd", "weight_pct": 3.4, "sector": "Financial Services"},
+            ],
+        }
+    elif any(k in cat_lower for k in ["pharma", "health"]):
+        return {
+            "name": scheme_name,
+            "category": "Sectoral - Healthcare",
+            "aum_cr": 9400.0,
+            "cash_pct": 5.2,
+            "large_cap_pct": 65.0,
+            "mid_cap_pct": 28.0,
+            "small_cap_pct": 1.8,
+            "holdings": [
+                {"ticker": "SUNPHARMA", "name": "Sun Pharmaceutical Industries", "weight_pct": 18.5, "sector": "Healthcare"},
+                {"ticker": "CIPLA", "name": "Cipla Ltd", "weight_pct": 12.4, "sector": "Healthcare"},
+                {"ticker": "DRREDDY", "name": "Dr. Reddy's Laboratories", "weight_pct": 10.8, "sector": "Healthcare"},
+                {"ticker": "MAXHEALTH", "name": "Max Healthcare Institute", "weight_pct": 8.6, "sector": "Healthcare"},
+                {"ticker": "DIVISLAB", "name": "Divi's Laboratories Ltd", "weight_pct": 7.5, "sector": "Healthcare"},
+                {"ticker": "APOLLOHOSP", "name": "Apollo Hospitals Enterprise", "weight_pct": 6.8, "sector": "Healthcare"},
+                {"ticker": "MANKIND", "name": "Mankind Pharma Ltd", "weight_pct": 5.4, "sector": "Healthcare"},
+                {"ticker": "LUPIN", "name": "Lupin Ltd", "weight_pct": 4.8, "sector": "Healthcare"},
+            ],
+        }
+    elif any(k in cat_lower for k in ["auto", "transport"]):
+        return {
+            "name": scheme_name,
+            "category": "Sectoral - Automobile",
+            "aum_cr": 7800.0,
+            "cash_pct": 4.2,
+            "large_cap_pct": 74.0,
+            "mid_cap_pct": 21.8,
+            "small_cap_pct": 0.0,
+            "holdings": [
+                {"ticker": "M&M", "name": "Mahindra & Mahindra Ltd", "weight_pct": 18.2, "sector": "Automobile"},
+                {"ticker": "MARUTI", "name": "Maruti Suzuki India", "weight_pct": 16.5, "sector": "Automobile"},
+                {"ticker": "TATAMOTORS", "name": "Tata Motors Ltd", "weight_pct": 14.8, "sector": "Automobile"},
+                {"ticker": "BAJAJ-AUTO", "name": "Bajaj Auto Ltd", "weight_pct": 11.2, "sector": "Automobile"},
+                {"ticker": "EICHERMOT", "name": "Eicher Motors Ltd", "weight_pct": 9.4, "sector": "Automobile"},
+                {"ticker": "TVSMOTOR", "name": "TVS Motor Company", "weight_pct": 8.1, "sector": "Automobile"},
+                {"ticker": "SONACOMS", "name": "Sona BLW Precision", "weight_pct": 5.2, "sector": "Automobile"},
+            ],
+        }
+    elif any(k in cat_lower for k in ["energy", "infra", "power", "utility"]):
+        return {
+            "name": scheme_name,
+            "category": "Thematic - Energy & Infrastructure",
+            "aum_cr": 16400.0,
+            "cash_pct": 6.0,
+            "large_cap_pct": 70.0,
+            "mid_cap_pct": 22.0,
+            "small_cap_pct": 2.0,
+            "holdings": [
+                {"ticker": "RELIANCE", "name": "Reliance Industries Ltd", "weight_pct": 16.8, "sector": "Energy"},
+                {"ticker": "NTPC", "name": "NTPC Ltd", "weight_pct": 12.4, "sector": "Power"},
+                {"ticker": "POWERGRID", "name": "Power Grid Corp of India", "weight_pct": 10.5, "sector": "Power"},
+                {"ticker": "COALINDIA", "name": "Coal India Ltd", "weight_pct": 8.9, "sector": "Energy"},
+                {"ticker": "LT", "name": "Larsen & Toubro Ltd", "weight_pct": 8.2, "sector": "Construction"},
+                {"ticker": "ONGC", "name": "Oil & Natural Gas Corp", "weight_pct": 7.4, "sector": "Energy"},
+                {"ticker": "GAIL", "name": "GAIL (India) Ltd", "weight_pct": 5.8, "sector": "Gas Utilities"},
+                {"ticker": "SUZLON", "name": "Suzlon Energy Ltd", "weight_pct": 4.6, "sector": "Capital Goods"},
+            ],
+        }
+    elif "small" in cat_lower:
+        return {
+            "name": scheme_name,
+            "category": category or "Small Cap",
             "aum_cr": 18500.0,
             "cash_pct": 7.5,
             "large_cap_pct": 8.0,
@@ -1002,7 +1103,7 @@ def _generate_synthetic_holdings(scheme_name: str, category: str) -> Dict[str, A
     elif "mid" in cat_lower:
         return {
             "name": scheme_name,
-            "category": category,
+            "category": category or "Mid Cap",
             "aum_cr": 22400.0,
             "cash_pct": 5.8,
             "large_cap_pct": 16.5,
@@ -1024,7 +1125,7 @@ def _generate_synthetic_holdings(scheme_name: str, category: str) -> Dict[str, A
     else:
         return {
             "name": scheme_name,
-            "category": category,
+            "category": category or "Large & Mid Cap",
             "aum_cr": 35000.0,
             "cash_pct": 6.2,
             "large_cap_pct": 76.5,
@@ -1148,24 +1249,58 @@ def calculate_cross_fund_overlap(scheme_codes: List[str]) -> FundOverlapResponse
     """
     Calculate cross-fund portfolio overlap % and common stock holdings
     between 2 schemes to detect duplicate exposure and redundant fee drag.
+    Accepts scheme codes or scheme names and dynamically resolves metadata.
     """
     if len(scheme_codes) < 2:
         raise ValueError("At least 2 scheme codes are required for portfolio overlap analysis.")
 
-    code_a = "".join(ch for ch in scheme_codes[0] if ch.isdigit()) or scheme_codes[0].strip()
-    code_b = "".join(ch for ch in scheme_codes[1] if ch.isdigit()) or scheme_codes[1].strip()
+    all_amfi = _load_amfi_scheme_master()
+    amfi_map = {str(item.get("schemeCode", "")): item for item in all_amfi}
 
     holdings_db = _load_mf_holdings_data()
     schemes_dict = holdings_db.get("schemes", {})
 
-    scheme_a_data = schemes_dict.get(code_a) or _generate_synthetic_holdings(f"AMFI Scheme #{code_a}", "Flexi Cap")
-    scheme_b_data = schemes_dict.get(code_b) or _generate_synthetic_holdings(f"AMFI Scheme #{code_b}", "Large Cap")
+    def resolve_scheme_data(query: str) -> Tuple[str, str, Dict[str, Any]]:
+        clean_code = "".join(ch for ch in query if ch.isdigit())
+        if clean_code and clean_code in schemes_dict:
+            data = schemes_dict[clean_code]
+            return clean_code, data.get("name", f"AMFI #{clean_code}"), data
 
-    name_a = scheme_a_data.get("name", f"Fund #{code_a}")
-    name_b = scheme_b_data.get("name", f"Fund #{code_b}")
+        if clean_code and clean_code in amfi_map:
+            amfi_item = amfi_map[clean_code]
+            name = amfi_item.get("schemeName", f"AMFI #{clean_code}")
+            cat = detect_scheme_category(name)
+            synth = _generate_synthetic_holdings(name, cat)
+            return clean_code, name, synth
 
-    holdings_a = {h["ticker"]: {"name": h.get("name", h["ticker"]), "weight": float(h["weight_pct"]), "sector": h.get("sector")} for h in scheme_a_data.get("holdings", [])}
-    holdings_b = {h["ticker"]: {"name": h.get("name", h["ticker"]), "weight": float(h["weight_pct"]), "sector": h.get("sector")} for h in scheme_b_data.get("holdings", [])}
+        # Try searching by name in AMFI master
+        q_lower = query.lower()
+        for item in all_amfi:
+            s_name = item.get("schemeName", "")
+            if q_lower in s_name.lower():
+                code = str(item.get("schemeCode", ""))
+                if code in schemes_dict:
+                    return code, schemes_dict[code].get("name", s_name), schemes_dict[code]
+                cat = detect_scheme_category(s_name)
+                synth = _generate_synthetic_holdings(s_name, cat)
+                return code, s_name, synth
+
+        # Fallback
+        cat = detect_scheme_category(query)
+        synth = _generate_synthetic_holdings(query, cat)
+        return clean_code or "CUSTOM", query, synth
+
+    code_a, name_a, scheme_a_data = resolve_scheme_data(scheme_codes[0])
+    code_b, name_b, scheme_b_data = resolve_scheme_data(scheme_codes[1])
+
+    holdings_a = {
+        h["ticker"]: {"name": h.get("name", h["ticker"]), "weight": float(h.get("weight_pct", 0.0)), "sector": h.get("sector", "General")}
+        for h in scheme_a_data.get("holdings", [])
+    }
+    holdings_b = {
+        h["ticker"]: {"name": h.get("name", h["ticker"]), "weight": float(h.get("weight_pct", 0.0)), "sector": h.get("sector", "General")}
+        for h in scheme_b_data.get("holdings", [])
+    }
 
     common_tickers = set(holdings_a.keys()).intersection(set(holdings_b.keys()))
     common_items: List[CommonStockOverlap] = []
@@ -1187,8 +1322,37 @@ def calculate_cross_fund_overlap(scheme_codes: List[str]) -> FundOverlapResponse
             )
         )
 
-    # Sort common holdings by combined weight descending
-    common_items.sort(key=lambda x: (x.fund_a_weight + x.fund_b_weight), reverse=True)
+    # Sort common holdings by overlapping weight descending
+    common_items.sort(key=lambda x: x.overlapping_weight, reverse=True)
+
+    # Sector breakdown calculation
+    sectors_a: Dict[str, float] = {}
+    for h in holdings_a.values():
+        sec = h.get("sector") or "General"
+        sectors_a[sec] = sectors_a.get(sec, 0.0) + h["weight"]
+
+    sectors_b: Dict[str, float] = {}
+    for h in holdings_b.values():
+        sec = h.get("sector") or "General"
+        sectors_b[sec] = sectors_b.get(sec, 0.0) + h["weight"]
+
+    all_sectors = set(sectors_a.keys()).union(set(sectors_b.keys()))
+    sector_breakdown: List[SectorOverlapItem] = []
+    for sec in sorted(all_sectors):
+        wt_a = round(sectors_a.get(sec, 0.0), 1)
+        wt_b = round(sectors_b.get(sec, 0.0), 1)
+        sec_overlap = round(min(wt_a, wt_b), 1)
+        if wt_a > 0 or wt_b > 0:
+            sector_breakdown.append(
+                SectorOverlapItem(
+                    sector=sec,
+                    fund_a_weight=wt_a,
+                    fund_b_weight=wt_b,
+                    overlapping_weight=sec_overlap,
+                )
+            )
+
+    sector_breakdown.sort(key=lambda x: (x.fund_a_weight + x.fund_b_weight), reverse=True)
 
     sum_a = sum(h["weight"] for h in holdings_a.values())
     sum_b = sum(h["weight"] for h in holdings_b.values())
@@ -1201,7 +1365,7 @@ def calculate_cross_fund_overlap(scheme_codes: List[str]) -> FundOverlapResponse
         summary = f"Low commonality ({total_overlap_pct}% overlap). Excellent diversification synergy with minimal stock duplication."
     elif total_overlap_pct < 55.0:
         div_rating = "Moderate Overlap"
-        summary = f"Moderate commonality ({total_overlap_pct}% overlap). {len(common_items)} overlapping stocks across financial and tech heavyweights."
+        summary = f"Moderate commonality ({total_overlap_pct}% overlap). {len(common_items)} overlapping stocks across major holdings."
     else:
         div_rating = "High Overlap / Fee Drag"
         summary = f"Severe duplication ({total_overlap_pct}% overlap). You are paying double fund manager fees for virtually identical stock holdings."
@@ -1216,7 +1380,9 @@ def calculate_cross_fund_overlap(scheme_codes: List[str]) -> FundOverlapResponse
         unique_b_pct=round(unique_b, 1),
         common_holdings_count=len(common_items),
         common_holdings=common_items,
+        sector_breakdown=sector_breakdown,
         diversification_rating=div_rating,
         insight_summary=summary,
     )
+
 

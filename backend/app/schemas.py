@@ -314,6 +314,13 @@ class CommonStockOverlap(BaseModel):
     sector: Optional[str] = None
 
 
+class SectorOverlapItem(BaseModel):
+    sector: str
+    fund_a_weight: float
+    fund_b_weight: float
+    overlapping_weight: float
+
+
 class FundOverlapRequest(BaseModel):
     scheme_codes: List[str] = Field(..., min_length=2, max_length=4)
 
@@ -328,6 +335,7 @@ class FundOverlapResponse(BaseModel):
     unique_b_pct: float
     common_holdings_count: int
     common_holdings: List[CommonStockOverlap] = Field(default_factory=list)
+    sector_breakdown: List[SectorOverlapItem] = Field(default_factory=list)
     diversification_rating: str = Field(..., description="High Diversification, Moderate Overlap, High Overlap / Fee Drag")
     insight_summary: str
 

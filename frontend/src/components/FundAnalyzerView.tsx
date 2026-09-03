@@ -32,6 +32,8 @@ import {
   Info,
   Scale,
   Crosshair,
+  Filter,
+  X,
 } from "lucide-react";
 import {
   AreaChart,
@@ -86,19 +88,47 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
   const [data, setData] = useState<FundAnalysisResponse | null>(null);
   const [activeChartTab, setActiveChartTab] = useState<"rolling_alpha" | "underwater_drawdown">("rolling_alpha");
 
-  // Cross-Fund Overlap Analyzer State
+  // 🌟 Dynamic Cross-Fund Overlap Analyzer State
   const [isOverlapModalOpen, setIsOverlapModalOpen] = useState(false);
-  const [overlapFundA, setOverlapFundA] = useState("122639"); // Parag Parikh Flexi Cap
-  const [overlapFundB, setOverlapFundB] = useState("118955"); // HDFC Flexi Cap
+  
+  // Fund A Search & Selection
+  const [searchQueryA, setSearchQueryA] = useState("");
+  const [searchResultsA, setSearchResultsA] = useState<FundSearchResult[]>([]);
+  const [isSearchingA, setIsSearchingA] = useState(false);
+  const [showDropdownA, setShowDropdownA] = useState(false);
+  const [selectedFundA, setSelectedFundA] = useState<FundSearchResult | null>({
+    scheme_code: "122639",
+    scheme_name: "Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
+    category: "Flexi Cap",
+    plan_type: "Direct",
+    fund_house: "PPFAS Mutual Fund",
+  });
+
+  // Fund B Search & Selection
+  const [searchQueryB, setSearchQueryB] = useState("");
+  const [searchResultsB, setSearchResultsB] = useState<FundSearchResult[]>([]);
+  const [isSearchingB, setIsSearchingB] = useState(false);
+  const [showDropdownB, setShowDropdownB] = useState(false);
+  const [selectedFundB, setSelectedFundB] = useState<FundSearchResult | null>({
+    scheme_code: "118955",
+    scheme_name: "HDFC Flexi Cap Fund - Direct Plan - Growth",
+    category: "Flexi Cap",
+    plan_type: "Direct",
+    fund_house: "HDFC Mutual Fund",
+  });
+
   const [overlapData, setOverlapData] = useState<FundOverlapResponse | null>(null);
   const [loadingOverlap, setLoadingOverlap] = useState(false);
   const [overlapError, setOverlapError] = useState<string | null>(null);
+  const [holdingsFilter, setHoldingsFilter] = useState("");
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const isSelectingRef = useRef(false);
 
-  // Debounce search query by 300ms
+  // Debounced search queries
   const debouncedQuery = useDebounce(searchQuery, 300);
+  const debouncedQueryA = useDebounce(searchQueryA, 300);
+  const debouncedQueryB = useDebounce(searchQueryB, 300);
 
   useEffect(() => {
     if (initialSchemeCode && initialSchemeCode.trim()) {
@@ -130,10 +160,9 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     }
   };
 
-  // Debounced auto-search for matching AMFI schemes
+  // Main Top Search Debounce
   useEffect(() => {
     let isCancelled = false;
-
     if (isSelectingRef.current) {
       isSelectingRef.current = false;
       setShowDropdown(false);
@@ -166,13 +195,68 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     };
 
     fetchMatchingFunds();
-
-    return () => {
-      isCancelled = true;
-    };
+    return () => { isCancelled = true; };
   }, [debouncedQuery]);
 
-  // Click outside listener to close dropdown
+  // Overlap Fund A Search Debounce
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchA = async () => {
+      const clean = debouncedQueryA.trim();
+      if (clean.length >= 2) {
+        setIsSearchingA(true);
+        try {
+          const res = await searchFunds(clean);
+          if (!isCancelled) {
+            setSearchResultsA(res);
+            setShowDropdownA(res.length > 0);
+          }
+        } catch {
+          if (!isCancelled) setSearchResultsA([]);
+        } finally {
+          if (!isCancelled) setIsSearchingA(false);
+        }
+      } else {
+        if (!isCancelled) {
+          setSearchResultsA([]);
+          setShowDropdownA(false);
+        }
+      }
+    };
+    fetchA();
+    return () => { isCancelled = true; };
+  }, [debouncedQueryA]);
+
+  // Overlap Fund B Search Debounce
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchB = async () => {
+      const clean = debouncedQueryB.trim();
+      if (clean.length >= 2) {
+        setIsSearchingB(true);
+        try {
+          const res = await searchFunds(clean);
+          if (!isCancelled) {
+            setSearchResultsB(res);
+            setShowDropdownB(res.length > 0);
+          }
+        } catch {
+          if (!isCancelled) setSearchResultsB([]);
+        } finally {
+          if (!isCancelled) setIsSearchingB(false);
+        }
+      } else {
+        if (!isCancelled) {
+          setSearchResultsB([]);
+          setShowDropdownB(false);
+        }
+      }
+    };
+    fetchB();
+    return () => { isCancelled = true; };
+  }, [debouncedQueryB]);
+
+  // Click outside listener
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -225,8 +309,8 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
   };
 
   const handleRunOverlap = async (codeA?: string, codeB?: string) => {
-    const a = codeA || overlapFundA;
-    const b = codeB || overlapFundB;
+    const a = codeA || selectedFundA?.scheme_code || selectedFundA?.scheme_name;
+    const b = codeB || selectedFundB?.scheme_code || selectedFundB?.scheme_name;
     if (!a || !b) return;
     setLoadingOverlap(true);
     setOverlapError(null);
@@ -273,6 +357,16 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
     }
   };
 
+  const filteredCommonHoldings = overlapData?.common_holdings.filter((h) => {
+    if (!holdingsFilter.trim()) return true;
+    const q = holdingsFilter.toLowerCase();
+    return (
+      h.ticker.toLowerCase().includes(q) ||
+      h.name.toLowerCase().includes(q) ||
+      (h.sector && h.sector.toLowerCase().includes(q))
+    );
+  }) || [];
+
   return (
     <div className="space-y-6">
       {/* 🌟 Top Hero Search & Multiline Suggestions Panel */}
@@ -291,8 +385,8 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
           <button
             onClick={() => {
               setIsOverlapModalOpen(true);
-              if (!overlapData) {
-                handleRunOverlap(data?.meta.scheme_code || "122639", "118955");
+              if (!overlapData && selectedFundA && selectedFundB) {
+                handleRunOverlap(selectedFundA.scheme_code, selectedFundB.scheme_code);
               }
             }}
             className="px-4 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/80 text-xs font-bold transition-all shadow-md shadow-purple-950 flex items-center gap-2 shrink-0 cursor-pointer"
@@ -1030,17 +1124,17 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
         </div>
       )}
 
-      {/* 🌟 Cross-Fund Portfolio Overlap Analyzer Modal */}
+      {/* 🌟 Dynamic Cross-Fund Portfolio Overlap Analyzer Modal */}
       {isOverlapModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="glass-panel p-6 rounded-3xl border border-slate-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl bg-slate-950">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel p-6 rounded-3xl border border-slate-700 max-w-4xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl bg-slate-950 text-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <Scale className="h-6 w-6 text-purple-400" />
                 <div>
                   <h3 className="text-lg font-bold text-white">Cross-Fund Portfolio Overlap Matrix</h3>
                   <p className="text-xs text-slate-400">
-                    Detect redundant stock exposure and duplicate fee drag across 2 mutual funds.
+                    Search and compare ANY 2 mutual funds dynamically across 37,851 schemes.
                   </p>
                 </div>
               </div>
@@ -1048,69 +1142,168 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                 onClick={() => setIsOverlapModalOpen(false)}
                 className="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Fund Selectors */}
+            {/* Dual Type-Ahead Fund Selectors */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Fund A (Scheme Code or Preset)</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={overlapFundA}
-                    onChange={(e) => setOverlapFundA(e.target.value)}
-                    placeholder="Enter Scheme Code (e.g. 122639)"
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono"
-                  />
-                  <select
-                    onChange={(e) => setOverlapFundA(e.target.value)}
-                    className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300"
-                  >
-                    <option value="">Quick Pick</option>
-                    {POPULAR_FUNDS.map((f) => (
-                      <option key={`a-${f.code}`} value={f.code}>{f.name}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Fund A Box */}
+              <div className="space-y-2 p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+                <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>Fund 1 (Base Portfolio)</span>
+                </label>
+
+                {selectedFundA ? (
+                  <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/80 flex items-center justify-between gap-2">
+                    <div className="space-y-1 truncate pr-2">
+                      <div className="text-xs font-bold text-white truncate">{selectedFundA.scheme_name}</div>
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-300">
+                        <span>{selectedFundA.category || "Equity"}</span>
+                        <span>•</span>
+                        <span>#{selectedFundA.scheme_code}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedFundA(null);
+                        setSearchQueryA("");
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 rounded-lg transition-colors cursor-pointer shrink-0"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={searchQueryA}
+                        onChange={(e) => setSearchQueryA(e.target.value)}
+                        placeholder="Type Fund 1 Name (e.g., Parag Parikh, Quant Small)..."
+                        className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                      />
+                      {isSearchingA && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-400 animate-spin" />
+                      )}
+                    </div>
+
+                    {showDropdownA && searchResultsA.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-slate-800/60 z-50">
+                        {searchResultsA.map((fund) => (
+                          <button
+                            key={fund.scheme_code}
+                            onClick={() => {
+                              setSelectedFundA(fund);
+                              setShowDropdownA(false);
+                              setSearchQueryA("");
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-emerald-950/60 transition-colors flex items-center justify-between cursor-pointer"
+                          >
+                            <div className="truncate pr-2">
+                              <div className="text-white font-medium truncate">{fund.scheme_name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">{fund.category} • {fund.fund_house}</div>
+                            </div>
+                            <span className="text-[10px] font-mono text-emerald-400 shrink-0">#{fund.scheme_code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Fund B (Scheme Code or Preset)</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={overlapFundB}
-                    onChange={(e) => setOverlapFundB(e.target.value)}
-                    placeholder="Enter Scheme Code (e.g. 118955)"
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono"
-                  />
-                  <select
-                    onChange={(e) => setOverlapFundB(e.target.value)}
-                    className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300"
-                  >
-                    <option value="">Quick Pick</option>
-                    {POPULAR_FUNDS.map((f) => (
-                      <option key={`b-${f.code}`} value={f.code}>{f.name}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Fund B Box */}
+              <div className="space-y-2 p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+                <label className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>Fund 2 (Target Comparison)</span>
+                </label>
+
+                {selectedFundB ? (
+                  <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/80 flex items-center justify-between gap-2">
+                    <div className="space-y-1 truncate pr-2">
+                      <div className="text-xs font-bold text-white truncate">{selectedFundB.scheme_name}</div>
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-cyan-300">
+                        <span>{selectedFundB.category || "Equity"}</span>
+                        <span>•</span>
+                        <span>#{selectedFundB.scheme_code}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedFundB(null);
+                        setSearchQueryB("");
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 rounded-lg transition-colors cursor-pointer shrink-0"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={searchQueryB}
+                        onChange={(e) => setSearchQueryB(e.target.value)}
+                        placeholder="Type Fund 2 Name (e.g., HDFC Flexi, Axis Midcap)..."
+                        className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                      />
+                      {isSearchingB && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-cyan-400 animate-spin" />
+                      )}
+                    </div>
+
+                    {showDropdownB && searchResultsB.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-slate-800/60 z-50">
+                        {searchResultsB.map((fund) => (
+                          <button
+                            key={fund.scheme_code}
+                            onClick={() => {
+                              setSelectedFundB(fund);
+                              setShowDropdownB(false);
+                              setSearchQueryB("");
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-cyan-950/60 transition-colors flex items-center justify-between cursor-pointer"
+                          >
+                            <div className="truncate pr-2">
+                              <div className="text-white font-medium truncate">{fund.scheme_name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">{fund.category} • {fund.fund_house}</div>
+                            </div>
+                            <span className="text-[10px] font-mono text-cyan-300 shrink-0">#{fund.scheme_code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             <button
               onClick={() => handleRunOverlap()}
-              disabled={loadingOverlap}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-950 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              disabled={loadingOverlap || !selectedFundA || !selectedFundB}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-purple-950/50 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {loadingOverlap ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scale className="h-4 w-4" />}
-              <span>Compute Portfolio Overlap</span>
+              {loadingOverlap ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Ingesting Disclosures &amp; Computing Factor Overlap...</span>
+                </>
+              ) : (
+                <>
+                  <Scale className="h-4 w-4" />
+                  <span>Compute Dynamic Portfolio Overlap</span>
+                </>
+              )}
             </button>
 
             {overlapError && (
               <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-rose-400" />
+                <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
                 <span>{overlapError}</span>
               </div>
             )}
@@ -1124,7 +1317,11 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                     <div className="text-3xl font-black text-purple-300 font-mono">
                       {overlapData.total_overlap_pct}%
                     </div>
-                    <span className="text-[11px] text-slate-300 block">{overlapData.diversification_rating}</span>
+                    <span className={`text-[11px] font-bold block ${
+                      overlapData.total_overlap_pct < 30 ? "text-emerald-400" : overlapData.total_overlap_pct < 55 ? "text-amber-300" : "text-rose-400"
+                    }`}>
+                      {overlapData.diversification_rating}
+                    </span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
@@ -1136,25 +1333,61 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Unique Allocation</span>
-                    <div className="text-sm font-mono text-slate-200 mt-1">
-                      <div>Fund A: <strong className="text-emerald-400">{overlapData.unique_a_pct}%</strong> Unique</div>
-                      <div>Fund B: <strong className="text-cyan-400">{overlapData.unique_b_pct}%</strong> Unique</div>
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold block">Unique Active Allocation</span>
+                    <div className="text-xs font-mono text-slate-200 mt-1 space-y-1">
+                      <div>Fund 1: <strong className="text-emerald-400">{overlapData.unique_a_pct}%</strong> Unique</div>
+                      <div>Fund 2: <strong className="text-cyan-400">{overlapData.unique_b_pct}%</strong> Unique</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Overlap Summary Rationale */}
-                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 flex items-start gap-2">
+                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5">
                   <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
                   <span>{overlapData.insight_summary}</span>
                 </div>
 
+                {/* Sector Breakdown Grid */}
+                {overlapData.sector_breakdown && overlapData.sector_breakdown.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <PieChart className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>Sector Allocation Divergence</span>
+                    </h4>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                      {overlapData.sector_breakdown.map((sec) => (
+                        <div key={sec.sector} className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-1 text-xs">
+                          <div className="font-semibold text-slate-200 truncate text-[11px]">{sec.sector}</div>
+                          <div className="flex items-center justify-between text-[10px] font-mono">
+                            <span className="text-emerald-400">F1: {sec.fund_a_weight}%</span>
+                            <span className="text-cyan-400">F2: {sec.fund_b_weight}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Common Holdings Table */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                    Duplicated Stock Holdings Breakdown ({overlapData.common_holdings.length})
-                  </h4>
+                <div className="space-y-3 pt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 text-purple-400" />
+                      <span>Duplicated Stock Holdings Breakdown ({overlapData.common_holdings.length})</span>
+                    </h4>
+
+                    <div className="relative w-full sm:w-64">
+                      <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={holdingsFilter}
+                        onChange={(e) => setHoldingsFilter(e.target.value)}
+                        placeholder="Filter overlapping stocks..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
 
                   <div className="overflow-x-auto rounded-xl border border-slate-800">
                     <table className="w-full text-left text-xs">
@@ -1162,24 +1395,32 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                         <tr>
                           <th className="px-4 py-2.5">Stock Holding</th>
                           <th className="px-4 py-2.5">Sector</th>
-                          <th className="px-4 py-2.5 font-mono">{overlapData.scheme_a_name.slice(0, 20)}...</th>
-                          <th className="px-4 py-2.5 font-mono">{overlapData.scheme_b_name.slice(0, 20)}...</th>
+                          <th className="px-4 py-2.5 font-mono text-emerald-400">Fund 1 Wt</th>
+                          <th className="px-4 py-2.5 font-mono text-cyan-400">Fund 2 Wt</th>
                           <th className="px-4 py-2.5 font-mono text-purple-300">Overlapping Wt</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
-                        {overlapData.common_holdings.map((stock) => (
-                          <tr key={stock.ticker} className="hover:bg-slate-900/50 transition-colors">
-                            <td className="px-4 py-2.5">
-                              <span className="font-bold text-white font-mono mr-2">{stock.ticker}</span>
-                              <span className="text-slate-400">{stock.name}</span>
+                        {filteredCommonHoldings.length > 0 ? (
+                          filteredCommonHoldings.map((stock) => (
+                            <tr key={stock.ticker} className="hover:bg-slate-900/50 transition-colors">
+                              <td className="px-4 py-2.5">
+                                <span className="font-bold text-white font-mono mr-2">{stock.ticker}</span>
+                                <span className="text-slate-400">{stock.name}</span>
+                              </td>
+                              <td className="px-4 py-2.5 text-slate-400 text-[11px] font-mono">{stock.sector || "General"}</td>
+                              <td className="px-4 py-2.5 font-mono text-emerald-400 font-bold">{stock.fund_a_weight}%</td>
+                              <td className="px-4 py-2.5 font-mono text-cyan-400 font-bold">{stock.fund_b_weight}%</td>
+                              <td className="px-4 py-2.5 font-mono text-purple-300 font-bold">{stock.overlapping_weight}%</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-4 text-center text-slate-500 text-xs">
+                              No duplicated holdings match your filter.
                             </td>
-                            <td className="px-4 py-2.5 text-slate-400 text-[11px] font-mono">{stock.sector || "General"}</td>
-                            <td className="px-4 py-2.5 font-mono text-emerald-400 font-bold">{stock.fund_a_weight}%</td>
-                            <td className="px-4 py-2.5 font-mono text-cyan-400 font-bold">{stock.fund_b_weight}%</td>
-                            <td className="px-4 py-2.5 font-mono text-purple-300 font-bold">{stock.overlapping_weight}%</td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
