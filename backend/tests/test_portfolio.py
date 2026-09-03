@@ -57,3 +57,37 @@ def test_risk_contribution_sum():
 
     # Total percentage risk contribution should sum to 100%
     assert pytest.approx(np.sum(prc), abs=1e-4) == 100.0
+
+
+def test_portfolio_stress_test_simulation_and_sector_breakdown():
+    from app.core.portfolio import optimize_risk_parity_portfolio
+    
+    res = optimize_risk_parity_portfolio(["RELIANCE", "TCS", "HDFCBANK", "ITC", "LT"])
+    
+    # 1. Basic properties
+    assert len(res.tickers) == 5
+    assert len(res.allocations) == 5
+    assert res.total_portfolio_volatility > 0
+    assert res.equal_weight_volatility > 0
+    
+    # 2. Stress Test Simulation Events
+    assert len(res.stress_test_events) == 3
+    for ev in res.stress_test_events:
+        assert ev.portfolio_max_drawdown_pct > 0
+        assert ev.benchmark_max_drawdown_pct > 0
+        assert ev.recovery_days_portfolio > 0
+        assert len(ev.event_name) > 0
+        
+    # 3. Sector Exposures
+    assert len(res.sector_exposures) >= 3
+    total_sector_weight = sum(s.weight_pct for s in res.sector_exposures)
+    assert pytest.approx(total_sector_weight, abs=1.0) == 100.0
+    
+    # 4. Backtest Series with Benchmark
+    assert len(res.backtest_series) > 0
+    assert res.backtest_series[0].benchmark is not None
+    
+    # 5. Benchmark Comparison
+    assert res.benchmark_comparison is not None
+    assert res.benchmark_comparison.benchmark_symbol == "^NSEI"
+

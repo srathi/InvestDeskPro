@@ -330,10 +330,39 @@ class PortfolioAssetAllocation(BaseModel):
     expected_return_1y: float = Field(..., description="Historical 1Y annualized return (%)")
 
 
+class PortfolioStressTestEvent(BaseModel):
+    event_name: str
+    period_label: str
+    portfolio_max_drawdown_pct: float
+    benchmark_max_drawdown_pct: float
+    recovery_days_portfolio: int
+    recovery_days_benchmark: int
+    downside_cushion_pct: float
+    historical_context: str
+
+
+class PortfolioSectorExposure(BaseModel):
+    sector: str
+    weight_pct: float
+    risk_contribution_pct: float
+
+
+class PortfolioBenchmarkComparison(BaseModel):
+    benchmark_symbol: str = "^NSEI"
+    benchmark_name: str = "Nifty 50 TRI"
+    portfolio_volatility: float
+    benchmark_volatility: float
+    volatility_spread_pct: float
+    portfolio_1y_cagr: float
+    benchmark_1y_cagr: float
+    cagr_alpha_pct: float
+
+
 class PortfolioBacktestPoint(BaseModel):
     date: str
     risk_parity: float
     equal_weight: float
+    benchmark: Optional[float] = None
 
 
 class PortfolioOptimizeResponse(BaseModel):
@@ -349,6 +378,10 @@ class PortfolioOptimizeResponse(BaseModel):
     correlation_matrix: Dict[str, Dict[str, float]] = Field(default_factory=dict)
     backtest_series: List[PortfolioBacktestPoint] = Field(default_factory=list)
     effective_number_of_assets: float = Field(..., description="Diversification ratio / ENB metric")
+    stress_test_events: List[PortfolioStressTestEvent] = Field(default_factory=list)
+    sector_exposures: List[PortfolioSectorExposure] = Field(default_factory=list)
+    concentration_warnings: List[str] = Field(default_factory=list)
+    benchmark_comparison: Optional[PortfolioBenchmarkComparison] = None
 
 
 # ---------------------------------------------------------------------------

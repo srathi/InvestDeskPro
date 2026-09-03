@@ -79,7 +79,7 @@ export const QuantDeskView: React.FC<QuantDeskViewProps> = ({
             }`}
           >
             <PieChart className="h-3.5 w-3.5" />
-            <span>Risk-Parity Optimizer</span>
+            <span>Portfolio Stress-Tester & Risk Parity</span>
           </button>
         </div>
       </div>
