@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import {
+  Bot,
   Send,
   X,
   Trash2,
@@ -350,7 +351,7 @@ export function AlphaChanakyaDrawer({
         <div className="bg-gradient-to-r from-[#0c1427] via-[#091122] to-[#080d1a] border-b border-gray-800/80 p-3.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600/40 to-amber-500/30 border border-cyan-400/50 flex items-center justify-center text-amber-300 shadow-lg shadow-cyan-500/10">
-              <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+              <Bot className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -434,7 +435,7 @@ export function AlphaChanakyaDrawer({
                       "You"
                     ) : (
                       <>
-                        <Sparkles className="w-3 h-3 text-amber-400 inline" />
+                        <Bot className="w-3.5 h-3.5 text-amber-400 inline" />
                         <span>AlphaChanakya</span>
                       </>
                     )}
