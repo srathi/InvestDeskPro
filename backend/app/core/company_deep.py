@@ -16,7 +16,13 @@ _COMPANY_360_CACHE: Dict[str, Tuple[float, Any]] = {}
 _HISTORY_CACHE: Dict[str, Tuple[float, Any]] = {}
 CACHE_TTL_SECONDS = 600.0
 
-from app.core.factors import is_bfsi_sector, normalize_ticker, safe_float
+from app.core.factors import (
+    fetch_live_stock_quote,
+    is_bfsi_sector,
+    normalize_ticker,
+    safe_float,
+    search_indian_stocks,
+)
 from app.core.growth_forecast import calculate_forward_estimates
 from app.schemas import (
     Company360Response,
@@ -1178,7 +1184,13 @@ def extract_historical_price_and_valuation(
         except Exception:
             hist = pd.DataFrame()
 
-    curr_p = current_price or safe_float(info.get("currentPrice") or info.get("regularMarketPrice")) or 500.0
+    curr_p = current_price or safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))
+    if not curr_p or curr_p <= 0:
+        try:
+            q_res = fetch_live_stock_quote(clean_ticker)
+            curr_p = q_res.last_price
+        except Exception:
+            curr_p = 100.0
     pe_val = safe_float(info.get("trailingPE") or info.get("forwardPE"), 24.5) or 24.5
     pb_val = safe_float(info.get("priceToBook"), 3.2) or 3.2
     eps_curr = safe_float(info.get("trailingEps"), curr_p / pe_val) or (curr_p / pe_val)
@@ -1446,12 +1458,33 @@ def fetch_company_360(ticker: str) -> Company360Response:
                 day_change = round(current_price - prev_close, 2)
                 day_change_pct = round((day_change / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
 
-    if current_price is None:
-        current_price = 100.0
+    if current_price is None or current_price <= 0:
+        try:
+            q_res = fetch_live_stock_quote(norm_ticker)
+            current_price = q_res.last_price
+            day_change = q_res.change
+            day_change_pct = q_res.percent_change
+            high_52w = q_res.year_high or (current_price * 1.25)
+            low_52w = q_res.year_low or (current_price * 0.75)
+            if q_res.market_cap_cr:
+                mcap_cr = q_res.market_cap_cr
+        except Exception:
+            pass
+
+    if current_price is None or current_price <= 0:
+        suggestions = search_indian_stocks(ticker)
+        suggestion_msg = f" Did you mean '{suggestions[0].name} ({suggestions[0].ticker})'?" if suggestions else ""
+        raise ValueError(
+            f"Stock symbol '{ticker}' is not a recognized listed equity on NSE/BSE.{suggestion_msg}"
+        )
+
     high_52w = safe_float(info.get("fiftyTwoWeekHigh"), current_price * 1.25) or current_price * 1.25
     low_52w = safe_float(info.get("fiftyTwoWeekLow"), current_price * 0.75) or current_price * 0.75
-    mcap_val = safe_float(info.get("marketCap"), current_price * 100000000.0) or (current_price * 100000000.0)
-    mcap_cr = round(mcap_val / 10000000.0, 1)
+    mcap_val = safe_float(info.get("marketCap"))
+    if mcap_val:
+        mcap_cr = round(mcap_val / 10000000.0, 1)
+    elif not mcap_cr:
+        mcap_cr = round((current_price * 100000000.0) / 10000000.0, 1)
 
     pe_val = safe_float(info.get("trailingPE") or info.get("forwardPE"), 24.5)
     pb_val = safe_float(info.get("priceToBook"), 3.2)
@@ -1494,9 +1527,20 @@ def fetch_company_360(ticker: str) -> Company360Response:
     promoter_pct = safe_float(info.get("heldPercentInsiders"))
     promoter_holding = round(promoter_pct * 100.0, 1) if promoter_pct is not None else 54.2
 
-    company_name = info.get("longName") or info.get("shortName") or clean_sym
-    sector = info.get("sector", "Diversified Indian Equities")
-    industry = info.get("industry", "Industrial & Capital Markets")
+    company_name = info.get("longName") or info.get("shortName")
+    if not company_name:
+        master_matches = search_indian_stocks(clean_sym, limit=1)
+        company_name = master_matches[0].name if master_matches else clean_sym
+
+    sector = info.get("sector")
+    if not sector or sector == "Diversified Indian Equities":
+        master_matches = search_indian_stocks(clean_sym, limit=1)
+        if master_matches and master_matches[0].sector and master_matches[0].sector != "Indian Equities":
+            sector = master_matches[0].sector
+        else:
+            sector = sector or "Indian Equities"
+
+    industry = info.get("industry") or "Diversified Operations"
     about = info.get(
         "longBusinessSummary",
         f"{company_name} is an Indian enterprise operating in the {sector} sector ({industry}), listed on the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE).",

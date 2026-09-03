@@ -212,5 +212,38 @@ def test_institutional_red_flags_detection():
     assert res.factor_model_type in ["Standard Corporate", "BFSI Banking & Financials"]
 
 
+def test_live_stock_quote_and_price_endpoint():
+    """Verify live stock quote returns dynamic positive prices across NSE & BSE."""
+    from app.core.factors import fetch_live_stock_quote
+    from app.main import app
+    from fastapi.testclient import TestClient
+
+    # Direct function test
+    q_radico = fetch_live_stock_quote("RADICO.NS")
+    assert q_radico.symbol == "RADICO.NS"
+    assert q_radico.last_price > 2000.0  # Radico is ₹4500+, definitely not ₹500
+    assert q_radico.exchange == "NSE"
+    assert "Radico" in q_radico.company_name
+
+    # API Endpoint test
+    client = TestClient(app)
+    resp = client.get("/api/v1/stocks/CONFIPET/price")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["symbol"] == "CONFIPET.NS"
+    assert data["last_price"] > 20.0
+    assert "Confidence" in data["company_name"]
+
+
+def test_master_2100_equities_natural_name_resolution():
+    """Verify fuzzy search and corporate suffix stripping across 2,100+ Indian equities."""
+    assert normalize_ticker("PICCADILY AGRO INDUSTRIES LTD") == "PICCADIL.NS"
+    assert normalize_ticker("CONFIDENCE PETROLEUM INDIA") == "CONFIPET.NS"
+    assert normalize_ticker("HINDUSTAN UNILEVER LIMITED") == "HINDUNILVR.NS"
+    assert normalize_ticker("TUBE INVESTMENTS OF INDIA") in ["TIINDIA.NS", "TIINDIA.BO"]
+    assert normalize_ticker("ZOMATO LIMITED") == "ZOMATO.NS"
+    assert normalize_ticker("SWIGGY LIMITED") == "SWIGGY.NS"
+
+
 
 

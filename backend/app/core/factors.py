@@ -6,6 +6,8 @@ Integrates Trendlyne DVM, Simply Wall St 5-Axis Radar, and Tickertape Red Flags.
 
 import json
 import math
+import os
+import time
 from typing import Any, Dict, List, Optional, Tuple
 import urllib.parse
 import urllib.request
@@ -26,6 +28,7 @@ from app.schemas import (
     StockFlags,
     StockFundamentals,
     StockPricePoint,
+    StockPriceQuoteResponse,
     StockScorecardResponse,
     StockSearchResult,
 )
@@ -318,6 +321,36 @@ TICKER_ALIASES: Dict[str, str] = {
     "543664": "KAYNES.BO",
 }
 
+# ---------------------------------------------------------------------------
+# Master 2,100+ Indian Equities Database (NSE / BSE) - RupeeMap Powered
+# ---------------------------------------------------------------------------
+
+_INDIAN_EQUITIES_LIST: List[dict] = []
+_INDIAN_EQUITIES_BY_SYMBOL: Dict[str, dict] = {}
+
+
+def _load_indian_equities_master() -> List[dict]:
+    """Load local 2,100+ Indian equities master database for sub-millisecond offline lookup."""
+    global _INDIAN_EQUITIES_LIST, _INDIAN_EQUITIES_BY_SYMBOL
+    if _INDIAN_EQUITIES_LIST:
+        return _INDIAN_EQUITIES_LIST
+    try:
+        data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "indian-equities.json")
+        if os.path.exists(data_path):
+            with open(data_path, "r", encoding="utf-8") as f:
+                items = json.load(f)
+                _INDIAN_EQUITIES_LIST = items
+                for it in items:
+                    sym = (it.get("symbol") or "").upper()
+                    full_sym = (it.get("fullSymbol") or "").upper()
+                    if sym:
+                        _INDIAN_EQUITIES_BY_SYMBOL[sym] = it
+                    if full_sym:
+                        _INDIAN_EQUITIES_BY_SYMBOL[full_sym] = it
+    except Exception:
+        pass
+    return _INDIAN_EQUITIES_LIST
+
 
 def clean_company_name_query(name: str) -> str:
     """Strip common corporate suffixes (LTD, LIMITED, PVT, CORP, etc.) and clean punctuation."""
@@ -332,13 +365,21 @@ def clean_company_name_query(name: str) -> str:
 
 
 def normalize_ticker(ticker: str) -> str:
-    """Ensure Indian ticker has exchange suffix (.NS or .BO) with robust alias, company name, & scrip code resolution."""
+    """Ensure Indian ticker has exchange suffix (.NS or .BO) with robust 2,100+ stock master resolution."""
+    if not ticker:
+        return ""
+
+    _load_indian_equities_master()
+
     raw = " ".join(ticker.strip().upper().replace(",", " ").split()).strip(" .")
     if not raw:
         return ""
 
     if raw in TICKER_ALIASES:
         return TICKER_ALIASES[raw]
+
+    if raw in _INDIAN_EQUITIES_BY_SYMBOL:
+        return _INDIAN_EQUITIES_BY_SYMBOL[raw].get("fullSymbol") or f"{raw}.NS"
 
     has_ns = raw.endswith(".NS")
     has_bo = raw.endswith(".BO")
@@ -348,11 +389,17 @@ def normalize_ticker(ticker: str) -> str:
         base = raw[:-3].strip(" .")
         if base in TICKER_ALIASES:
             aliased = TICKER_ALIASES[base]
-            # If caller explicitly requested .BO and the alias points to .NS, preserve .BO
             if has_bo and aliased.endswith(".NS"):
                 return f"{aliased[:-3]}.BO"
             return aliased
         
+        if base in _INDIAN_EQUITIES_BY_SYMBOL:
+            it = _INDIAN_EQUITIES_BY_SYMBOL[base]
+            full_s = it.get("fullSymbol", f"{base}.NS")
+            if has_bo and full_s.endswith(".NS"):
+                return f"{full_s[:-3]}.BO"
+            return full_s
+
         cleaned_base = clean_company_name_query(base)
         if cleaned_base in TICKER_ALIASES:
             aliased = TICKER_ALIASES[cleaned_base]
@@ -360,7 +407,7 @@ def normalize_ticker(ticker: str) -> str:
                 return f"{aliased[:-3]}.BO"
             return aliased
 
-        # If base contains spaces, search local stock universe
+        # If base contains spaces, search master stock universe
         if " " in base:
             matches = search_indian_stocks(base)
             if matches:
@@ -372,13 +419,20 @@ def normalize_ticker(ticker: str) -> str:
         clean_base_sym = base.replace(".", "").strip()
         return f"{clean_base_sym}.{'BO' if has_bo else 'NS'}"
 
+    # Check base without suffix in master database
+    if raw in _INDIAN_EQUITIES_BY_SYMBOL:
+        return _INDIAN_EQUITIES_BY_SYMBOL[raw].get("fullSymbol") or f"{raw}.NS"
+
     # Clean corporate noise words (LTD, LIMITED, etc.)
     cleaned_query = clean_company_name_query(raw)
     if cleaned_query in TICKER_ALIASES:
         return TICKER_ALIASES[cleaned_query]
 
-    # If user typed full name or multi-word phrase like "Radico Khaitan Ltd." or "Tata Motors Ltd"
-    if " " in raw or len(raw) > 10:
+    if cleaned_query in _INDIAN_EQUITIES_BY_SYMBOL:
+        return _INDIAN_EQUITIES_BY_SYMBOL[cleaned_query].get("fullSymbol") or f"{cleaned_query}.NS"
+
+    # If user typed company name or multi-word phrase like "Radico Khaitan Ltd." or "Tata Motors Ltd"
+    if " " in raw or len(raw) > 7:
         matches = search_indian_stocks(raw)
         if matches:
             return matches[0].ticker
@@ -1596,65 +1650,244 @@ INDIAN_STOCKS_DIRECTORY = [
 ]
 
 
-def search_indian_stocks(query: str) -> List[StockSearchResult]:
-    """Fast prefix, keywords, local directory, and live Yahoo Finance search for Indian Equities."""
+def search_indian_stocks(query: str, limit: int = 15) -> List[StockSearchResult]:
+    """Fast indexed search across 2,100+ Indian Equities with exact, prefix, substring, and live fallback."""
     q = query.strip()
     if not q:
         return []
 
-    clean_q = q.upper().replace(".NS", "").replace(".BO", "")
+    _load_indian_equities_master()
+
+    clean_q = q.upper().replace(".NS", "").replace(".BO", "").replace(",", "").strip()
     q_lower = q.lower()
-    results: List[StockSearchResult] = []
+    noise_words = {
+        "ltd", "limited", "pvt", "private", "corp", "corporation", "inc", 
+        "co", "company", "holdings", "enterprise", "enterprises", "industries", 
+        "industry", "india", "indian", "the", "and", "of"
+    }
+    clean_search = " ".join([t for t in q.lower().replace(".", " ").replace(",", " ").split() if t not in noise_words])
+    meaningful_tokens = [t for t in clean_search.split() if t not in noise_words and len(t) >= 2]
+
+    ranked_results: List[Tuple[int, StockSearchResult]] = []
     seen = set()
 
-    # 1. Search local curated directory first (instant sub-millisecond match)
+    # 1. Search 2,100+ Master Indian Equities Index (RupeeMap Engine)
+    for it in _INDIAN_EQUITIES_LIST:
+        sym = (it.get("symbol") or "").upper()
+        full_sym = (it.get("fullSymbol") or f"{sym}.NS").upper()
+        name = it.get("name") or sym
+        name_lower = name.lower()
+        sym_lower = sym.lower()
+        clean_name = " ".join([t for t in name_lower.replace(".", " ").replace(",", " ").split() if t not in noise_words])
+
+        score = 0
+        if sym_lower == clean_search or full_sym.lower() == q.lower() or name_lower == q.lower():
+            score = 100
+        elif clean_search and (clean_search == clean_name or clean_search == sym_lower):
+            score = 95
+        elif clean_search and clean_name.startswith(clean_search):
+            score = 85
+        elif sym_lower.startswith(clean_q.lower()):
+            score = 75
+        elif meaningful_tokens and all(t in name_lower for t in meaningful_tokens):
+            score = 70
+        elif clean_search and clean_search in name_lower:
+            score = 65
+        elif clean_q and clean_q in sym:
+            score = 60
+        elif meaningful_tokens and meaningful_tokens[0] in name_lower:
+            score = 35
+
+        if score > 0 and full_sym not in seen:
+            ranked_results.append((
+                score,
+                StockSearchResult(
+                    ticker=full_sym,
+                    name=name,
+                    sector="Indian Equities",
+                    exchange=it.get("exchange", "NSE"),
+                ),
+            ))
+            seen.add(full_sym)
+
+    # 2. Search local curated keyword directory for brand/product keywords (e.g. Magic Moments, Fevicol, Zudio)
     for item in INDIAN_STOCKS_DIRECTORY:
-        t_base = item["ticker"].replace(".NS", "").replace(".BO", "")
+        full_tick = item["ticker"]
+        t_base = full_tick.replace(".NS", "").replace(".BO", "")
         keywords = item.get("keywords", "").lower()
         name_lower = item["name"].lower()
 
-        # Match exact ticker prefix, name substring, or keyword/alias substring
-        if (
-            t_base.startswith(clean_q)
-            or clean_q in t_base
-            or q_lower in name_lower
-            or any(part in keywords for part in q_lower.split() if len(part) >= 2)
-            or q_lower in keywords
-        ):
-            if item["ticker"] not in seen:
-                results.append(StockSearchResult(
-                    ticker=item["ticker"],
+        if full_tick in seen:
+            # Update sector metadata if available
+            continue
+
+        score = 0
+        if t_base.lower() == clean_q.lower() or full_tick.lower() == q_lower:
+            score = 100
+        elif any(part in keywords for part in q_lower.split() if len(part) >= 3):
+            score = 60
+        elif q_lower in keywords:
+            score = 55
+
+        if score > 0 and full_tick not in seen:
+            ranked_results.append((
+                score,
+                StockSearchResult(
+                    ticker=full_tick,
                     name=item["name"],
-                    sector=item["sector"],
-                    exchange="NSE" if item["ticker"].endswith(".NS") else "BSE",
-                ))
-                seen.add(item["ticker"])
+                    sector=item.get("sector", "Indian Equities"),
+                    exchange="NSE" if full_tick.endswith(".NS") else "BSE",
+                ),
+            ))
+            seen.add(full_tick)
 
-    # 2. Query Yahoo Finance live search API for real Indian listed assets (.NS and .BO), excluding mutual funds
+    # 3. Query Yahoo Finance live search API if local index yielded fewer than 3 matches (for brand new IPOs)
+    if len(ranked_results) < 3:
+        try:
+            url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(q)}&quotesCount=10&newsCount=0&enableFuzzyQuery=false"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            with urllib.request.urlopen(req, timeout=2.5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                quotes = data.get("quotes", [])
+                for item in quotes:
+                    sym = item.get("symbol", "")
+                    if (sym.endswith(".NS") or sym.endswith(".BO")) and not sym.startswith("0P"):
+                        if sym not in seen:
+                            name = item.get("longname") or item.get("shortname") or sym
+                            sector = item.get("sector") or item.get("industry") or "Indian Equities"
+                            exchange = "NSE" if sym.endswith(".NS") else "BSE"
+                            ranked_results.append((
+                                40,
+                                StockSearchResult(
+                                    ticker=sym,
+                                    name=name,
+                                    sector=sector,
+                                    exchange=exchange,
+                                ),
+                            ))
+                            seen.add(sym)
+        except Exception:
+            pass
+
+    # Sort by score descending, then by shortest name
+    ranked_results.sort(key=lambda x: (-x[0], len(x[1].name), len(x[1].ticker)))
+    return [r[1] for r in ranked_results[:limit]]
+
+
+# ---------------------------------------------------------------------------
+# High-Speed Dynamic Stock Price Quote Proxy (RupeeMap Model)
+# ---------------------------------------------------------------------------
+
+_PRICE_CACHE: Dict[str, Tuple[float, StockPriceQuoteResponse]] = {}
+PRICE_CACHE_TTL = 30.0  # 30 seconds
+
+
+def fetch_live_stock_quote(ticker: str) -> StockPriceQuoteResponse:
+    """Fetch ultra-fast live market price and quote metrics across Yahoo dual-hosts with yfinance fallback."""
+    norm_ticker = normalize_ticker(ticker)
+    now = time.time()
+    if norm_ticker in _PRICE_CACHE:
+        cached_time, cached_quote = _PRICE_CACHE[norm_ticker]
+        if now - cached_time < PRICE_CACHE_TTL:
+            return cached_quote
+
+    # 1. Try direct high-speed chart API from Yahoo Finance (query1/query2)
+    hosts = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"]
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+    data_dict = None
+
+    for host in hosts:
+        try:
+            url = f"{host}/v8/finance/chart/{urllib.parse.quote(norm_ticker)}?interval=1d&range=1d"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=3.5) as resp:
+                raw_json = json.loads(resp.read().decode("utf-8"))
+                result_arr = raw_json.get("chart", {}).get("result")
+                if result_arr and len(result_arr) > 0:
+                    data_dict = result_arr[0]
+                    break
+        except Exception:
+            continue
+
+    if data_dict:
+        meta = data_dict.get("meta", {})
+        last_price = safe_float(meta.get("regularMarketPrice"))
+        prev_close = safe_float(meta.get("previousClose") or meta.get("chartPreviousClose"))
+        
+        if last_price and last_price > 0:
+            change = round(last_price - prev_close, 2) if prev_close else 0.0
+            pct_change = round((change / prev_close) * 100.0, 2) if prev_close and prev_close > 0 else 0.0
+            
+            quote = StockPriceQuoteResponse(
+                symbol=meta.get("symbol", norm_ticker),
+                company_name=meta.get("longName") or meta.get("shortName") or norm_ticker,
+                exchange="NSE" if norm_ticker.endswith(".NS") else "BSE",
+                currency=meta.get("currency", "INR"),
+                last_price=last_price,
+                previous_close=prev_close or last_price,
+                change=change,
+                percent_change=pct_change,
+                day_high=safe_float(meta.get("regularMarketDayHigh")),
+                day_low=safe_float(meta.get("regularMarketDayLow")),
+                year_high=safe_float(meta.get("fiftyTwoWeekHigh")),
+                year_low=safe_float(meta.get("fiftyTwoWeekLow")),
+                volume=meta.get("regularMarketVolume"),
+                timestamp=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+            )
+            _PRICE_CACHE[norm_ticker] = (now, quote)
+            return quote
+
+    # 2. Fallback to yfinance Ticker
+    t = yf.Ticker(norm_ticker)
+    info = {}
     try:
-        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(q)}&quotesCount=10&newsCount=0&enableFuzzyQuery=false"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-        with urllib.request.urlopen(req, timeout=2.5) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            quotes = data.get("quotes", [])
-            for item in quotes:
-                sym = item.get("symbol", "")
-                if (sym.endswith(".NS") or sym.endswith(".BO")) and not sym.startswith("0P"):
-                    if sym not in seen:
-                        name = item.get("longname") or item.get("shortname") or sym
-                        sector = item.get("sector") or item.get("industry") or "Indian Equities"
-                        exchange = "NSE" if sym.endswith(".NS") else "BSE"
-                        results.append(StockSearchResult(
-                            ticker=sym,
-                            name=name,
-                            sector=sector,
-                            exchange=exchange,
-                        ))
-                        seen.add(sym)
+        info = t.info or {}
     except Exception:
-        pass
+        info = {}
 
-    return results[:15]
+    last_p = safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))
+    prev_c = safe_float(info.get("previousClose") or info.get("regularMarketPreviousClose"))
+
+    if not last_p or last_p <= 0:
+        # Check history
+        hist = t.history(period="5d")
+        if not hist.empty and "Close" in hist.columns:
+            closes = hist["Close"].dropna()
+            if len(closes) > 0:
+                last_p = float(closes.iloc[-1])
+                if len(closes) >= 2:
+                    prev_c = float(closes.iloc[-2])
+
+    if not last_p or last_p <= 0:
+        suggestions = search_indian_stocks(ticker)
+        suggestion_msg = f" Did you mean '{suggestions[0].name} ({suggestions[0].ticker})'?" if suggestions else ""
+        raise ValueError(f"Unable to fetch live market price for '{ticker}'.{suggestion_msg}")
+
+    chg = round(last_p - (prev_c or last_p), 2)
+    pct_chg = round((chg / prev_c) * 100.0, 2) if prev_c and prev_c > 0 else 0.0
+    mcap_val = safe_float(info.get("marketCap"))
+    mcap_cr = round(mcap_val / 10000000.0, 1) if mcap_val else None
+
+    quote = StockPriceQuoteResponse(
+        symbol=norm_ticker,
+        company_name=info.get("longName") or info.get("shortName") or norm_ticker,
+        exchange="NSE" if norm_ticker.endswith(".NS") else "BSE",
+        currency=info.get("currency", "INR"),
+        last_price=last_p,
+        previous_close=prev_c or last_p,
+        change=chg,
+        percent_change=pct_chg,
+        day_high=safe_float(info.get("dayHigh")),
+        day_low=safe_float(info.get("dayLow")),
+        year_high=safe_float(info.get("fiftyTwoWeekHigh")),
+        year_low=safe_float(info.get("fiftyTwoWeekLow")),
+        volume=info.get("volume"),
+        market_cap_cr=mcap_cr,
+        pe=safe_float(info.get("trailingPE")),
+        timestamp=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+    )
+    _PRICE_CACHE[norm_ticker] = (now, quote)
+    return quote
 
 
 # ---------------------------------------------------------------------------

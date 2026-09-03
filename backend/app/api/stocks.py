@@ -5,10 +5,16 @@ from fastapi import APIRouter, HTTPException, Query
 from app.core.factors import (
     fetch_latest_institutional_flow,
     fetch_live_market_indices,
+    fetch_live_stock_quote,
     generate_stock_scorecard,
     search_indian_stocks,
 )
-from app.schemas import MarketIndicesResponse, StockScorecardResponse, StockSearchResult
+from app.schemas import (
+    MarketIndicesResponse,
+    StockPriceQuoteResponse,
+    StockScorecardResponse,
+    StockSearchResult,
+)
 
 router = APIRouter(prefix="/stocks", tags=["Stocks"])
 
@@ -30,7 +36,7 @@ def get_market_indices():
 
 @router.get("/search", response_model=List[StockSearchResult])
 def search_stocks(q: str = Query(..., min_length=1, description="Ticker prefix or company name")):
-    """Fast search for Indian stocks by ticker or company name."""
+    """Fast search across 2,100+ Indian stocks by ticker, company name, or brand."""
     try:
         results = search_indian_stocks(q)
         return results
@@ -38,6 +44,25 @@ def search_stocks(q: str = Query(..., min_length=1, description="Ticker prefix o
         raise HTTPException(
             status_code=500,
             detail=f"Stock search failed for '{q}': {str(exc)}",
+        )
+
+
+@router.get("/{ticker}/price", response_model=StockPriceQuoteResponse)
+@router.get("/{ticker}/quote", response_model=StockPriceQuoteResponse)
+def get_stock_price(ticker: str):
+    """Retrieve high-speed dynamic live market price, day change, 52W range, and volume for any Indian stock."""
+    try:
+        quote = fetch_live_stock_quote(ticker)
+        return quote
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=404,
+            detail=str(val_err),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch live stock price for '{ticker}': {str(exc)}",
         )
 
 

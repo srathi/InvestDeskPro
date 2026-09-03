@@ -144,6 +144,25 @@ class StockSearchResult(BaseModel):
     exchange: str = "NSE"
 
 
+class StockPriceQuoteResponse(BaseModel):
+    symbol: str
+    company_name: str
+    exchange: str = "NSE"
+    currency: str = "INR"
+    last_price: float
+    previous_close: float
+    change: float
+    percent_change: float
+    day_high: Optional[float] = None
+    day_low: Optional[float] = None
+    year_high: Optional[float] = None
+    year_low: Optional[float] = None
+    volume: Optional[int] = None
+    market_cap_cr: Optional[float] = None
+    pe: Optional[float] = None
+    timestamp: str
+
+
 # ---------------------------------------------------------------------------
 # Mutual Fund Models (Advisorkhoj + Morningstar + PrimeInvestor)
 # ---------------------------------------------------------------------------
