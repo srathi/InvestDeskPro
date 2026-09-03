@@ -1432,19 +1432,7 @@ def fetch_company_360(ticker: str) -> Company360Response:
     except Exception:
         hist = pd.DataFrame()
 
-    # STRICT VALIDATION: Check if this ticker is a recognized listed company
     current_price = safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))
-    has_valid_price = current_price is not None or (not hist.empty and len(hist) > 0)
-    has_valid_info = bool(info.get("marketCap") or info.get("shortName") or info.get("longName") or info.get("trailingPE") or info.get("bookValue"))
-
-    if not has_valid_price and not has_valid_info:
-        from app.core.factors import search_indian_stocks
-        suggestions = search_indian_stocks(ticker)
-        suggestion_msg = f" Did you mean '{suggestions[0].name} ({suggestions[0].ticker})'?" if suggestions else ""
-        raise ValueError(
-            f"Stock symbol '{ticker}' is not a recognized listed equity on NSE/BSE.{suggestion_msg}"
-        )
-
     day_change = safe_float(info.get("regularMarketChange"), 0.0) or 0.0
     day_change_pct = safe_float(info.get("regularMarketChangePercent"), 0.0) or 0.0
 
@@ -1465,14 +1453,17 @@ def fetch_company_360(ticker: str) -> Company360Response:
             current_price = q_res.last_price
             day_change = q_res.change
             day_change_pct = q_res.percent_change
-            high_52w = q_res.year_high or (current_price * 1.25)
-            low_52w = q_res.year_low or (current_price * 0.75)
             if q_res.market_cap_cr:
                 mcap_cr = q_res.market_cap_cr
+            if not info.get("longName"):
+                info["longName"] = q_res.company_name
+                info["shortName"] = q_res.company_name
         except Exception:
             pass
 
+    # If still no valid price after all attempts, fail gracefully with search suggestions
     if current_price is None or current_price <= 0:
+        from app.core.factors import search_indian_stocks
         suggestions = search_indian_stocks(ticker)
         suggestion_msg = f" Did you mean '{suggestions[0].name} ({suggestions[0].ticker})'?" if suggestions else ""
         raise ValueError(

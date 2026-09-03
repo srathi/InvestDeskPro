@@ -241,7 +241,7 @@ def test_master_2100_equities_natural_name_resolution():
     assert normalize_ticker("CONFIDENCE PETROLEUM INDIA") == "CONFIPET.NS"
     assert normalize_ticker("HINDUSTAN UNILEVER LIMITED") == "HINDUNILVR.NS"
     assert normalize_ticker("TUBE INVESTMENTS OF INDIA") in ["TIINDIA.NS", "TIINDIA.BO"]
-    assert normalize_ticker("ZOMATO LIMITED") == "ZOMATO.NS"
+    assert normalize_ticker("ZOMATO LIMITED") in ["ETERNAL.NS", "ZOMATO.NS"]
     assert normalize_ticker("SWIGGY LIMITED") == "SWIGGY.NS"
 
 

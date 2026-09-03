@@ -239,8 +239,9 @@ TICKER_ALIASES: Dict[str, str] = {
     "508869": "APOLLOHOSP.BO",
 
     # New Age Tech & Consumer Brands
-    "ZOMATO": "ZOMATO.NS",
-    "543320": "ZOMATO.BO",
+    "ZOMATO": "ETERNAL.NS",
+    "ETERNAL": "ETERNAL.NS",
+    "543320": "ETERNAL.BO",
     "PAYTM": "PAYTM.NS",
     "543396": "PAYTM.BO",
     "NYKAA": "NYKAA.NS",
@@ -252,6 +253,8 @@ TICKER_ALIASES: Dict[str, str] = {
     "532667": "SUZLON.BO",
     "SWIGGY": "SWIGGY.NS",
     "544280": "SWIGGY.BO",
+    "INDRAMEDCO": "INDRAMEDCO.NS",
+    "532189": "INDRAMEDCO.BO",
 
     # Distilleries, Breweries & Alcoholic Beverages
     "RADICO": "RADICO.NS",
