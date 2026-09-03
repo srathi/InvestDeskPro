@@ -623,7 +623,7 @@ def backfill_series(vals: List[Optional[float]], default_growth: float = 1.12) -
     return res
 
 
-def extract_quarterly_financials(t: yf.Ticker, info: Dict[str, Any], current_price: float) -> QuarterlyFinancialTable:
+def extract_quarterly_financials(t: yf.Ticker, info: Dict[str, Any], current_price: float, mcap_cr: Optional[float] = None) -> QuarterlyFinancialTable:
     """Extract 4 to 8 quarters of financial results with YoY/QoQ growth metrics."""
     q_fin = getattr(t, "quarterly_financials", pd.DataFrame())
     if not isinstance(q_fin, pd.DataFrame) or q_fin.empty or len(q_fin.columns) < 2:
@@ -717,10 +717,10 @@ def extract_quarterly_financials(t: yf.Ticker, info: Dict[str, Any], current_pri
             latest_opm_pct=latest_opm,
         )
 
-    # Fallback to estimated quarterly trend
+    # Fallback to structured estimated quarterly trend using real dynamic market cap
     quarters = ["Q1 FY24", "Q2 FY24", "Q3 FY24", "Q4 FY24", "Q1 FY25", "Q2 FY25", "Q3 FY25", "Q4 FY25"]
-    mcap_cr = round((safe_float(info.get("marketCap"), 50000000000.0) or 50000000000.0) / 10000000.0, 1)
-    base_q_rev = max(120.0, round((mcap_cr * 0.45) / 4.0, 1))
+    calc_mcap_cr = mcap_cr or round((safe_float(info.get("marketCap")) or (safe_float(info.get("sharesOutstanding"), 10000000.0) * current_price)) / 10000000.0, 1) or 1000.0
+    base_q_rev = max(50.0, round((calc_mcap_cr * 0.45) / 4.0, 1))
     factors = [0.85, 0.92, 0.96, 1.02, 1.06, 1.12, 1.18, 1.25]
     rev_vals = [round(base_q_rev * f, 1) for f in factors]
     exp_vals = [round(r * 0.81, 1) for r in rev_vals]
@@ -730,7 +730,7 @@ def extract_quarterly_financials(t: yf.Ticker, info: Dict[str, Any], current_pri
     int_vals = [round(r * 0.015, 1) for r in rev_vals]
     pbt_vals = [round(o - d - i, 1) for o, d, i in zip(op_vals, dep_vals, int_vals)]
     pat_vals = [round(p * 0.75, 1) for p in pbt_vals]
-    shares_cr = max(1.0, mcap_cr / max(1.0, current_price))
+    shares_cr = max(1.0, calc_mcap_cr / max(1.0, current_price))
     eps_vals = [round(p / shares_cr, 2) for p in pat_vals]
 
     rows = [
@@ -941,7 +941,7 @@ def generate_forensic_probes(
     return probes
 
 
-def build_real_or_fallback_financials(t: yf.Ticker, info: Dict[str, Any], current_price: float) -> CompanyFinancials:
+def build_real_or_fallback_financials(t: yf.Ticker, info: Dict[str, Any], current_price: float, mcap_cr: Optional[float] = None) -> CompanyFinancials:
     """Extract real audited 5-year financials from company filings with trended backfill for historical gaps."""
     fin = getattr(t, "financials", pd.DataFrame())
     bs = getattr(t, "balance_sheet", pd.DataFrame())
@@ -1013,8 +1013,8 @@ def build_real_or_fallback_financials(t: yf.Ticker, info: Dict[str, Any], curren
             if pat[i] is None and pbt[i] is not None:
                 pat[i] = round(pbt[i] * 0.75, 1)
             if eps[i] is None and pat[i] is not None:
-                mcap_cr = round((safe_float(info.get("marketCap"), 50000000000.0) or 50000000000.0) / 10000000.0, 1)
-                shares_cr = max(1.0, mcap_cr / max(1.0, current_price))
+                calc_mcap_cr = mcap_cr or round((safe_float(info.get("marketCap")) or (safe_float(info.get("sharesOutstanding"), 10000000.0) * current_price)) / 10000000.0, 1) or 1000.0
+                shares_cr = max(1.0, calc_mcap_cr / max(1.0, current_price))
                 eps[i] = round(pat[i] / shares_cr, 2)
 
         income_rows = [
@@ -1087,9 +1087,9 @@ def build_real_or_fallback_financials(t: yf.Ticker, info: Dict[str, Any], curren
 
     # Fallback to structured estimates if financial statements are not returned
     years = ["FY21", "FY22", "FY23", "FY24", "FY25 (TTM)"]
-    mcap_cr = round((safe_float(info.get("marketCap"), 50000000000.0) or 50000000000.0) / 10000000.0, 1)
-    base_rev = max(500.0, round(mcap_cr * 0.45, 1))
-    base_pat = max(50.0, round(mcap_cr * 0.055, 1))
+    calc_mcap_cr = mcap_cr or round((safe_float(info.get("marketCap")) or (safe_float(info.get("sharesOutstanding"), 10000000.0) * current_price)) / 10000000.0, 1) or 1000.0
+    base_rev = max(100.0, round(calc_mcap_cr * 0.45, 1))
+    base_pat = max(10.0, round(calc_mcap_cr * 0.055, 1))
 
     rev_row = [round(base_rev * f, 1) for f in [0.65, 0.78, 0.88, 0.96, 1.05]]
     exp_row = [round(r * 0.82, 1) for r in rev_row]
@@ -1099,7 +1099,7 @@ def build_real_or_fallback_financials(t: yf.Ticker, info: Dict[str, Any], curren
     int_row = [round(r * 0.015, 1) for r in rev_row]
     pbt_row = [round(op - d - i, 1) for op, d, i in zip(op_row, dep_row, int_row)]
     pat_row = [round(pbt * 0.75, 1) for pbt in pbt_row]
-    shares_cr = max(1.0, mcap_cr / max(1.0, current_price))
+    shares_cr = max(1.0, calc_mcap_cr / max(1.0, current_price))
     eps_row = [round(pat / shares_cr, 2) for pat in pat_row]
 
     income_rows = [
@@ -1646,10 +1646,10 @@ def fetch_company_360(ticker: str) -> Company360Response:
     )
 
     # 5-Year Financial Statements (Audited filings from yfinance with fallback)
-    financials = build_real_or_fallback_financials(t, info, current_price)
+    financials = build_real_or_fallback_financials(t, info, current_price, mcap_cr=mcap_cr)
 
     # 8-Quarter Financial Trends
-    quarterly_financials = extract_quarterly_financials(t, info, current_price)
+    quarterly_financials = extract_quarterly_financials(t, info, current_price, mcap_cr=mcap_cr)
 
     # Shareholding Evolution (4 Quarters) & Institutional Delta
     p_pct = promoter_holding
