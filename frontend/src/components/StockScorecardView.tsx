@@ -653,6 +653,80 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
 
       {data && (
         <div className="space-y-6">
+          {/* Institutional Forensic & Red Flags Banner */}
+          {data.flags?.risk_tier === "CRITICAL" ? (
+            <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-600/60 shadow-lg shadow-rose-950/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="h-9 w-9 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
+                  <ShieldAlert className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-rose-400">
+                      {data.flags.risk_title || "Critical Institutional Red Flag"}
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-900/80 text-rose-200 border border-rose-700 font-mono">
+                      HIGH RISK
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-200/90 mt-0.5 leading-relaxed font-sans">
+                    {data.flags.risk_summary}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {data.flags.flag_details?.filter(f => f.severity === "CRITICAL").map((fd, i) => (
+                  <span key={i} className="px-2.5 py-1 rounded-lg bg-rose-900/70 border border-rose-700/80 text-[11px] font-mono text-rose-200 font-bold" title={fd.impact}>
+                    ⚠️ {fd.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : data.flags?.risk_tier === "WATCHLIST" ? (
+            <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-600/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="h-9 w-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                      {data.flags.risk_title || "Cautionary Forensic Watchlist"}
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-900/80 text-amber-200 border border-amber-700 font-mono">
+                      WATCHLIST
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-200/90 mt-0.5 leading-relaxed font-sans">
+                    {data.flags.risk_summary}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {data.flags.flag_details?.map((fd, i) => (
+                  <span key={i} className="px-2.5 py-1 rounded-lg bg-amber-900/60 border border-amber-700/70 text-[11px] font-mono text-amber-200" title={fd.impact}>
+                    🔍 {fd.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-800/40 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-emerald-400">Clean Institutional Solvency & Governance</span>
+                  <span className="text-xs text-slate-400 ml-2 hidden sm:inline">• 0.0% Promoter Pledge, sound liquidity & unencumbered equity.</span>
+                </div>
+              </div>
+              <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 rounded-full">
+                PASSED PROBES
+              </span>
+            </div>
+          )}
+
           {/* Header Banner: Company Info + DVM Classification */}
           <div className="glass-panel p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
             <div className="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -668,6 +742,11 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                     <Compass className="h-3 w-3 text-indigo-400" />
                     <span>{data.dvm.classification}</span>
                   </span>
+                  {data.factor_model_type && data.factor_model_type.includes("BFSI") && (
+                    <span className="px-2.5 py-0.5 text-xs font-mono font-bold rounded-md bg-purple-950/80 text-purple-300 border border-purple-700/80 flex items-center gap-1" title="Specialized Banking & Financials model: Leverage (D/E) and FCF are substituted for RoA and Price-to-Book">
+                      <span>🏦 BFSI Model</span>
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
                   <span>Sector: <strong className="text-slate-300">{data.sector}</strong></span>

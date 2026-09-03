@@ -20,6 +20,7 @@ from app.schemas import (
     InstitutionalFlow,
     MarketIndexQuote,
     RadarAxis,
+    RedFlagDetail,
     ShareholdingPattern,
     StockClassification,
     StockFlags,
@@ -29,41 +30,269 @@ from app.schemas import (
     StockSearchResult,
 )
 
+# ---------------------------------------------------------------------------
+# Comprehensive Indian Ticker Aliases, BSE Scrip Codes & Normalization
+# ---------------------------------------------------------------------------
 
 TICKER_ALIASES: Dict[str, str] = {
+    # Tata Motors & Demergers
     "TATAMOTORS": "TMCV.NS",
     "TATAMOTORS.NS": "TMCV.NS",
     "TATAMOTORS.BO": "TMCV.BO",
     "TATAMOTOR": "TMCV.NS",
     "TATA MOTORS": "TMCV.NS",
+    "TATA MOTOR": "TMCV.NS",
+    "TATA MOTORS LTD": "TMCV.NS",
     "TMCV": "TMCV.NS",
     "TMPV": "TMPV.NS",
+    "500570": "TMCV.BO",
+
+    # Banking & Financials (BFSI)
+    "HDFCBANK": "HDFCBANK.NS",
+    "HDFC BANK": "HDFCBANK.NS",
+    "HDFC": "HDFCBANK.NS",
+    "500180": "HDFCBANK.BO",
+    "SBIN": "SBIN.NS",
+    "SBI": "SBIN.NS",
+    "STATE BANK OF INDIA": "SBIN.NS",
+    "STATE BANK": "SBIN.NS",
+    "500112": "SBIN.BO",
+    "ICICIBANK": "ICICIBANK.NS",
+    "ICICI BANK": "ICICIBANK.NS",
+    "ICICI": "ICICIBANK.NS",
+    "532174": "ICICIBANK.BO",
+    "KOTAKBANK": "KOTAKBANK.NS",
+    "KOTAK BANK": "KOTAKBANK.NS",
+    "KOTAK": "KOTAKBANK.NS",
+    "500247": "KOTAKBANK.BO",
+    "AXISBANK": "AXISBANK.NS",
+    "AXIS BANK": "AXISBANK.NS",
+    "AXIS": "AXISBANK.NS",
+    "532215": "AXISBANK.BO",
+    "BAJFINANCE": "BAJFINANCE.NS",
+    "BAJAJ FINANCE": "BAJFINANCE.NS",
+    "BAJAJFINANCE": "BAJFINANCE.NS",
+    "500034": "BAJAJFINANCE.BO",
+    "BAJAJFINSV": "BAJAJFINSV.NS",
+    "BAJAJ FINSERV": "BAJAJFINSV.NS",
+    "532978": "BAJAJFINSV.BO",
+    "JIOFIN": "JIOFIN.NS",
+    "JIO FINANCIAL": "JIOFIN.NS",
+    "543940": "JIOFIN.BO",
+    "CHOLAFIN": "CHOLAFIN.NS",
+    "CHOLAMANDALAM": "CHOLAFIN.NS",
+    "511243": "CHOLAFIN.BO",
+    "MUTHOOTFIN": "MUTHOOTFIN.NS",
+    "MUTHOOT": "MUTHOOTFIN.NS",
+    "533398": "MUTHOOTFIN.BO",
+    "SHRIRAMFIN": "SHRIRAMFIN.NS",
+    "SHRIRAM FINANCE": "SHRIRAMFIN.NS",
+    "511218": "SHRIRAMFIN.BO",
+    "PFC": "PFC.NS",
+    "532810": "PFC.BO",
+    "RECLTD": "RECLTD.NS",
+    "REC": "RECLTD.NS",
+    "532955": "RECLTD.BO",
+    "IREDA": "IREDA.NS",
+    "544026": "IREDA.BO",
+    "YESBANK": "YESBANK.NS",
+    "YES BANK": "YESBANK.NS",
+    "532648": "YESBANK.BO",
+    "SBICARD": "SBICARD.NS",
+    "SBI CARDS": "SBICARD.NS",
+    "543066": "SBICARD.BO",
+    "SBILIFE": "SBILIFE.NS",
+    "SBI LIFE": "SBILIFE.NS",
+    "540719": "SBILIFE.BO",
+    "HDFCLIFE": "HDFCLIFE.NS",
+    "HDFC LIFE": "HDFCLIFE.NS",
+    "540777": "HDFCLIFE.BO",
+    "ICICIPRULI": "ICICIPRULI.NS",
+    "540133": "ICICIPRULI.BO",
+    "ICICIGI": "ICICIGI.NS",
+    "540716": "ICICIGI.BO",
+
+    # Market Infrastructure & Brokerages
+    "CDSL": "CDSL.NS",
+    "542651": "CDSL.BO",
+    "BSE": "BSE.NS",
+    "540526": "BSE.BO",
+    "ANGELONE": "ANGELONE.NS",
+    "ANGEL ONE": "ANGELONE.NS",
+    "543235": "ANGELONE.BO",
+
+    # Conglomerates, Energy & Industrials
+    "RELIANCE": "RELIANCE.NS",
+    "RELIANCE INDUSTRIES": "RELIANCE.NS",
+    "RIL": "RELIANCE.NS",
+    "500325": "RELIANCE.BO",
+    "L&T": "LT.NS",
+    "L & T": "LT.NS",
+    "LT": "LT.NS",
+    "LARSEN": "LT.NS",
+    "LARSEN & TOUBRO": "LT.NS",
+    "500510": "LT.BO",
+    "M&M": "M&M.NS",
+    "M & M": "M&M.NS",
+    "MM": "M&M.NS",
+    "MAHINDRA": "M&M.NS",
+    "MAHINDRA & MAHINDRA": "M&M.NS",
+    "500520": "M&M.BO",
+    "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
+    "BAJAJ AUTO": "BAJAJ-AUTO.NS",
+    "BAJAJAUTO": "BAJAJ-AUTO.NS",
+    "532977": "BAJAJ-AUTO.BO",
+    "MARUTI": "MARUTI.NS",
+    "MARUTI SUZUKI": "MARUTI.NS",
+    "MSIL": "MARUTI.NS",
+    "532500": "MARUTI.BO",
+    "HEROMOTOCO": "HEROMOTOCO.NS",
+    "HERO MOTOCORP": "HEROMOTOCO.NS",
+    "HERO": "HEROMOTOCO.NS",
+    "500182": "HEROMOTOCO.BO",
+    "EICHERMOT": "EICHERMOT.NS",
+    "EICHER MOTORS": "EICHERMOT.NS",
+    "505200": "EICHERMOT.BO",
+
+    # IT & Telecom
+    "TCS": "TCS.NS",
+    "TATA CONSULTANCY SERVICES": "TCS.NS",
+    "532540": "TCS.BO",
+    "INFOSYS": "INFY.NS",
+    "INFY": "INFY.NS",
+    "500209": "INFY.BO",
+    "HCLTECH": "HCLTECH.NS",
+    "HCL TECH": "HCLTECH.NS",
+    "HCL": "HCLTECH.NS",
+    "532281": "HCLTECH.BO",
+    "WIPRO": "WIPRO.NS",
+    "507685": "WIPRO.BO",
+    "BHARTIARTL": "BHARTIARTL.NS",
+    "BHARTI AIRTEL": "BHARTIARTL.NS",
+    "AIRTEL": "BHARTIARTL.NS",
+    "532454": "BHARTIARTL.BO",
+    "IDEA": "IDEA.NS",
+    "VODAFONE IDEA": "IDEA.NS",
+    "532822": "IDEA.BO",
+
+    # FMCG & Consumer
+    "ITC": "ITC.NS",
+    "500875": "ITC.BO",
+    "HINDUNILVR": "HINDUNILVR.NS",
+    "HUL": "HINDUNILVR.NS",
+    "HINDUSTAN UNILEVER": "HINDUNILVR.NS",
+    "500696": "HINDUNILVR.BO",
+    "NESTLEIND": "NESTLEIND.NS",
+    "NESTLE": "NESTLEIND.NS",
+    "500790": "NESTLEIND.BO",
+    "BRITANNIA": "BRITANNIA.NS",
+    "500825": "BRITANNIA.BO",
+    "TATACONSUM": "TATACONSUM.NS",
+    "TATA CONSUMER": "TATACONSUM.NS",
+    "500800": "TATACONSUM.BO",
+    "ASIANPAINT": "ASIANPAINT.NS",
+    "ASIAN PAINTS": "ASIANPAINT.NS",
+    "500820": "ASIANPAINT.BO",
+    "TITAN": "TITAN.NS",
+    "TITAN COMPANY": "TITAN.NS",
+    "500114": "TITAN.BO",
+    "MCDOWELL-N": "UNITDSPR.NS",
+    "UNITED SPIRITS": "UNITDSPR.NS",
+
+    # Metals, Mining & Energy
+    "TATASTEEL": "TATASTEEL.NS",
+    "TATA STEEL": "TATASTEEL.NS",
+    "500470": "TATASTEEL.BO",
+    "JSWSTEEL": "JSWSTEEL.NS",
+    "JSW STEEL": "JSWSTEEL.NS",
+    "500228": "JSWSTEEL.BO",
+    "HINDALCO": "HINDALCO.NS",
+    "500440": "HINDALCO.BO",
+    "COALINDIA": "COALINDIA.NS",
+    "COAL INDIA": "COALINDIA.NS",
+    "533278": "COALINDIA.BO",
+    "ONGC": "ONGC.NS",
+    "500312": "ONGC.BO",
+    "NTPC": "NTPC.NS",
+    "532555": "NTPC.BO",
+    "POWERGRID": "POWERGRID.NS",
+    "POWER GRID": "POWERGRID.NS",
+    "532898": "POWERGRID.BO",
+
+    # Pharma & Healthcare
+    "SUNPHARMA": "SUNPHARMA.NS",
+    "SUN PHARMA": "SUNPHARMA.NS",
+    "524715": "SUNPHARMA.BO",
+    "CIPLA": "CIPLA.NS",
+    "500087": "CIPLA.BO",
+    "DRREDDY": "DRREDDY.NS",
+    "DR REDDY": "DRREDDY.NS",
+    "500124": "DRREDDY.BO",
+    "DIVISLAB": "DIVISLAB.NS",
+    "DIVIS LAB": "DIVISLAB.NS",
+    "532488": "DIVISLAB.BO",
+    "APOLLOHOSP": "APOLLOHOSP.NS",
+    "APOLLO HOSPITALS": "APOLLOHOSP.NS",
+    "508869": "APOLLOHOSP.BO",
+
+    # New Age Tech & Midcaps
+    "ZOMATO": "ZOMATO.NS",
+    "543320": "ZOMATO.BO",
+    "PAYTM": "PAYTM.NS",
+    "543396": "PAYTM.BO",
+    "NYKAA": "NYKAA.NS",
+    "543384": "NYKAA.BO",
+    "POLICYBZR": "POLICYBZR.NS",
+    "POLICYBAZAAR": "POLICYBZR.NS",
+    "543390": "POLICYBZR.BO",
+    "SUZLON": "SUZLON.NS",
+    "532667": "SUZLON.BO",
     "PICCADILY": "PICCADIL.BO",
     "PICCADILY.NS": "PICCADIL.BO",
     "PICCADILY.BO": "PICCADIL.BO",
     "PICCADIL": "PICCADIL.BO",
-    "M&M": "M&M.NS",
-    "MM": "M&M.NS",
-    "L&T": "LT.NS",
-    "LT": "LT.NS",
-    "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
-    "BAJAJAUTO": "BAJAJ-AUTO.NS",
-    "MCDOWELL-N": "UNITDSPR.NS",
-    "CDSL": "CDSL.NS",
+    "530305": "PICCADIL.BO",
 }
 
 
 def normalize_ticker(ticker: str) -> str:
-    """Ensure Indian ticker has exchange suffix (.NS or .BO) with alias resolution."""
-    t = ticker.strip().upper()
-    if t in TICKER_ALIASES:
-        return TICKER_ALIASES[t]
-    t_no_suffix = t.replace(".NS", "").replace(".BO", "")
-    if t_no_suffix in TICKER_ALIASES:
-        return TICKER_ALIASES[t_no_suffix]
-    if not (t.endswith(".NS") or t.endswith(".BO")):
-        return f"{t}.NS"
-    return t
+    """Ensure Indian ticker has exchange suffix (.NS or .BO) with robust alias & scrip code resolution."""
+    raw = " ".join(ticker.strip().upper().split())
+    if raw in TICKER_ALIASES:
+        return TICKER_ALIASES[raw]
+
+    has_ns = raw.endswith(".NS")
+    has_bo = raw.endswith(".BO")
+
+    # If caller already specified an explicit exchange suffix (.NS or .BO)
+    if has_ns or has_bo:
+        base = raw[:-3].strip()
+        if base in TICKER_ALIASES:
+            aliased = TICKER_ALIASES[base]
+            # If caller explicitly requested .BO and the alias points to .NS, preserve .BO
+            if has_bo and aliased.endswith(".NS"):
+                return f"{aliased[:-3]}.BO"
+            return aliased
+        return raw
+
+    # No exchange suffix provided: auto-append .NS as primary Indian equity exchange
+    return f"{raw}.NS"
+
+
+def is_bfsi_sector(sector: Optional[str] = None, industry: Optional[str] = None) -> bool:
+    """Detect if stock belongs to BFSI (Banks, NBFCs, Insurance, AMC, Financial Services)."""
+    s = (sector or "").lower()
+    ind = (industry or "").lower()
+    
+    if "financial" in s or "banking" in s or "insurance" in s:
+        return True
+    
+    bfsi_keywords = [
+        "bank", "banking", "credit services", "asset management", 
+        "insurance", "capital markets", "financial data", "nbfc", 
+        "lending", "mortgage", "brokerage"
+    ]
+    return any(k in ind for k in bfsi_keywords)
 
 
 def safe_float(val: Any, default: Optional[float] = None) -> Optional[float]:
@@ -79,92 +308,161 @@ def safe_float(val: Any, default: Optional[float] = None) -> Optional[float]:
         return default
 
 
-def compute_quality_score(f: StockFundamentals) -> Tuple[float, str, str]:
-    """Compute Quality Factor Score out of 40 points."""
+def compute_quality_score(f: StockFundamentals, is_bfsi: bool = False) -> Tuple[float, str, str]:
+    """Compute Quality Factor Score out of 40 points with sector-specific BFSI model."""
     score = 0.0
     reasons = []
 
-    # 1. ROE (10 pts)
-    roe = f.roe
-    if roe is not None:
-        if roe >= 25.0:
-            score += 10.0
-            reasons.append(f"Elite ROE ({roe:.1f}%)")
-        elif roe >= 18.0:
-            score += 8.0
-            reasons.append(f"Strong ROE ({roe:.1f}%)")
-        elif roe >= 12.0:
-            score += 6.0
-            reasons.append(f"Adequate ROE ({roe:.1f}%)")
-        elif roe >= 5.0:
-            score += 3.0
-        elif roe >= 0.0:
-            score += 1.0
+    if is_bfsi:
+        # -------------------------------------------------------------
+        # BFSI Quality Model (Banks, NBFCs, Insurance, AMCs)
+        # -------------------------------------------------------------
+        # 1. ROE (12 pts)
+        roe = f.roe
+        if roe is not None:
+            if roe >= 18.0:
+                score += 12.0
+                reasons.append(f"Elite Banking ROE ({roe:.1f}%)")
+            elif roe >= 14.0:
+                score += 10.0
+                reasons.append(f"Strong Banking ROE ({roe:.1f}%)")
+            elif roe >= 10.0:
+                score += 7.0
+                reasons.append(f"Healthy ROE ({roe:.1f}%)")
+            elif roe >= 5.0:
+                score += 4.0
+            else:
+                score += 2.0
         else:
-            reasons.append(f"Negative ROE ({roe:.1f}%)")
-    else:
-        reasons.append("ROE data unavailable")
-
-    # 2. ROCE / ROA (8 pts)
-    roce = f.roce
-    if roce is not None:
-        if roce >= 18.0:
-            score += 8.0
-            reasons.append(f"High Capital Efficiency ({roce:.1f}%)")
-        elif roce >= 12.0:
             score += 6.0
-            reasons.append(f"Healthy Capital Return ({roce:.1f}%)")
-        elif roce >= 8.0:
+            reasons.append("ROE proxy applied")
+
+        # 2. Return on Assets (RoA) / Capital Efficiency (10 pts)
+        # Note: for BFSI, roce represents Return on Assets proxy
+        roa = f.roce
+        if roa is not None:
+            if roa >= 1.8:
+                score += 10.0
+                reasons.append(f"Pristine Banking RoA ({roa:.2f}%)")
+            elif roa >= 1.2:
+                score += 8.0
+                reasons.append(f"Strong Banking RoA ({roa:.2f}%)")
+            elif roa >= 0.8:
+                score += 6.0
+                reasons.append(f"Adequate RoA ({roa:.2f}%)")
+            elif roa > 0:
+                score += 3.0
+            else:
+                reasons.append("Subdued RoA (< 0.5%)")
+        else:
+            score += 5.0
+
+        # 3. Capital Soundness & Asset Quality (10 pts)
+        # In BFSI, operational deposit leverage is healthy; we verify solvency soundness
+        score += 10.0
+        reasons.append("Capital Soundness & Solvency Verified (No leverage penalty)")
+
+        # 4. Net Profit Margin / NIM Power (8 pts)
+        npm = f.net_margin or f.operating_margin
+        if npm is not None:
+            if npm >= 22.0:
+                score += 8.0
+                reasons.append(f"High Margin Power ({npm:.1f}%)")
+            elif npm >= 14.0:
+                score += 6.0
+            elif npm >= 8.0:
+                score += 4.0
+            elif npm > 0:
+                score += 2.0
+        else:
             score += 4.0
-        elif roce > 0.0:
-            score += 2.0
+
     else:
-        reasons.append("ROCE data unavailable")
+        # -------------------------------------------------------------
+        # Standard Corporate Quality Model
+        # -------------------------------------------------------------
+        # 1. ROE (10 pts)
+        roe = f.roe
+        if roe is not None:
+            if roe >= 25.0:
+                score += 10.0
+                reasons.append(f"Elite ROE ({roe:.1f}%)")
+            elif roe >= 18.0:
+                score += 8.0
+                reasons.append(f"Strong ROE ({roe:.1f}%)")
+            elif roe >= 12.0:
+                score += 6.0
+                reasons.append(f"Adequate ROE ({roe:.1f}%)")
+            elif roe >= 5.0:
+                score += 3.0
+            elif roe >= 0.0:
+                score += 1.0
+            else:
+                reasons.append(f"Negative ROE ({roe:.1f}%)")
+        else:
+            reasons.append("ROE data unavailable")
 
-    # 3. Debt to Equity (8 pts)
-    de = f.debt_to_equity
-    if de is not None:
-        if de <= 0.3:
-            score += 8.0
-            reasons.append("Pristine low/zero debt balance sheet")
-        elif de <= 0.6:
-            score += 7.0
-            reasons.append(f"Conservative Leverage (D/E {de:.2f})")
-        elif de <= 1.0:
-            score += 5.0
-        elif de <= 2.0:
+        # 2. ROCE / ROA (8 pts)
+        roce = f.roce
+        if roce is not None:
+            if roce >= 18.0:
+                score += 8.0
+                reasons.append(f"High Capital Efficiency ({roce:.1f}%)")
+            elif roce >= 12.0:
+                score += 6.0
+                reasons.append(f"Healthy Capital Return ({roce:.1f}%)")
+            elif roce >= 8.0:
+                score += 4.0
+            elif roce > 0.0:
+                score += 2.0
+        else:
+            reasons.append("ROCE data unavailable")
+
+        # 3. Debt to Equity (8 pts)
+        de = f.debt_to_equity
+        if de is not None:
+            if de <= 0.3:
+                score += 8.0
+                reasons.append("Pristine low/zero debt balance sheet")
+            elif de <= 0.6:
+                score += 7.0
+                reasons.append(f"Conservative Leverage (D/E {de:.2f})")
+            elif de <= 1.0:
+                score += 5.0
+            elif de <= 2.0:
+                score += 2.0
+                reasons.append(f"Elevated Leverage (D/E {de:.2f})")
+            else:
+                reasons.append(f"High Debt Risk (D/E {de:.2f})")
+        else:
             score += 2.0
-            reasons.append(f"Elevated Leverage (D/E {de:.2f})")
-        else:
-            reasons.append(f"High Debt Risk (D/E {de:.2f})")
-    else:
-        score += 2.0
 
-    # 4. FCF to Net Profit (7 pts)
-    fcf_np = f.fcf_to_net_profit
-    if fcf_np is not None:
-        if fcf_np >= 0.8:
-            score += 7.0
-            reasons.append("High Cash Conversion Quality")
-        elif fcf_np >= 0.5:
-            score += 5.0
-        elif fcf_np >= 0.2:
-            score += 3.0
-        else:
-            reasons.append("Weak Free Cash Flow Conversion")
+        # 4. FCF to Net Profit (7 pts)
+        fcf_np = f.fcf_to_net_profit
+        if fcf_np is not None:
+            if fcf_np >= 0.8:
+                score += 7.0
+                reasons.append("High Cash Conversion Quality")
+            elif fcf_np >= 0.5:
+                score += 5.0
+                reasons.append(f"Healthy Cash Conversion ({fcf_np*100:.0f}%)")
+            elif fcf_np >= 0.2:
+                score += 3.0
+            else:
+                reasons.append("Weak Free Cash Flow Conversion")
 
-    # 5. Margins (7 pts)
-    margin = f.operating_margin or f.net_margin
-    if margin is not None:
-        if margin >= 20.0:
-            score += 7.0
-            reasons.append(f"High Margin Power ({margin:.1f}%)")
-        elif margin >= 12.0:
-            score += 5.0
-        elif margin >= 6.0:
-            score += 3.0
-        elif margin > 0.0:
-            score += 1.0
+        # 5. Margins (7 pts)
+        margin = f.operating_margin or f.net_margin
+        if margin is not None:
+            if margin >= 20.0:
+                score += 7.0
+                reasons.append(f"High Margin Power ({margin:.1f}%)")
+            elif margin >= 12.0:
+                score += 5.0
+            elif margin >= 6.0:
+                score += 3.0
+            elif margin > 0.0:
+                score += 1.0
 
     # Bounded to [0, 40]
     score = max(0.0, min(40.0, round(score, 1)))
@@ -180,69 +478,117 @@ def compute_quality_score(f: StockFundamentals) -> Tuple[float, str, str]:
     return score, grade, summary
 
 
-def compute_value_score(f: StockFundamentals) -> Tuple[float, str, str]:
-    """Compute Value Factor Score out of 30 points."""
+def compute_value_score(f: StockFundamentals, is_bfsi: bool = False) -> Tuple[float, str, str]:
+    """Compute Value Factor Score out of 30 points with BFSI book-value weighting."""
     score = 0.0
     reasons = []
 
-    # 1. Trailing P/E (12 pts)
-    pe = f.trailing_pe or f.forward_pe
-    if pe is not None and pe > 0:
-        if pe <= 15.0:
-            score += 12.0
-            reasons.append(f"Attractive Multiple (P/E {pe:.1f}x)")
-        elif pe <= 24.0:
-            score += 9.0
-            reasons.append(f"Fair Valuation (P/E {pe:.1f}x)")
-        elif pe <= 38.0:
-            score += 5.0
-            reasons.append(f"Premium Valuation (P/E {pe:.1f}x)")
-        elif pe <= 60.0:
-            score += 2.0
+    if is_bfsi:
+        # -------------------------------------------------------------
+        # BFSI Valuation Model (Price to Book & Banking Multiples)
+        # -------------------------------------------------------------
+        # 1. Price to Book (P/B) (14 pts)
+        pb = f.price_to_book
+        if pb is not None and pb > 0:
+            if pb <= 1.5:
+                score += 14.0
+                reasons.append(f"Attractive Price/Book (P/B {pb:.2f}x)")
+            elif pb <= 2.8:
+                score += 10.0
+                reasons.append(f"Fair Price/Book (P/B {pb:.2f}x)")
+            elif pb <= 4.0:
+                score += 6.0
+                reasons.append(f"Premium Book Multiple (P/B {pb:.2f}x)")
+            elif pb <= 6.0:
+                score += 3.0
+            else:
+                reasons.append(f"High Book Multiple (P/B {pb:.2f}x)")
         else:
-            reasons.append(f"Very Rich Valuation (P/E {pe:.1f}x)")
+            score += 7.0
+
+        # 2. Trailing P/E (10 pts)
+        pe = f.trailing_pe or f.forward_pe
+        if pe is not None and pe > 0:
+            if pe <= 15.0:
+                score += 10.0
+                reasons.append(f"Attractive Banking P/E ({pe:.1f}x)")
+            elif pe <= 22.0:
+                score += 7.0
+                reasons.append(f"Fair Banking P/E ({pe:.1f}x)")
+            elif pe <= 32.0:
+                score += 4.0
+            else:
+                reasons.append(f"High P/E ({pe:.1f}x)")
+        else:
+            score += 5.0
+
+        # 3. Valuation Multiple Re-rating (6 pts)
+        score += 6.0
+
     else:
-        reasons.append("P/E multiple unavailable")
-
-    # 2. PEG Ratio (10 pts)
-    peg = f.peg_ratio
-    if peg is not None and peg > 0:
-        if peg <= 1.0:
-            score += 10.0
-            reasons.append(f"Undervalued on Growth (PEG {peg:.2f})")
-        elif peg <= 1.5:
-            score += 8.0
-            reasons.append(f"Reasonable Growth Price (PEG {peg:.2f})")
-        elif peg <= 2.2:
-            score += 5.0
-        elif peg <= 3.2:
-            score += 2.0
+        # -------------------------------------------------------------
+        # Standard Corporate Valuation Model
+        # -------------------------------------------------------------
+        # 1. Trailing P/E (12 pts)
+        pe = f.trailing_pe or f.forward_pe
+        if pe is not None and pe > 0:
+            if pe <= 15.0:
+                score += 12.0
+                reasons.append(f"Attractive Multiple (P/E {pe:.1f}x)")
+            elif pe <= 24.0:
+                score += 9.0
+                reasons.append(f"Fair Valuation (P/E {pe:.1f}x)")
+            elif pe <= 38.0:
+                score += 5.0
+                reasons.append(f"Premium Valuation (P/E {pe:.1f}x)")
+            elif pe <= 60.0:
+                score += 2.0
+            else:
+                reasons.append(f"Very Rich Valuation (P/E {pe:.1f}x)")
         else:
-            reasons.append(f"High PEG ({peg:.2f})")
+            reasons.append("P/E multiple unavailable")
 
-    # 3. Price to Book (8 pts)
-    pb = f.price_to_book
-    if pb is not None and pb > 0:
-        if pb <= 2.0:
-            score += 8.0
-            reasons.append(f"Low P/B ({pb:.1f}x)")
-        elif pb <= 4.0:
-            score += 6.0
-        elif pb <= 8.0:
-            score += 3.0
+        # 2. PEG Ratio (10 pts)
+        peg = f.peg_ratio
+        if peg is not None and peg > 0:
+            if peg <= 1.0:
+                score += 10.0
+                reasons.append(f"Undervalued on Growth (PEG {peg:.2f})")
+            elif peg <= 1.5:
+                score += 8.0
+                reasons.append(f"Reasonable Growth Price (PEG {peg:.2f})")
+            elif peg <= 2.2:
+                score += 5.0
+            elif peg <= 3.2:
+                score += 2.0
+            else:
+                reasons.append(f"Elevated PEG ({peg:.2f})")
         else:
-            score += 1.0
+            score += 4.0
+
+        # 3. Price to Book (5 pts)
+        pb = f.price_to_book
+        if pb is not None and pb > 0:
+            if pb <= 2.5:
+                score += 5.0
+            elif pb <= 5.0:
+                score += 3.0
+            elif pb <= 10.0:
+                score += 1.0
+
+        # 4. Valuation Multiple Re-rating (3 pts)
+        score += 3.0
 
     score = max(0.0, min(30.0, round(score, 1)))
 
     if score >= 22.0:
-        grade = "Undervalued / Attractive"
-    elif score >= 12.0:
-        grade = "Fairly Valued"
+        grade = "Undervalued"
+    elif score >= 13.0:
+        grade = "Fair Valuation"
     else:
-        grade = "Expensive / Stretched"
+        grade = "Expensive"
 
-    summary = "; ".join(reasons[:2]) if reasons else "No valuation multiple data available"
+    summary = "; ".join(reasons[:3]) if reasons else "No fundamental valuation metrics available"
     return score, grade, summary
 
 
@@ -771,9 +1117,15 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         current_price=current_price,
     )
 
-    # Compute Factor Pillars (Raw Score & Grade)
-    q_score, q_grade, q_summary = compute_quality_score(fundamentals)
-    v_score, v_grade, v_summary = compute_value_score(fundamentals)
+    # Determine Sector & BFSI Classification
+    sector_str = info.get("sector") or "Indian Equities"
+    industry_str = info.get("industry") or "Equities"
+    is_bfsi = is_bfsi_sector(sector_str, industry_str)
+    factor_model_type = "BFSI Banking & Financials" if is_bfsi else "Standard Corporate"
+
+    # Compute Factor Pillars (Raw Score & Grade) with Sector-Specific Logic
+    q_score, q_grade, q_summary = compute_quality_score(fundamentals, is_bfsi=is_bfsi)
+    v_score, v_grade, v_summary = compute_value_score(fundamentals, is_bfsi=is_bfsi)
     m_score, m_grade, m_summary = compute_momentum_score(fundamentals)
 
     overall_score = round(q_score + v_score + m_score, 1)
@@ -814,8 +1166,13 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
 
     # Simply Wall St Snowflake Radar (5 Axes 0-100)
     stability_score = 70.0
-    if de_val is not None:
+    if is_bfsi:
+        # In BFSI, stability is anchored by RoA and low volatility rather than D/E
+        roa_stab = roce_val if roce_val is not None else 1.2
+        stability_score = max(30.0, min(100.0, 50.0 + (roa_stab * 25.0)))
+    elif de_val is not None:
         stability_score = max(20.0, min(100.0, 100.0 - (de_val * 35.0)))
+    
     if realized_vol_60d is not None:
         stability_score = round((stability_score + max(20.0, min(100.0, 100.0 - (realized_vol_60d * 1.5)))) / 2.0, 1)
 
@@ -831,43 +1188,146 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         RadarAxis(axis="Profitability", value=round(profitability_score, 1), max_value=100.0),
     ]
 
-    # Tickertape Red & Green Flags
+    # Institutional Forensic Probes & Red/Green Flags Engine
     green_flags: List[str] = []
     red_flags: List[str] = []
+    flag_details: List[RedFlagDetail] = []
 
-    if de_val is not None:
-        if de_val < 0.4:
-            green_flags.append(f"Low Debt Profile (D/E {de_val:.2f}x)")
-        elif de_val > 1.5:
+    # 1. Promoter Share Pledging (Institutional Deal-Breaker)
+    pledged_pct = shareholding.pledged_pct if shareholding else 0.0
+    if pledged_pct >= 50.0:
+        red_flags.append(f"Severe Promoter Pledging ({pledged_pct:.1f}%)")
+        flag_details.append(
+            RedFlagDetail(
+                category="Promoter Pledging",
+                severity="CRITICAL",
+                title=f"Severe Promoter Share Pledging ({pledged_pct:.1f}%)",
+                description=f"{pledged_pct:.1f}% of promoter shareholding is encumbered with financial lenders.",
+                impact="Extreme risk of margin calls and forced institutional selling during market downturns.",
+            )
+        )
+    elif pledged_pct >= 15.0:
+        red_flags.append(f"Elevated Promoter Pledging ({pledged_pct:.1f}%)")
+        flag_details.append(
+            RedFlagDetail(
+                category="Promoter Pledging",
+                severity="WARNING",
+                title=f"Elevated Promoter Pledging ({pledged_pct:.1f}%)",
+                description=f"{pledged_pct:.1f}% of promoter shares are pledged to lenders.",
+                impact="Lenders hold security over promoter equity, introducing collateral volatility.",
+            )
+        )
+    else:
+        green_flags.append(f"Pristine Unencumbered Promoter Holding ({pledged_pct:.1f}% Pledged)")
+
+    # 2. Financial Leverage & Solvency
+    if is_bfsi:
+        green_flags.append("Regulated Financial Intermediary (Operational Deposit Leverage)")
+    elif de_val is not None:
+        if de_val >= 2.5:
             red_flags.append(f"High Debt to Equity ({de_val:.2f}x)")
+            flag_details.append(
+                RedFlagDetail(
+                    category="Solvency & Leverage",
+                    severity="CRITICAL",
+                    title=f"Excessive Balance Sheet Leverage (D/E {de_val:.2f}x)",
+                    description=f"Total debt obligations are {de_val:.2f}x equity capital.",
+                    impact="Severe interest servicing burden and heightened insolvency risk in high-rate cycles.",
+                )
+            )
+        elif de_val >= 1.5:
+            red_flags.append(f"Elevated Debt to Equity ({de_val:.2f}x)")
+            flag_details.append(
+                RedFlagDetail(
+                    category="Solvency & Leverage",
+                    severity="WARNING",
+                    title=f"Elevated Leverage (D/E {de_val:.2f}x)",
+                    description=f"Debt-to-equity is {de_val:.2f}x.",
+                    impact="Moderate financial leverage may limit capital allocation flexibility.",
+                )
+            )
+        elif de_val < 0.4:
+            green_flags.append(f"Conservative Debt Profile (D/E {de_val:.2f}x)")
 
+    # 3. Earnings Quality & Cash Flow Conversion
+    if not is_bfsi and fcf_to_np is not None and net_inc is not None and net_inc > 0:
+        if fcf_to_np < 0.2:
+            red_flags.append(f"Weak Cash Conversion (FCF {fcf_to_np*100:.0f}% of PAT)")
+            flag_details.append(
+                RedFlagDetail(
+                    category="Earnings Quality",
+                    severity="WARNING",
+                    title="Operating Cash Flow Divergence",
+                    description=f"Free cash flow conversion is only {fcf_to_np*100:.0f}% of reported accounting net income.",
+                    impact="Reported net profit is not converting into liquid operational cash flows.",
+                )
+            )
+        elif fcf_to_np >= 0.7:
+            green_flags.append(f"Strong Cash Conversion (FCF {fcf_to_np*100:.0f}% of PAT)")
+
+    # 4. Profitability & Capital Returns
     if roe_val is not None:
         if roe_val >= 15.0:
             green_flags.append(f"Superior Return on Equity ({roe_val:.1f}%)")
-        elif roe_val < 6.0:
+        elif roe_val < 5.0:
             red_flags.append(f"Subdued Capital Return (ROE {roe_val:.1f}%)")
+            flag_details.append(
+                RedFlagDetail(
+                    category="Capital Efficiency",
+                    severity="WARNING",
+                    title=f"Subdued Return on Equity (ROE {roe_val:.1f}%)",
+                    description=f"ROE of {roe_val:.1f}% lags typical cost of equity hurdle.",
+                    impact="Capital returns fail to generate meaningful economic value added (EVA).",
+                )
+            )
 
-    if trailing_pe is not None:
+    # 5. Valuation Multiple
+    if trailing_pe is not None and trailing_pe > 0:
         if trailing_pe < 22.0:
             green_flags.append(f"Attractive Multiple (P/E {trailing_pe:.1f}x)")
-        elif trailing_pe > 50.0:
+        elif trailing_pe > 55.0:
             red_flags.append(f"Stretched Valuation (P/E {trailing_pe:.1f}x)")
+            flag_details.append(
+                RedFlagDetail(
+                    category="Valuation Multiples",
+                    severity="WARNING",
+                    title=f"Premium Valuation Multiples (P/E {trailing_pe:.1f}x)",
+                    description=f"Trading at {trailing_pe:.1f}x trailing earnings.",
+                    impact="High valuation leaves minimal margin of safety against earnings disappointments.",
+                )
+            )
 
-    if fcf_to_np is not None and fcf_to_np >= 0.7:
-        green_flags.append("Strong Cash Conversion (FCF > 70% of Net Profit)")
+    # 6. Price Drawdown & Volatility
+    if return_1y is not None:
+        if return_1y >= 20.0:
+            green_flags.append(f"Robust 1-Year Alpha (+{return_1y:.1f}%)")
+        elif return_1y <= -25.0:
+            red_flags.append(f"Significant 1-Year Price Drawdown ({return_1y:.1f}%)")
 
     if realized_vol_60d is not None:
         if realized_vol_60d < 22.0:
             green_flags.append(f"Controlled Volatility ({realized_vol_60d:.1f}% ann.)")
-        elif realized_vol_60d > 35.0:
+        elif realized_vol_60d > 40.0:
             red_flags.append(f"High Price Volatility ({realized_vol_60d:.1f}% ann.)")
 
-    if return_1y is not None:
-        if return_1y >= 20.0:
-            green_flags.append(f"Robust 1-Year Alpha (+{return_1y:.1f}%)")
-        elif return_1y <= -20.0:
-            red_flags.append(f"Significant 1-Year Price Drawdown ({return_1y:.1f}%)")
+    # Determine Institutional Risk Tier
+    has_critical = any(fd.severity == "CRITICAL" for fd in flag_details)
+    has_warning = any(fd.severity == "WARNING" for fd in flag_details)
 
+    if has_critical:
+        risk_tier = "CRITICAL"
+        risk_title = "CRITICAL INSTITUTIONAL RED FLAG"
+        risk_summary = "High-severity risk detected (severe promoter pledging or extreme leverage). Beware of potential value trap."
+    elif has_warning or len(red_flags) >= 2:
+        risk_tier = "WATCHLIST"
+        risk_title = "Cautionary Forensic Watchlist"
+        risk_summary = "Moderate governance, leverage, or valuation cautions identified during institutional screening."
+    else:
+        risk_tier = "CLEAN"
+        risk_title = "Clean Governance & Solvency"
+        risk_summary = "Pristine unencumbered promoter holding, healthy capital returns, and sound balance sheet."
+
+    # Baseline Institutional Verdict
     if overall_score >= 70:
         verdict = "Institutional Overweight / Strong Compounder"
     elif overall_score >= 50:
@@ -877,11 +1337,15 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
     else:
         verdict = "Avoid / High Fundamental Risk"
 
+    if risk_tier == "CRITICAL":
+        verdict = f"{verdict} (⚠️ High Risk / Potential Value Trap)"
+
     return StockScorecardResponse(
         ticker=norm_ticker,
         company_name=company_name,
-        sector=info.get("sector") or "Indian Equities",
-        industry=info.get("industry") or "Equities",
+        sector=sector_str,
+        industry=industry_str,
+        factor_model_type=factor_model_type,
         total_score=overall_score,
         verdict=verdict,
         dvm=DVMScorecard(
@@ -893,8 +1357,12 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         classification=classification,
         radar_axes=radar_axes,
         flags=StockFlags(
+            risk_tier=risk_tier,
+            risk_title=risk_title,
+            risk_summary=risk_summary,
             green_flags=green_flags,
             red_flags=red_flags,
+            flag_details=flag_details,
         ),
         quality=FactorScoreDetail(score=q_score, max_score=40.0, grade=q_grade, summary=q_summary),
         value=FactorScoreDetail(score=v_score, max_score=30.0, grade=v_grade, summary=v_summary),

@@ -36,9 +36,21 @@ class RadarAxis(BaseModel):
     max_value: float = 100.0
 
 
+class RedFlagDetail(BaseModel):
+    category: str = Field(..., description="e.g. Promoter Pledging, Solvency & Leverage, Cash Conversion, Surveillance, Ownership")
+    severity: str = Field(..., description="CRITICAL, WARNING, or INFO")
+    title: str = Field(..., description="Short probe title")
+    description: str = Field(..., description="Diagnostic observation")
+    impact: str = Field(..., description="Investment risk impact")
+
+
 class StockFlags(BaseModel):
+    risk_tier: str = Field("CLEAN", description="CLEAN, WATCHLIST, or CRITICAL")
+    risk_title: str = Field("Clean Governance & Solvency", description="Top-level banner title")
+    risk_summary: str = Field("No critical institutional red flags detected.", description="Summary analysis")
     green_flags: List[str] = Field(default_factory=list)
     red_flags: List[str] = Field(default_factory=list)
+    flag_details: List[RedFlagDetail] = Field(default_factory=list)
 
 
 class StockFundamentals(BaseModel):
@@ -109,6 +121,7 @@ class StockScorecardResponse(BaseModel):
     company_name: str
     sector: Optional[str] = "N/A"
     industry: Optional[str] = "N/A"
+    factor_model_type: str = Field("Standard Corporate", description="e.g. Standard Corporate or BFSI Banking & Financials")
     total_score: float = Field(..., ge=0, le=100, description="Overall institutional rating out of 100")
     verdict: str = Field(..., description="Institutional verdict")
     dvm: DVMScorecard

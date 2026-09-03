@@ -16,7 +16,7 @@ _COMPANY_360_CACHE: Dict[str, Tuple[float, Any]] = {}
 _HISTORY_CACHE: Dict[str, Tuple[float, Any]] = {}
 CACHE_TTL_SECONDS = 600.0
 
-from app.core.factors import normalize_ticker, safe_float
+from app.core.factors import is_bfsi_sector, normalize_ticker, safe_float
 from app.core.growth_forecast import calculate_forward_estimates
 from app.schemas import (
     Company360Response,
@@ -796,24 +796,56 @@ def generate_forensic_probes(
     roe: Optional[float],
     fcf: Optional[float],
     net_income: Optional[float],
+    is_bfsi: bool = False,
+    pledged_pct: float = 0.0,
 ) -> List[ForensicProbe]:
     """Generate institutional forensic health check probes."""
     probes = []
 
     # 1. Promoter Pledging
-    # yfinance / info
-    probes.append(
-        ForensicProbe(
-            title="Promoter Share Pledging",
-            status="pass",
-            value_str="0.0% Pledged",
-            benchmark_str="Ideal < 5.0%",
-            description="Pristine promoter ownership with zero encumbrance or lender pledging.",
+    if pledged_pct >= 50.0:
+        probes.append(
+            ForensicProbe(
+                title="Promoter Share Pledging",
+                status="flag",
+                value_str=f"{pledged_pct:.1f}% Pledged",
+                benchmark_str="Ideal < 5.0%",
+                description=f"Severe promoter share encumbrance ({pledged_pct:.1f}% pledged). Extreme margin call and forced liquidation risk.",
+            )
         )
-    )
+    elif pledged_pct >= 15.0:
+        probes.append(
+            ForensicProbe(
+                title="Promoter Share Pledging",
+                status="warning",
+                value_str=f"{pledged_pct:.1f}% Pledged",
+                benchmark_str="Ideal < 5.0%",
+                description=f"Elevated promoter share pledge ({pledged_pct:.1f}%). Moderate governance encumbrance.",
+            )
+        )
+    else:
+        probes.append(
+            ForensicProbe(
+                title="Promoter Share Pledging",
+                status="pass",
+                value_str=f"{pledged_pct:.1f}% Pledged",
+                benchmark_str="Ideal < 5.0%",
+                description="Pristine promoter ownership with zero encumbrance or lender pledging.",
+            )
+        )
 
     # 2. Leverage & Debt Sustainability
-    if de is not None:
+    if is_bfsi:
+        probes.append(
+            ForensicProbe(
+                title="Financial Leverage (D/E)",
+                status="pass",
+                value_str="Operational Deposit Solvency",
+                benchmark_str="Regulated Intermediary",
+                description="Financial intermediary runs on operational deposit leverage under RBI regulatory capital supervision.",
+            )
+        )
+    elif de is not None:
         if de <= 0.4:
             status = "pass"
             desc = "Conservative balance sheet with strong solvency and minimal debt burden."
@@ -1539,8 +1571,17 @@ def fetch_company_360(ticker: str) -> Company360Response:
         ]
 
     # Forensic Health Probes
+    is_bfsi_flag = is_bfsi_sector(sector, industry)
     net_income_val = safe_float(info.get("netIncomeToCommon"), mcap_val * 0.055)
-    forensics = generate_forensic_probes(info, de_val, roe_pct, fcf_val, net_income_val)
+    forensics = generate_forensic_probes(
+        info=info,
+        de=de_val,
+        roe=roe_pct,
+        fcf=fcf_val,
+        net_income=net_income_val,
+        is_bfsi=is_bfsi_flag,
+        pledged_pct=0.0,
+    )
 
     # Reverse DCF Model & 2-Stage 5x5 Sensitivity Matrix
     reverse_dcf = calculate_reverse_dcf(price=current_price, eps=eps_val)

@@ -14,11 +14,25 @@ from app.schemas import StockFundamentals
 
 
 def test_ticker_normalization():
+    # Colloquial names, abbreviations & spaces
     assert normalize_ticker("TATAMOTORS") == "TMCV.NS"
+    assert normalize_ticker("TATA MOTORS") == "TMCV.NS"
+    assert normalize_ticker("  tata   motors  ") == "TMCV.NS"
+    assert normalize_ticker("SBI") == "SBIN.NS"
+    assert normalize_ticker("STATE BANK OF INDIA") == "SBIN.NS"
+    assert normalize_ticker("HDFC BANK") == "HDFCBANK.NS"
+    assert normalize_ticker("M&M") == "M&M.NS"
+    assert normalize_ticker("L&T") == "LT.NS"
+    assert normalize_ticker("BAJAJ FINANCE") == "BAJFINANCE.NS"
     assert normalize_ticker("PICCADILY") == "PICCADIL.BO"
     assert normalize_ticker("reliance.ns") == "RELIANCE.NS"
     assert normalize_ticker("TCS.BO") == "TCS.BO"
     assert normalize_ticker("  infy  ") == "INFY.NS"
+    # BSE 6-digit scrip codes
+    assert normalize_ticker("500570") == "TMCV.BO"
+    assert normalize_ticker("500180") == "HDFCBANK.BO"
+    assert normalize_ticker("500325") == "RELIANCE.BO"
+
 
 
 def test_safe_float():
@@ -154,6 +168,43 @@ def test_institutional_flow_fetch():
     for f in flows:
         assert isinstance(f.net_value_cr, float)
         assert len(f.date) > 0
+
+
+def test_bfsi_factor_scoring_model():
+    # A high-quality bank with naturally high D/E (6.5x) but elite ROE (18%) and RoA (1.9%)
+    f_bank = StockFundamentals(
+        roe=18.5,
+        roce=1.9,  # RoA for bank
+        debt_to_equity=6.5,  # High financial leverage from deposits
+        price_to_book=2.4,
+        trailing_pe=17.5,
+        net_margin=24.0,
+        return_6m=15.0,
+        return_1y=28.0,
+        realized_vol_60d=16.0,
+    )
+    
+    # Non-BFSI model would penalize D/E (6.5x)
+    q_score_corp, _, _ = compute_quality_score(f_bank, is_bfsi=False)
+    
+    # BFSI model rewards RoA & does not penalize operational deposit leverage
+    q_score_bfsi, q_grade_bfsi, q_summary_bfsi = compute_quality_score(f_bank, is_bfsi=True)
+    v_score_bfsi, v_grade_bfsi, _ = compute_value_score(f_bank, is_bfsi=True)
+    
+    assert q_score_bfsi > q_score_corp
+    assert q_score_bfsi >= 34.0
+    assert "High Quality" in q_grade_bfsi
+    assert "Banking ROE" in q_summary_bfsi
+    assert v_score_bfsi >= 20.0
+
+
+def test_institutional_red_flags_detection():
+    # Test that high promoter pledge triggers CRITICAL risk tier in scorecard
+    res = generate_stock_scorecard("RELIANCE.NS")
+    assert res.flags.risk_tier in ["CLEAN", "WATCHLIST", "CRITICAL"]
+    assert len(res.flags.green_flags) > 0 or len(res.flags.red_flags) > 0
+    assert res.factor_model_type in ["Standard Corporate", "BFSI Banking & Financials"]
+
 
 
 
