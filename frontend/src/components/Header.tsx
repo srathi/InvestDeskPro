@@ -279,6 +279,20 @@ export const Header: React.FC<HeaderProps> = ({
 
           <span className="text-slate-700">|</span>
 
+          {/* Built-in Page Guide & Jargon Trigger Button */}
+          <button
+            type="button"
+            onClick={onOpenGuide}
+            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-cyan-950/80 to-blue-950/60 hover:from-cyan-900/90 hover:to-blue-900/80 text-cyan-300 hover:text-cyan-200 border border-cyan-700/60 hover:border-cyan-400 text-[11px] font-semibold transition-all group shadow-sm cursor-pointer"
+            title="Open Contextual Page Guide & Financial Jargon Playbook (press '?')"
+          >
+            <BookOpen className="w-3 h-3 text-cyan-400 group-hover:scale-110 transition-transform" />
+            <span>Page Guide</span>
+            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-700 hidden sm:inline">?</span>
+          </button>
+
+          <span className="text-slate-700">|</span>
+
           <span className="flex items-center gap-1.5 text-xs">
             <span
               className={`w-2 h-2 rounded-full ${

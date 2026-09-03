@@ -160,26 +160,6 @@ export default function Home() {
         initialTerm={guideInitialTerm}
       />
 
-      {/* 🌟 Floating Action Badge (FAB) - Page Guide & Strategy Playbook */}
-      <button
-        type="button"
-        onClick={() => handleOpenGuide()}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-slate-950/90 hover:bg-slate-900 text-cyan-300 border border-cyan-500/50 hover:border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.25)] hover:shadow-[0_0_35px_rgba(6,182,212,0.5)] backdrop-blur-xl transition-all duration-300 hover:scale-105 active:scale-95 group cursor-pointer"
-        title="Open Page Guide, Strategy Blueprints & Financial Dictionary (press '?')"
-      >
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
-        </span>
-        <BookOpen className="w-4 h-4 text-cyan-400 group-hover:rotate-12 transition-transform duration-300" />
-        <span className="text-xs font-bold text-white tracking-wide font-sans">
-          Page Guide
-        </span>
-        <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-md shadow-inner">
-          ?
-        </span>
-      </button>
-
       {/* Rupeemap Ecosystem Institutional Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/90 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
