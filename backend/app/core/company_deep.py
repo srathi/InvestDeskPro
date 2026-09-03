@@ -1623,7 +1623,8 @@ def fetch_company_360(ticker: str) -> Company360Response:
 
     # Forensic Health Probes
     is_bfsi_flag = is_bfsi_sector(sector, industry)
-    net_income_val = safe_float(info.get("netIncomeToCommon"), mcap_val * 0.055)
+    fallback_net_income = ((mcap_val or ((mcap_cr or 1000.0) * 10000000.0))) * 0.055
+    net_income_val = safe_float(info.get("netIncomeToCommon"), fallback_net_income)
     forensics = generate_forensic_probes(
         info=info,
         de=de_val,
