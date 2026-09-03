@@ -1,6 +1,8 @@
 # InvestDeskPro 📈
 
-**InvestDeskPro** is an institutional-grade quantitative investment intelligence, forensic diagnostic scorecard, and portfolio optimization platform engineered specifically for **Indian Equities (NSE/BSE)** and **Mutual Funds (AMFI)**. Powered by [rupeemap.in](https://rupeemap.in) and engineered by **Sandesh Rathi**.
+**InvestDeskPro** is an institutional-grade quantitative equity research terminal, forensic diagnostic engine, and multi-asset portfolio stress-testing platform engineered specifically for the **Indian Capital Markets (NSE/BSE & AMFI)**.
+
+Powered by [rupeemap.in](https://rupeemap.in) and engineered by **Sandesh Rathi**.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-15_(App_Router)-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
@@ -9,30 +11,29 @@
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
 [![Render](https://img.shields.io/badge/Deploy-Render_Blueprint-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com)
-[![Pytest](https://img.shields.io/badge/Tests-25_Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![Pytest](https://img.shields.io/badge/Tests-37_Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org)
 
 ---
 
 ## 📑 Table of Contents
 
 - [Overview & System Philosophy](#-overview--system-philosophy)
-- [Key Functional Capabilities](#-key-functional-capabilities)
-  - [1. Universal OmniSearch & Quick Audit](#1-universal-omnisearch--quick-audit)
-  - [2. Company 360° Diagnostic Scorecard & Health Badges](#2-company-360-diagnostic-scorecard--health-badges)
-  - [3. Multi-Timeframe Price & Valuation Bands (P/E & P/B)](#3-multi-timeframe-price--valuation-bands-pe--pb)
-  - [4. 1-to-3 Year Forward Growth & Earnings Forecasting Engine](#4-1-to-3-year-forward-growth--earnings-forecasting-engine)
-  - [5. Authentic Sector-Specific Peer Benchmarking](#5-authentic-sector-specific-peer-benchmarking)
-  - [6. Reverse DCF & Valuation Sensitivity Matrix](#6-reverse-dcf--valuation-sensitivity-matrix)
-  - [7. AMFI Mutual Fund Rolling Alpha & Risk Engine](#7-amfi-mutual-fund-rolling-alpha--risk-engine)
-  - [8. Inverse-Volatility Risk-Parity Portfolio Optimizer](#8-inverse-volatility-risk-parity-portfolio-optimizer)
-- [📖 How to Use (Step-by-Step User Guide)](#-how-to-use-step-by-step-user-guide)
-  - [A. Running an Instant Stock Audit](#a-running-an-instant-stock-audit)
-  - [B. Simulating 1-to-3 Year Forward Growth](#b-simulating-1-to-3-year-forward-growth)
-  - [C. Auditing Mutual Funds via AMFI Scheme Lookup](#c-auditing-mutual-funds-via-amfi-scheme-lookup)
-  - [D. Constructing a Risk-Parity Equity Basket](#d-constructing-a-risk-parity-equity-basket)
+- [Institutional Research Modules](#-institutional-research-modules)
+  - [1. Stock Intelligence (360° Forensics)](#1-stock-intelligence-360-forensics)
+  - [2. Fund Alpha Engine (AMFI Analytics)](#2-fund-alpha-engine-amfi-analytics)
+  - [3. Quant & Stress Lab (Risk Parity & Historical Crash Replays)](#3-quant--stress-lab-risk-parity--historical-crash-replays)
+  - [4. Universal OmniSearch & Real-Time Market Ribbon](#4-universal-omnisearch--real-time-market-ribbon)
+  - [5. Contextual Page Guide & Financial Jargon Playbook](#5-contextual-page-guide--financial-jargon-playbook)
 - [🏛️ System Architecture & Data Flow](#-system-architecture--data-flow)
 - [🧠 Quantitative & Mathematical Formulations](#-quantitative--mathematical-formulations)
-- [🛠️ Tech Stack](#-tech-stack)
+  - [A. Active Share & Closet Indexing Detection](#a-active-share--closet-indexing-detection)
+  - [B. Compound Monthly Up/Down Capture Ratios](#b-compound-monthly-updown-capture-ratios)
+  - [C. Cross-Fund Portfolio Overlap Matrix](#c-cross-fund-portfolio-overlap-matrix)
+  - [D. Rolling Return Outperformance Consistency & Capital Preservation](#d-rolling-return-outperformance-consistency--capital-preservation)
+  - [E. Inverse-Volatility Risk-Parity & Marginal Risk Contributions (MRC)](#e-inverse-volatility-risk-parity--marginal-risk-contributions-mrc)
+  - [F. Forward Growth & Target Price Compounding ($FY+1$ to $FY+3$)](#f-forward-growth--target-price-compounding-fy1-to-fy3)
+  - [G. 0–100 Multi-Factor Scoring Model (Quality, Value, Momentum)](#g-0100-multi-factor-scoring-model-quality-value-momentum)
+- [🛠️ Tech Stack & Technical Specifications](#-tech-stack--technical-specifications)
 - [📁 Repository Structure](#-repository-structure)
 - [🚀 Quick Start & Local Setup](#-quick-start--local-setup)
 - [📡 REST API Reference](#-rest-api-reference)
@@ -44,197 +45,232 @@
 
 ## 🌟 Overview & System Philosophy
 
-**InvestDeskPro** bridges the gap between raw financial data and institutional-grade decision intelligence for Indian capital markets. Traditional retail tools often suffer from:
-- **Point-to-point trailing return bias**: Distorting fund performance based on arbitrary start/end dates.
-- **Surface-level P/E ratios**: Failing to contextualize valuations against historical standard deviation bands.
-- **Unverified peer comparisons**: Fabricating peer metrics or comparing disparate sectors (e.g. comparing LPG distributors to IT exporters).
-- **Missing forward growth models**: Lacking transparent 1-to-3 year forward earnings forecasting and return driver attribution.
+**InvestDeskPro** bridges the gap between fragmented financial data feeds and institutional-grade decision intelligence for Indian investors, wealth managers, and family offices.
 
-InvestDeskPro solves this by providing a unified quantitative terminal featuring orthogonal factor scoring, multi-timeframe valuation bands, reverse DCF sensitivity matrices, dynamic forward forecasting, verified sector peers, AMFI rolling alpha tracking, and risk-parity portfolio optimization.
+Traditional retail platforms often suffer from structural flaws:
+- **Trailing point-to-point CAGR distortion**: Arbitrary start/end dates mask true manager consistency (endpoint bias).
+- **Closet Indexing**: Active fund managers charging high TER ($0.7\%–1.5\%$) while simply hugging the Nifty 50 or Nifty 100 benchmark.
+- **Hidden Portfolio Overlap**: Investors buying 4–6 mutual funds unaware that $40\%–55\%$ of their capital sits in the same 12 stocks.
+- **Static Model Portfolios**: Toy equal-weighted baskets that ignore asset covariance, concentration risk, and historical crisis drawdowns.
+- **Surface-level P/E multiples**: Multiple evaluation without historical $+1\sigma / -1\sigma$ standard deviation valuation bands.
 
----
-
-## ⚡ Key Functional Capabilities
-
-### 1. Universal OmniSearch & Quick Audit
-- Instant auto-complete search across all **NSE and BSE listed equities** (e.g., `RELIANCE`, `TCS`, `CONFIPET`, `TATAMOTORS`, `PICCADIL`).
-- Seamless **AMFI Mutual Fund Scheme Resolution** supporting scheme name queries or direct 6-digit numeric AMFI scheme codes (e.g., `122639` for Parag Parikh Flexi Cap).
-- Quick-Search chips on the homepage for single-click institutional audits of high-volume market benchmarks.
-
-### 2. Company 360° Diagnostic Scorecard & Health Badges
-- **12-Factor Fundamental Essentials Grid**: Real-time tracking of CMP, Market Cap (₹ Cr), P/E, P/B, EV/EBITDA, Dividend Yield, ROCE, ROE, Debt-to-Equity, Promoter Holding %, Pledged Shares %, and 1Y Price Return.
-- **Automated Warning Badges System**:
-  - 🚨 **High Financial Leverage**: Triggers if $\text{Debt-to-Equity} > 1.50\text{x}$ (Critical) or $> 1.00\text{x}$ (Moderate).
-  - 🚨 **Promoter Share Pledging**: Alerts if pledged promoter shares exceed $0\%$ (Critical if $> 15\%$).
-  - 🚨 **Cash Flow Divergence**: Flags negative Operating Cash Flow (OCF), YoY OCF declines $> 15\%$, or weak conversion ($OCF < 0.70 \times \text{PAT}$).
-  - 🚨 **Valuation Stretch**: Alerts when current P/E exceeds a $45\%$ premium over the 5-year historical median.
-  - 🚨 **Forensic Probe Red Flags**: Automated red-flag detection across Beneish M-Score, Altman Z-Score, and Piotroski F-Score probes.
-
-### 3. Multi-Timeframe Price & Valuation Bands (P/E & P/B)
-- Multi-timeframe presets: **1M, 6M, 1Y, 3Y, 5Y, and MAX** (spanning the entire listed history of the stock).
-- **Synchronized Dual-Chart Terminal**:
-  1. *Price & Volume Chart*: Interactive daily closes with 50-DMA and 200-DMA moving average overlays and volume bars.
-  2. *Valuation History Chart*: Daily trailing P/E multiple plotted against the **5-Year Historical Median**, $+1\sigma$ (Upper Bound), and $-1\sigma$ (Lower Bound) standard deviation valuation bands.
-
-### 4. 1-to-3 Year Forward Growth & Earnings Forecasting Engine
-- Projects **Revenue (₹ Cr), PAT (₹ Cr), Diluted EPS (₹), Target Share Price (₹), Implied Total Return (%), and Annualized CAGR (%)** over 1-Year ($FY+1$), 2-Year ($FY+2$), and 3-Year ($FY+3$) horizons.
-- **Three Core Scenarios**:
-  - ⚖️ **Base Case (Most Likely)**: Multi-factor top-line compounding ($40\% \times \text{3Y CAGR} + 35\% \times \text{5Y CAGR} + 25\% \times \text{SGR}$), mean-reverting net margins ($65\% \times \text{Latest} + 35\% \times \text{5Y Avg}$), and 5-year historical median exit P/E.
-  - 🐂 **Bull Case (Accelerated Expansion)**: Top-line growth acceleration, operating leverage margin expansion ($+12\%$), and $+1\sigma$ exit P/E multiple.
-  - 🐻 **Bear Case (Macro Slowdown & De-rating)**: Top-line growth compression, raw material margin contraction ($-15\%$), and $-1\sigma$ discounted exit P/E.
-- **Interactive "What-If" Custom Simulator**: Live sliders for custom Revenue Growth % p.a., Projected Net Margin %, and Target Exit P/E Multiple with instant client-side recalculation.
-- **Return Driver Attribution Breakdown**: Mathematically decomposes 3-year expected returns into **Fundamental Earnings Growth %** vs **Valuation Multiple Expansion/Contraction %**.
-
-### 5. Authentic Sector-Specific Peer Benchmarking
-- Comprehensive classification covering **16 deep industry sector peer groups**:
-  - *Oil & Gas / LPG / Refineries* (`CONFIPET`, `AEGISLOG`, `MGL`, `IGL`, `GUJGASLTD`, `BPCL`, `IOC`, `HPCL`, `GAIL`, `PETRONET`, `ONGC`, `RELIANCE`)
-  - *IT & SaaS* (`TCS`, `INFY`, `HCLTECH`, `WIPRO`, `TECHM`, `LTIM`, `PERSISTENT`, `COFORGE`, `KPITTECH`, `TATAELXSI`)
-  - *Banking* (`HDFCBANK`, `ICICIBANK`, `SBIN`, `KOTAKBANK`, `AXISBANK`, `INDUSINDBK`, `FEDERALBNK`, `IDFCFIRSTB`, `BANKBARODA`, `PNB`)
-  - *NBFC & Wealth / Exchanges* (`BAJFINANCE`, `BAJAJFINSV`, `JIOFIN`, `CHOLAFIN`, `CDSL`, `BSE`, `MUTHOOTFIN`, `ANGELONE`, `MCX`, `IREDA`)
-  - *Automotive & Ancillaries* (`TATAMOTORS`, `MARUTI`, `M&M`, `BAJAJ-AUTO`, `HEROMOTOCO`, `EICHERMOT`, `TVSMOTOR`, `MOTHERSON`, `BHARATFORG`)
-  - *FMCG & Consumer Goods* (`ITC`, `HINDUNILVR`, `NESTLEIND`, `BRITANNIA`, `DABUR`, `MARICO`, `GODREJCP`, `COLPAL`, `VBL`, `TATACONSUM`)
-  - *Distilleries & Spirits* (`PICCADILY`, `RADICO`, `UNITDSPR`, `TI`, `GLOBUSSPR`, `SULA`, `GMBREW`)
-  - *Retail & Consumer Discretionary* (`TRENT`, `TITAN`, `DMART`, `ABFRL`, `PAGEIND`, `BATAINDIA`)
-  - *Pharma & Healthcare* (`SUNPHARMA`, `CIPLA`, `DRREDDY`, `DIVISLAB`, `APOLLOHOSP`, `MANKIND`, `MAXHEALTH`, `LUPIN`, `TORNTPHARM`)
-  - *Capital Goods, Cables & EMS* (`LT`, `POLYCAB`, `KEI`, `HAVELLS`, `DIXON`, `KAYNES`, `SIEMENS`, `ABB`, `BHEL`, `VOLTAS`, `ASTRAL`)
-  - *Power & Clean Energy* (`TATAPOWER`, `NTPC`, `POWERGRID`, `SUZLON`, `IREDA`)
-  - *Chemicals & Agrochemicals* (`PIDILITIND`, `SRF`, `AARTIIND`, `DEEPAKNTR`, `TATACHEM`, `PIIND`, `UPL`, `COROMANDEL`)
-  - *Metals & Mining* (`TATASTEEL`, `JSWSTEEL`, `HINDALCO`, `VEDL`, `COALINDIA`, `JINDALSTEL`, `NMDC`, `SAIL`)
-  - *Cement & Materials* (`ULTRACEMCO`, `GRASIM`, `AMBUJACEM`, `ACC`, `SHREECEM`, `DALBHARAT`)
-  - *Defence & Aerospace* (`HAL`, `BEL`, `MAZDOCK`, `COCHINSHIP`, `BDL`)
-  - *Railways & Infrastructure* (`RVNL`, `IRFC`, `IRCTC`, `RAILTEL`, `RITES`)
-- Real, verified fundamental metrics: CMP (₹), Market Cap (₹ Cr), P/E, P/B, ROE %, ROCE %, OPM %, and 1Y Return %.
-
-### 6. Reverse DCF & Valuation Sensitivity Matrix
-- **Implied Growth Rate**: Computes the exact 5-year and 10-year PAT compounding rate baked into the current stock price given standard hurdle rates (12% Discount Rate, 4% Terminal Growth).
-- **2D Sensitivity Matrix**: 2D heatmapped valuation grid varying Discount Rate ($10.0\% - 15.0\%$) and Terminal Growth ($3.0\% - 5.0\%$) to identify margin of safety.
-
-### 7. AMFI Mutual Fund Rolling Alpha & Risk Engine
-- Fetches full historical daily NAV series from AMFI open endpoints for over 40,000+ mutual fund schemes.
-- Aligns with the **Nifty 50 TRI (`^NSEI`)** benchmark on exact trading dates.
-- Calculates **3-Year Rolling Alpha, Alpha Consistency Ratio %, Information Ratio, Downside Capture Ratio (DCR), Upside Capture Ratio (UCR), and Sortino Ratio** ($R_f = 6.5\%$).
-
-### 8. Inverse-Volatility Risk-Parity Portfolio Optimizer
-- Allocates capital inversely proportional to realized 60-day annualized volatility.
-- Enforces an iterative simplex weight cap constraint ($w_i \le c_{\text{max}}$, e.g. 15%).
-- Computes Marginal Risk Contribution (MRC), Percent Risk Contribution (PRC), full annualized Covariance Matrix ($\Sigma$), and Effective Number of Assets (ENB).
+**InvestDeskPro** addresses these challenges through a unified quantitative terminal built with orthogonal factor scorecards, dynamic reverse DCF models, rolling alpha distributions, active share detection, cross-fund overlap matrices, and interactive risk-parity stress-testing.
 
 ---
 
-## 📖 How to Use (Step-by-Step User Guide)
+## ⚡ Institutional Research Modules
 
-### A. Running an Instant Stock Audit
-1. Navigate to the **Homepage Search Bar** or switch to the **"Company 360°"** tab.
-2. Enter any NSE or BSE ticker (e.g., `TCS`, `RELIANCE`, `CONFIPET`, `TATAMOTORS`, `PICCADILY`).
-3. View the **Diagnostic Scorecard Banner**:
-   - Check if any warning badges are triggered (Red = Critical, Amber = Warning).
-   - Click *"View Detailed Breakdown"* to inspect exact thresholds and metric triggers.
-4. Examine the **12-Factor Fundamental Essentials Grid** for key valuation multiples, return on capital, and debt metrics.
-5. Review the **Dual-Chart Section**:
-   - Toggle timeframe buttons (`1M`, `6M`, `1Y`, `3Y`, `5Y`, `MAX`).
-   - Switch between **Price & Volume** and **P/E & Valuation Bands** to see if the stock is trading near its historical median or $+1\sigma$ / $-1\sigma$ valuation extremes.
+### 1. Stock Intelligence (360° Forensics)
+- **12-Factor Fundamental Essentials Grid**: CMP, Market Cap (₹ Cr), Trailing P/E, P/B, EV/EBITDA, Dividend Yield, ROCE %, ROE %, Debt-to-Equity, Promoter Holding %, Pledged Shares %, and 1Y Return %.
+- **Dual-Engine Forensic Probe System**:
+  - *Non-BFSI Models*: Beneish M-Score (earnings manipulation), Altman Z-Score (bankruptcy distress), and Piotroski F-Score (financial trend quality).
+  - *BFSI Specific Models*: Net NPA %, Gross NPA %, Provision Coverage Ratio (PCR), and Capital Adequacy Ratio (CAR / CRAR) for banks and NBFCs.
+- **Automated Institutional Red-Flag Badges**:
+  - 🚨 High Financial Leverage ($D/E > 1.50\text{x}$)
+  - 🚨 Promoter Share Pledging ($> 0\%$, Critical if $> 15\%$)
+  - 🚨 Cash Flow Divergence ($OCF < 0.70 \times \text{PAT}$ or negative OCF)
+  - 🚨 Valuation Stretch (P/E at $>45\%$ premium over 5Y Historical Median)
+- **Multi-Timeframe Valuation Bands (`1M`, `6M`, `1Y`, `3Y`, `5Y`, `MAX`)**:
+  - *Price & Volume*: Daily closes with 50-DMA and 200-DMA moving average overlays and volume bars.
+  - *Valuation Bands*: Historical daily P/E multiple plotted against the **5-Year Historical Median**, $+1\sigma$ (Upper Bound), and $-1\sigma$ (Lower Bound) standard deviation valuation bands.
+- **1-to-3 Year Forward Earnings Forecasting Engine ($FY+1$, $FY+2$, $FY+3$)**:
+  - Projects Revenue, PAT, Diluted EPS, Target Share Price, and Implied CAGR across **Base Case (Most Likely)**, **Bull Case (Accelerated Expansion)**, and **Bear Case (Slowdown)**.
+  - **Interactive What-If Custom Simulator**: Live sliders for custom Revenue Growth % p.a., Net Margin %, and Exit P/E Multiple with real-time recalculation.
+  - **Return Driver Attribution Breakdown**: Mathematical decomposition into *Fundamental Earnings Growth %* vs *Valuation Multiple Expansion/Contraction %*.
+- **Reverse DCF & Valuation Sensitivity Matrix**:
+  - Implied 5Y & 10Y PAT growth rate baked into the current stock price.
+  - 2D Sensitivity Grid varying Discount Rates ($10.0\% - 15.0\%$) and Terminal Growth Rates ($3.0\% - 5.0\%$).
+- **Authentic Sector-Specific Peer Benchmarking**:
+  - Real, verified fundamental metrics across 16 deep industry sector peer groups (Oil & Gas/LPG, IT & SaaS, Banking, NBFC/Exchanges, Auto, FMCG, Distilleries, Retail, Pharma, Capital Goods/Cables, Power, Chemicals, Metals, Cement, Defence, Railways).
 
-### B. Simulating 1-to-3 Year Forward Growth
-1. Scroll down to the **1-to-3 Year Forward Earnings & Growth Forecasting Engine**.
-2. Review the **Historical Growth Anchors Strip** (3Y/5Y Rev CAGR, 3Y PAT CAGR, Sustainable Growth Rate SGR, and 5Y Median P/E).
-3. Toggle between **Base Case (Most Likely)**, **Bull Case (Accelerated)**, and **Bear Case (Slowdown)** to see target share prices and implied CAGRs.
-4. To test custom thesis assumptions:
-   - Click the **"Custom Simulator"** tab.
-   - Adjust the **Revenue Growth (% p.a.)**, **Projected Net Margin (%)**, and **Target Exit P/E** sliders.
-   - Observe real-time recalculation of FY+1, FY+2, and FY+3 Target Prices and driver attribution.
+---
 
-### C. Auditing Mutual Funds via AMFI Scheme Lookup
-1. Switch to the **"Mutual Funds"** tab or search for a scheme directly in the global search bar.
-2. Search by AMC/Scheme name (e.g., `Parag Parikh Flexi Cap`, `Mirae Asset Large Cap`) or enter the direct **6-digit AMFI Scheme Code** (e.g., `122639`).
-3. Inspect the **Rolling Alpha Chart** to verify if the fund manager consistently generates alpha over 3-year rolling windows.
-4. Check the **Downside Capture Ratio (DCR)**: A DCR $< 80\%$ indicates superior downside capital protection during market corrections.
+### 2. Fund Alpha Engine (AMFI Analytics)
+- **In-Memory Instant Search**: Fuzzy lookup across all **37,851 AMFI mutual fund schemes** with instant response times, direct numeric scheme codes (e.g. `122639`), and colloquial aliases (e.g., `PPFAS`, `HDFC TOP 100`, `QUANT SMALL`, `SBI CONTRA`).
+- **Dynamic Category Benchmarks**: Automatically pairs schemes with their official SEBI-mandated category index:
+  - Small Cap $\rightarrow$ **Nifty Smallcap 250 TRI**
+  - Mid Cap $\rightarrow$ **Nifty Midcap 150 TRI**
+  - Large Cap $\rightarrow$ **Nifty 50 TRI / Nifty 100 TRI**
+  - Flexi Cap / Multi Cap $\rightarrow$ **Nifty 500 TRI**
+  - Sectoral / Thematic $\rightarrow$ **Nifty Bank, Nifty IT, Nifty Pharma, Nifty Auto**
+- **Active Share & Closet Indexing Detection**:
+  - Computes the portfolio divergence score: $\text{Active Share} = \frac{1}{2} \sum |w_{\text{fund}} - w_{\text{bench}}|$.
+  - Highlights **Truly Active High-Conviction ($\ge 60\%$)**, **Moderate Tilt ($40\% - 60\%$)**, and flags **Closet Indexers ($< 40\%$)** with warning alerts when paying active management fees for index replication.
+- **Compound Monthly Up/Down Capture Ratios (UCR / DCR)**:
+  - Evaluates geometric compound returns across positive and negative market months.
+  - Asymmetric classification: *Asymmetric Alpha Compounder* ($UCR > 95\%, DCR < 75\%$), *High-Beta Passenger*, or *Downside Bleeder*.
+- **Rolling Return Outperformance Consistency Matrix**:
+  - Evaluates daily rolling windows across 1Y, 3Y, and 5Y horizons.
+  - **Capital Preservation Rate**: Percentage of historical windows with zero negative return (e.g., $100\%$ capital preservation over 5Y).
+  - **Manager Skill vs. Luck Diagnostic**: Identifies whether a 3Y CAGR is backed by repeatable rolling alpha ($\ge 65\%$) or driven by an isolated lucky quarter (endpoint bias).
+  - **Return Quartile Box**: Min, 25th percentile, Median, 75th percentile, and Max CAGR.
+- **Cross-Fund Portfolio Overlap Matrix**:
+  - Interactive multi-fund selector comparing 2 schemes side-by-side.
+  - Computes **Total Overlap %** ($\sum \min(w_A, w_B)$), **Unique Allocation %**, and displays the **Common Duplicated Stock Holdings Table** with combined weights and sector tags.
+  - Provides a **Diversification Synergy Rating** (*High Diversification* vs *Redundant Fee Drag*).
+- **Institutional Risk Scorecard**:
+  - **Information Ratio (IR)** ($\frac{\alpha}{\text{Tracking Error}}$) with $\ge 0.50$ talent indicator.
+  - **Sortino Ratio** (downside semi-variance penalty against risk-free rate $6.5\%$).
+  - **Annualized Tracking Error** and Volatility Comparison.
+- **AUM Bloat & Style Drift Diagnostics**:
+  - Flags small-cap schemes exceeding $₹25,000\text{ Cr}$ AUM with cash cushions $> 10\%$.
+  - Flags style drift (e.g. Mid Cap Fund holding $> 35\%$ Large Cap equities for liquidity).
 
-### D. Constructing a Risk-Parity Equity Basket
-1. Switch to the **"Portfolio Optimizer"** tab.
-2. Enter a basket of 4 to 12 Indian equity tickers (e.g., `RELIANCE`, `TCS`, `HDFCBANK`, `INFY`, `ITC`, `LT`).
-3. Set the **Max Weight Constraint** (e.g., `15%`).
-4. Click **"Run Optimization"** to generate inverse-volatility allocations, the full asset covariance matrix, and risk contributions (PRC %).
+---
+
+### 3. Quant & Stress Lab (Risk Parity & Historical Crash Replays)
+- **0–100 Multi-Factor Stock Diagnostic Scorecard**:
+  - Evaluates single stocks across 5 orthogonal pillars: **Quality (40 pts)**, **Value (30 pts)**, and **Momentum / Low-Vol (30 pts)**.
+- **Interactive Portfolio Stress-Tester & Risk-Parity Optimizer**:
+  - **Empty Default State**: Build custom portfolios from scratch or start from curated presets (*Nifty Core 6*, *Financials + Tech*, *Defensive All-Weather*, *High-Growth Leaders*).
+  - **Unrestricted Portfolio Size**: Add 2 to 30+ stocks with no arbitrary caps.
+  - **CSV & Excel (`.xlsx`, `.xls`) Portfolio Importer**: Client-side parser with multi-sheet scanning (`Tradewise-Equity`, `Equity`, `Holdings`) supporting tax P&L exports from **Zerodha, Groww, Upstox, Angel One, and ICICI Direct**.
+  - **Collapsible / Expandable Allocation Manager**:
+    - Mode Switcher: **Auto Risk-Parity** (algorithmic inverse-volatility parity) vs **Custom Sliders**.
+    - Dual input controls per stock: **Interactive Slider Bar ($0\%-100\%$)** + **Numeric Input Box**.
+    - 1-Click Balancing Actions: **Normalize to 100%**, **Equal-Weight**, **Reset to Risk-Parity**, and per-row deletion.
+  - **Dynamic Frontend Covariance Recalculation**: Instant real-time recalculation of portfolio volatility ($\sigma_p = \sqrt{w^T \Sigma w}$) and marginal risk contributions ($\text{PRC}_i$) on slider movement using the cached $N \times N$ covariance matrix.
+- **Historical Market Crash Replays vs Nifty 50 TRI**:
+  - Simulates custom portfolio performance during major historical stress regimes:
+    1. 🦠 **COVID-19 Global Shock (Feb 2020 – Aug 2020)** vs Nifty 50 $-38.4\%$.
+    2. 📈 **Global Rate Hike & Inflation Tightening (Oct 2021 – Jun 2022)**.
+    3. 🚨 **Mid & Smallcap Liquidity Squeeze (Jan 2024 – Mar 2024)**.
+  - Calculates Portfolio Max Drawdown, Downside Cushion Badge (+% cushion vs Nifty 50), and Peak-to-Peak Recovery Duration.
+- **Interactive Correlation Matrix Filter & Pairwise Inspector**:
+  - Interactive stock pill chips to filter and customize the visible $N \times N$ heatmap without horizontal scroll clutter.
+  - Quick buttons: **Top 8 Holdings**, **Show All ({N})**, and **Clear**.
+  - **1-on-1 Pairwise Correlation Inspector**: Select any two portfolio stocks to display exact Pearson correlation $r$ and co-movement status (*High Co-Movement*, *Moderate*, *High Diversification*).
+
+---
+
+### 4. Universal OmniSearch & Real-Time Market Ribbon
+- **Unified Global OmniSearch**: Searches NSE/BSE equities, tickers, ISINs, and AMFI mutual funds in a single input. Supports global shortcut keys (`Cmd+K`, `Ctrl+K`, `/`).
+- **Live Market Ribbon**: Real-time tracking of NIFTY 50, SENSEX, NIFTY BANK, INDIA VIX, and BRENT CRUDE with live FII / DII institutional net flow updates.
+
+---
+
+### 5. Contextual Page Guide & Financial Jargon Playbook
+- Accessible via the **Floating Action Badge (FAB)** or hotkey `?`.
+- Provides definitions, mathematical formulas, and practical interpretation for all financial metrics (Active Share, Information Ratio, Capture Ratios, Reverse DCF, Risk Parity, Piotroski, Beneish, Altman Z).
 
 ---
 
 ## 🏛️ System Architecture & Data Flow
 
 ```text
-                               ┌────────────────────────────────────────────────┐
-                               │             InvestDeskPro Frontend             │
-                               │          (Next.js 15 + Tailwind + Recharts)    │
-                               └──────────────────────┬─────────────────────────┘
-                                                      │ REST JSON (HTTP / CORS)
-                                                      ▼
-                               ┌────────────────────────────────────────────────┐
-                               │             InvestDeskPro Backend              │
-                               │          (FastAPI + Pydantic v2 Engine)        │
-                               │          [In-Memory Cache: TTL 600s]           │
-                               └───────┬──────────────┬──────────────┬──────────┘
-                                       │              │              │
-                   ┌───────────────────┴──┐    ┌──────┴──────┐   ┌───┴────────────────┐
-                   │ Company 360 & Factor │    │ AMFI Engine │   │ Portfolio Optimizer│
-                   │ Diagnostic Scorecard │    │ 3Y Rolling  │   │ Inverse-Volatility │
-                   │ + Forward Forecast   │    │ Alpha & DCR │   │ Risk-Parity & MRC  │
-                   └───────────┬──────────┘    └──────┬──────┘   └───┬────────────────┘
-                               │                      │              │
-                               ▼                      ▼              ▼
-                    ┌─────────────────────┐    ┌─────────────┐   ┌────────────────────┐
-                    │ Yahoo Finance API   │    │  AMFI API   │   │ Historical Price & │
-                    │ (NSE/BSE Financials)│    │ (api.mfapi) │   │ Covariance Matrix  │
-                    └─────────────────────┘    └─────────────┘   └────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           InvestDeskPro Frontend                             │
+│                  (Next.js 15 App Router + TailwindCSS + Recharts)            │
+│  ┌─────────────────────────┬─────────────────────────┬────────────────────┐  │
+│  │   Stock Intelligence    │    Fund Alpha Engine    │ Quant & Stress Lab │  │
+│  │  (360° & Forward Model) │  (Active Share & Overlap│ (Risk Parity & DD) │  │
+│  └─────────────────────────┴─────────────────────────┴────────────────────┘  │
+└──────────────────────────────────────┬───────────────────────────────────────┘
+                                       │ REST JSON (HTTP / CORS)
+                                       ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            InvestDeskPro Backend                             │
+│                      (FastAPI + Pydantic v2 Architecture)                    │
+│ ┌───────────────────────┬─────────────────────────────┬────────────────────┐ │
+│ │  Company 360 Engine   │     AMFI Alpha Engine       │ Portfolio Engine   │ │
+│ │  • Forensic Probes    │     • Active Share / Overlap│ • Inverse-Vol Wts  │ │
+│ │  • Forward Projections│     • Monthly Capture UCR   │ • Covariance Σ     │ │
+│ │  • DCF Sensitivity    │     • Rolling Consistency   │ • Crash Simulation │ │
+│ └───────────┬───────────┴──────────────┬──────────────┴─────────┬──────────┘ │
+└─────────────┼──────────────────────────┼────────────────────────┼────────────┘
+              │                          │                        │
+              ▼                          ▼                        ▼
+  ┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────────────┐
+  │  NSE / BSE Financials │  │  AMFI NAV Open API    │  │ Local Repositories   │
+  │  & Live Price Engine  │  │  (37,851 Schemes)     │  │ (Holdings Master &   │
+  │  (yfinance / Indices) │  │  (api.mfapi.in)       │  │  Benchmark Datasets) │
+  └───────────────────────┘  └───────────────────────┘  └──────────────────────┘
 ```
 
 ---
 
 ## 🧠 Quantitative & Mathematical Formulations
 
-### 1. Orthogonal Stock Factor Scoring (0–100)
-$$S_{\text{total}} = S_{\text{Quality}} (40\text{ pts}) + S_{\text{Value}} (30\text{ pts}) + S_{\text{Momentum/Low-Vol}} (30\text{ pts})$$
+### A. Active Share & Closet Indexing Detection
+Measures the percentage of fund holdings that differ from the category benchmark index:
+$$\text{Active Share} = \frac{1}{2} \sum_{i=1}^{N} |w_{\text{fund}, i} - w_{\text{benchmark}, i}|$$
 
-- **Quality Score ($S_{\text{Quality}} \le 40$)**: Evaluates Return on Equity ($\text{ROE} \ge 20\% \to 10\text{ pts}$), Capital Efficiency ($\text{ROCE} \ge 18\% \to 8\text{ pts}$), Leverage ($D/E \le 0.30 \to 8\text{ pts}$), FCF Conversion ($\text{FCF}/\text{PAT} \ge 0.80 \to 7\text{ pts}$), and Operating Margin ($\text{OPM} \ge 20\% \to 7\text{ pts}$).
-- **Value Score ($S_{\text{Value}} \le 30$)**: Evaluates Trailing P/E ($P/E \le 15.0 \to 12\text{ pts}$), PEG Ratio ($\text{PEG} \le 1.0 \to 10\text{ pts}$), and Price-to-Book ($P/B \le 2.0 \to 8\text{ pts}$).
-- **Momentum & Low-Vol Score ($S_{\text{Momentum}} \le 30$)**: Evaluates 6M Return ($R_{6M} \ge 20\% \to 10\text{ pts}$), 1Y Return ($R_{1Y} \ge 25\% \to 10\text{ pts}$), and 60-Day Realized Annualized Volatility ($\sigma_{60} \le 18.0\% \to 10\text{ pts}$).
-
-### 2. Forward Growth & Target Price Compounding
-- **Top-Line Blended Growth ($g$)**:
-  $$g_{\text{base}} = 0.40 \times \text{CAGR}_{3Y}^{\text{Rev}} + 0.35 \times \text{CAGR}_{5Y}^{\text{Rev}} + 0.25 \times \text{SGR}, \quad \text{where } \text{SGR} = \text{ROE} \times (1 - \text{Payout Ratio})$$
-- **Mean-Reverting Net Profit Margin ($NPM$)**:
-  $$NPM_{\text{base}} = 0.65 \times \text{NPM}_{\text{Latest}} + 0.35 \times \text{NPM}_{\text{5Y Avg}}$$
-- **Forward Horizon Projections ($t \in \{1, 2, 3\}$)**:
-  $$\text{Revenue}_t = \text{Revenue}_0 \times (1 + g)^t \qquad \text{PAT}_t = \text{Revenue}_t \times NPM \qquad \text{EPS}_t = \text{EPS}_0 \times \left(\frac{\text{PAT}_t}{\text{PAT}_0}\right)$$
-  $$\text{Target Price}_t = \text{EPS}_t \times \text{Exit P/E} \qquad \text{Implied CAGR}_t = \left(\frac{\text{Target Price}_t}{\text{CMP}}\right)^{\frac{1}{t}} - 1$$
-
-### 3. AMFI Mutual Fund Rolling Alpha & Risk Metrics
-- **3-Year Rolling Alpha ($756\text{ trading days}$)**:
-  $$\text{Alpha}_{3Y}(t) = \left[\left(\frac{\text{NAV}_t}{\text{NAV}_{t-756}}\right)^{\frac{1}{3}} - \left(\frac{\text{Bench}_t}{\text{Bench}_{t-756}}\right)^{\frac{1}{3}}\right] \times 100\%$$
-- **Downside Capture Ratio ($\text{DCR}$)**:
-  $$\text{DCR} = \frac{\prod_{t \in \mathcal{D}} (1 + r_{\text{fund},t}) - 1}{\prod_{t \in \mathcal{D}} (1 + r_{\text{bench},t}) - 1} \times 100\%, \quad \text{where } \mathcal{D} = \{ t \mid r_{\text{bench},t} < 0 \}$$
-- **Information Ratio ($\text{IR}$)**:
-  $$\text{IR} = \frac{\bar{R}_{\text{active, ann}}}{\text{Tracking Error}_{\text{ann}}} = \frac{\frac{252}{N}\sum (r_{\text{fund},t} - r_{\text{bench},t})}{\sqrt{252} \cdot \text{std}(r_{\text{fund},t} - r_{\text{bench},t})}$$
-
-### 4. Inverse-Volatility Risk-Parity Allocation
-- **Raw Volatility Weights**:
-  $$\sigma_i = \sqrt{252 \cdot \text{Var}(r_i)}, \quad w_i^{\text{raw}} = \frac{1 / \sigma_i}{\sum_{j=1}^N (1 / \sigma_j)}$$
-- **Marginal & Percent Risk Contribution**:
-  $$\text{MRC}_i = \frac{(\Sigma_{\text{ann}} w)_i}{\sigma_p}, \qquad \text{PRC}_i = \frac{w_i \cdot \text{MRC}_i}{\sigma_p} \times 100\%$$
+- **Active Share $\ge 60\%$**: Truly Active High-Conviction Management.
+- **Active Share $40\% - 60\%$**: Moderate Active Tilt.
+- **Active Share $< 40\%$**: Closet Indexer (Charging active fees for passive market returns).
 
 ---
 
-## 🛠️ Tech Stack
+### B. Compound Monthly Up/Down Capture Ratios
+Calculates geometric compound returns across positive and negative market months:
+$$\text{UCR} = \frac{\prod_{m \in \mathcal{U}} (1 + R_{\text{fund}, m}) - 1}{\prod_{m \in \mathcal{U}} (1 + R_{\text{bench}, m}) - 1} \times 100\%, \quad \text{where } \mathcal{U} = \{ m \mid R_{\text{bench}, m} > 0 \}$$
 
-| Domain | Technology | Description |
+$$\text{DCR} = \frac{\prod_{m \in \mathcal{D}} (1 + R_{\text{fund}, m}) - 1}{\prod_{m \in \mathcal{D}} (1 + R_{\text{bench}, m}) - 1} \times 100\%, \quad \text{where } \mathcal{D} = \{ m \mid R_{\text{bench}, m} < 0 \}$$
+
+$$\text{Capture Spread} = \text{UCR} - \text{DCR}$$
+
+---
+
+### C. Cross-Fund Portfolio Overlap Matrix
+Calculates the exact duplicate equity holding percentage between Fund A and Fund B:
+$$\text{Overlap}(\text{Fund A}, \text{Fund B}) = \sum_{i} \min(w_{A, i}, w_{B, i})$$
+
+$$\text{Unique Allocation}_A = \sum_{i} w_{A, i} - \text{Overlap}$$
+
+---
+
+### D. Rolling Return Outperformance Consistency & Capital Preservation
+- **Outperformance Beat Rate %**:
+  $$\text{Beat Rate} = \frac{\text{Count of Rolling Windows where } R_{\text{fund}} > R_{\text{bench}}}{\text{Total Rolling Windows}} \times 100\%$$
+- **Capital Preservation Rate (Zero Loss)**:
+  $$\text{Capital Preservation Rate} = 100\% - \left(\frac{\text{Count of Windows where } R_{\text{fund}} < 0\%}{\text{Total Windows}} \times 100\%\right)$$
+- **Information Ratio (IR)**:
+  $$\text{IR} = \frac{\bar{R}_{\text{active, ann}}}{\text{Tracking Error}_{\text{ann}}} = \frac{\text{Mean}(R_{\text{fund}} - R_{\text{bench}}) \times 252}{\text{StdDev}(R_{\text{fund}} - R_{\text{bench}}) \times \sqrt{252}}$$
+
+---
+
+### E. Inverse-Volatility Risk-Parity & Marginal Risk Contributions (MRC)
+Allocates capital inversely proportional to realized 60-day annualized volatility:
+$$w_i^{\text{raw}} = \frac{1 / \sigma_i}{\sum_{j=1}^N (1 / \sigma_j)}, \quad \text{where } \sigma_i = \sqrt{252} \cdot \text{StdDev}(r_i)$$
+
+Subject to the iterative simplex weight cap constraint:
+$$w_i \le c_{\text{max}} \quad (\text{e.g. } 15\% \text{ or } 25\%), \quad \sum_{i=1}^N w_i = 1$$
+
+Portfolio Variance and Percent Risk Contribution:
+$$\sigma_p = \sqrt{w^T \Sigma_{\text{ann}} w}, \qquad \text{MRC}_i = \frac{(\Sigma_{\text{ann}} w)_i}{\sigma_p}, \qquad \text{PRC}_i = \frac{w_i \cdot \text{MRC}_i}{\sigma_p} \times 100\%$$
+
+---
+
+### F. Forward Growth & Target Price Compounding ($FY+1$ to $FY+3$)
+- **Top-Line Compounding Rate ($g$)**:
+  $$g_{\text{base}} = 0.40 \times \text{CAGR}_{3Y}^{\text{Rev}} + 0.35 \times \text{CAGR}_{5Y}^{\text{Rev}} + 0.25 \times \text{SGR}, \quad \text{where } \text{SGR} = \text{ROE} \times (1 - \text{Payout})$$
+- **Mean-Reverting Net Margin ($NPM$)**:
+  $$NPM_{\text{base}} = 0.65 \times \text{NPM}_{\text{Latest}} + 0.35 \times \text{NPM}_{\text{5Y Avg}}$$
+- **Forward Horizon Projections ($t \in \{1, 2, 3\}$)**:
+  $$\text{Revenue}_t = \text{Revenue}_0 \times (1 + g)^t, \quad \text{PAT}_t = \text{Revenue}_t \times NPM, \quad \text{EPS}_t = \text{EPS}_0 \times \left(\frac{\text{PAT}_t}{\text{PAT}_0}\right)$$
+  $$\text{Target Price}_t = \text{EPS}_t \times \text{Exit P/E}, \quad \text{Implied CAGR}_t = \left(\frac{\text{Target Price}_t}{\text{CMP}}\right)^{\frac{1}{t}} - 1$$
+
+---
+
+### G. 0–100 Multi-Factor Scoring Model (Quality, Value, Momentum)
+$$S_{\text{total}} = S_{\text{Quality}} (40\text{ pts}) + S_{\text{Value}} (30\text{ pts}) + S_{\text{Momentum/Low-Vol}} (30\text{ pts})$$
+
+---
+
+## 🛠️ Tech Stack & Technical Specifications
+
+| Layer | Technologies | Key Specifications |
 | :--- | :--- | :--- |
-| **Backend Framework** | [FastAPI](https://fastapi.tiangolo.com) (Python 3.11) | Async REST API with in-memory caching |
-| **Data Validation** | [Pydantic v2](https://docs.pydantic.dev) | Strict schema contracts for all API endpoints |
-| **Quantitative Engines** | NumPy, Pandas, SciPy | Mathematical modeling, matrix ops & rolling statistics |
-| **Market Data** | yfinance & AMFI Open Endpoints | Live equities, historical OHLCV & mutual fund NAVs |
-| **Testing** | [Pytest](https://pytest.org) | 25 automated unit tests with full coverage |
-| **Frontend Framework** | [Next.js 15](https://nextjs.org) (App Router) | React 19, TypeScript, Server & Client Components |
-| **Styling & Theme** | [Tailwind CSS](https://tailwindcss.com) | Institutional dark glassmorphic UI terminal |
-| **Visualizations** | [Recharts](https://recharts.org) | Responsive synchronized area charts, bars & valuation bands |
-| **Containerization** | Docker Multi-Stage | Lean Alpine/Slim deployment containers |
-| **Cloud Hosting** | Render Blueprint (`render.yaml`) | Automated dual-service web deployment |
+| **Backend Framework** | [FastAPI](https://fastapi.tiangolo.com) (Python 3.11) | Async ASGI REST engine with CORS middleware and auto-docs (`/docs`) |
+| **Data Contracts** | [Pydantic v2](https://docs.pydantic.dev) | Strict typed validation models across all endpoints |
+| **Numerical Engines** | NumPy, Pandas, SciPy | In-memory matrix covariance, rolling quantile statistics & simplex optimization |
+| **Data Ingestion** | yfinance & AMFI Open Endpoints | Real-time quotes, multi-timeframe OHLCV, and 37,851+ mutual fund NAVs |
+| **File Parsing** | SheetJS (`xlsx`) & Python openpyxl | Client/Server multi-sheet CSV/Excel broker statement ingestion |
+| **Testing Suite** | [Pytest](https://pytest.org) | 37 automated unit/integration tests with 100% passing status |
+| **Frontend Framework** | [Next.js 15](https://nextjs.org) (App Router) | React 19, TypeScript, Server & Client Components, Turbopack |
+| **UI Styling** | [Tailwind CSS](https://tailwindcss.com) & Lucide | Institutional dark glassmorphic terminal aesthetics |
+| **Charting Engine** | [Recharts](https://recharts.org) | Responsive synchronized area charts, valuation bands, and drawdown timelines |
+| **Deployment** | Docker & Render Blueprint | Multi-stage containerization with IaC (`render.yaml`) |
 
 ---
 
@@ -245,30 +281,34 @@ investdeskpro/
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── main.py                 # FastAPI app, CORS, routes & /health
-│   │   ├── schemas.py              # Pydantic v2 data models for all responses
+│   │   ├── main.py                 # FastAPI application, CORS, routes & /health
+│   │   ├── schemas.py              # Pydantic v2 models for all data responses
+│   │   ├── data/
+│   │   │   ├── amfi-schemes.json   # 37,851 in-memory AMFI scheme master
+│   │   │   └── mf_holdings.json    # Institutional portfolio holdings & index constituent weights
 │   │   ├── core/
 │   │   │   ├── __init__.py
 │   │   │   ├── company_deep.py     # 360° overview, forensic checks & verified peers
-│   │   │   ├── growth_forecast.py  # 1-3Y forward earnings & growth engine
-│   │   │   ├── factors.py          # 0-100 Quality (40), Value (30), Momentum (30)
-│   │   │   ├── mf_engine.py        # AMFI NAV parsing, 3Y rolling alpha, DCR/UCR
-│   │   │   ├── portfolio.py        # Inverse-volatility risk parity & simplex cap
-│   │   │   └── screener_engine.py  # Multi-criteria screening & thematic bundles
+│   │   │   ├── growth_forecast.py  # 1-3Y forward earnings & growth forecasting
+│   │   │   ├── factors.py          # 0-100 Quality, Value, Momentum factor scoring
+│   │   │   ├── mf_engine.py        # Active share, monthly capture, rolling consistency & overlap
+│   │   │   ├── mf_benchmark.py     # Dynamic SEBI category-aware benchmark assigner
+│   │   │   ├── portfolio.py        # MultiIndex historical prices, inverse-vol parity & crash replays
+│   │   │   └── screener_engine.py  # Multi-factor equity screening & thematic baskets
 │   │   └── api/
 │   │       ├── __init__.py
-│   │       ├── company.py          # GET /api/v1/company/{ticker}, /history, /forecast
-│   │       ├── stocks.py           # GET /api/v1/stocks/{ticker}
-│   │       ├── funds.py            # GET /api/v1/funds/{scheme_code} & /search
-│   │       └── optimizer.py        # GET & POST /api/v1/portfolio/optimize
+│   │       ├── company.py          # /company/{ticker}, /history, /forecast, /omni
+│   │       ├── stocks.py           # /stocks/{ticker}, /stocks/indices, /stocks/{ticker}/price
+│   │       ├── funds.py            # /funds/{scheme_code}, /funds/search, /funds/overlap
+│   │       └── optimizer.py        # /portfolio/optimize
 │   ├── tests/
 │   │   ├── __init__.py
 │   │   ├── test_company.py         # Tests for Company 360, DCF, history & search
 │   │   ├── test_forecast.py        # Tests for 1-3Y forward CAGR & math formulations
-│   │   ├── test_factors.py         # Tests for factor calculations & scoring bounds
-│   │   ├── test_mf_engine.py       # Tests for AMFI parsing & rolling alpha
-│   │   └── test_portfolio.py       # Tests for risk parity, caps & covariance
-│   ├── Dockerfile                  # Multi-stage Python 3.11 container
+│   │   ├── test_factors.py         # Tests for factor scoring bounds & BFSI probes
+│   │   ├── test_mf_engine.py       # Tests for active share, monthly capture & overlap API
+│   │   └── test_portfolio.py       # Tests for risk parity, caps, crash replays & covariance
+│   ├── Dockerfile                  # Multi-stage Python 3.11 deployment container
 │   ├── pytest.ini                  # Pytest test discovery config
 │   └── requirements.txt            # Python dependencies
 ├── frontend/
@@ -278,20 +318,23 @@ investdeskpro/
 │   │   │   ├── layout.tsx          # Root layout & metadata
 │   │   │   └── page.tsx            # Dashboard shell, omni-search & tab switcher
 │   │   ├── components/
-│   │   │   ├── Header.tsx          # Navigation bar, live indicator & tabs
-│   │   │   ├── Company360View.tsx  # Scorecard, Warning Badges, Forecast & Peers
-│   │   │   ├── StockScorecardView.tsx   # 0-100 Factor Diagnostic View
-│   │   │   ├── FundAnalyzerView.tsx     # AMFI Mutual Fund Alpha View
-│   │   │   └── PortfolioOptimizerView.tsx # Risk-Parity Allocation View
+│   │   │   ├── Header.tsx          # Institutional Terminal Header & Live Market Ribbon
+│   │   │   ├── Company360View.tsx  # Stock Intelligence (360° Forensics, Forecast & DCF)
+│   │   │   ├── FundAnalyzerView.tsx # Fund Alpha Engine (Active Share, Capture & Overlap)
+│   │   │   ├── QuantDeskView.tsx   # Quant Desk Sub-Tab Shell
+│   │   │   ├── StockScorecardView.tsx # 0-100 Multi-Factor Scorecard
+│   │   │   ├── PortfolioOptimizerView.tsx # Portfolio Stress-Tester & Crash Replays
+│   │   │   └── PageGuideDrawer.tsx # Contextual Playbook & Financial Dictionary
+│   │   ├── hooks/
+│   │   │   └── useDebounce.ts      # Input debouncing hook
 │   │   └── lib/
-│   │       └── api.ts              # Type-safe API client with timeout protection
+│   │       └── api.ts              # Type-safe API client with error handling
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── next.config.ts
 ├── .gitignore
-├── render.yaml                     # Render Blueprint IaC specification
-├── USERGUIDE.md                    # In-depth User Guide & Playbook
-└── README.md                       # Complete Technical & Functional Specification
+├── render.yaml                     # Render Blueprint IaC deployment file
+└── README.md                       # Complete Project Specification
 ```
 
 ---
@@ -310,40 +353,40 @@ investdeskpro/
 # Navigate to backend directory
 cd backend
 
-# Create and activate Python virtual environment
+# Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run test suite to verify quantitative engines
-pytest -v
+# Run automated tests
+PYTHONPATH=. pytest -v
 
 # Start FastAPI server on port 8005
 uvicorn app.main:app --reload --port 8005
 ```
 
 - **API Base URL**: `http://127.0.0.1:8005`
-- **Swagger Docs**: [http://127.0.0.1:8005/docs](http://127.0.0.1:8005/docs)
-- **Healthcheck**: [http://127.0.0.1:8005/health](http://127.0.0.1:8005/health)
+- **Swagger Documentation**: [http://127.0.0.1:8005/docs](http://127.0.0.1:8005/docs)
+- **Healthcheck Endpoint**: [http://127.0.0.1:8005/health](http://127.0.0.1:8005/health)
 
 ### 2. Frontend Setup
 
-In a new terminal window:
+In a new terminal:
 
 ```bash
 # Navigate to frontend directory
 cd frontend
 
-# Install Node dependencies
+# Install dependencies
 npm install
 
 # Start Next.js development server
 npm run dev
 ```
 
-- **Frontend App**: `http://localhost:3000` (or `http://localhost:3001` / `3005`)
+- **Frontend Terminal**: `http://localhost:3000` (or `http://localhost:3005`)
 
 ---
 
@@ -351,45 +394,32 @@ npm run dev
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/health` | Healthcheck returning backend status, UTC timestamp, and version. |
-| `GET` | `/api/v1/company/omni-search?q={query}` | Global auto-complete searching Indian stocks & AMFI mutual funds. |
-| `GET` | `/api/v1/company/{ticker}` | Returns complete Company 360° overview, forensic checks, warning badges, and forecast. |
-| `GET` | `/api/v1/company/{ticker}/history?timeframe={1y\|3y\|5y\|max}` | Multi-timeframe price history, moving averages, and valuation bands (P/E & P/B). |
-| `GET` | `/api/v1/company/{ticker}/forecast` | Dedicated 1Y, 2Y, 3Y Forward Growth, EPS, Target Prices, and Driver Attribution. |
+| `GET` | `/health` | Healthcheck returning backend status, version, and UTC timestamp. |
+| `GET` | `/api/v1/search/omni?q={query}` | Global search across Indian stocks and AMFI mutual funds. |
+| `GET` | `/api/v1/company/{ticker}` | Returns complete Company 360° overview, forensic checks, warning badges, and DCF. |
+| `GET` | `/api/v1/company/{ticker}/history?timeframe={1y\|3y\|5y\|max}` | Daily price history, moving averages, and P/E valuation standard deviation bands. |
+| `GET` | `/api/v1/company/{ticker}/forecast` | 1Y, 2Y, 3Y Forward Growth, EPS, Target Prices, and Driver Attribution. |
 | `GET` | `/api/v1/stocks/{ticker}` | Orthogonal 0–100 Quality, Value, and Momentum factor score breakdown. |
-| `GET` | `/api/v1/funds/search?q={query}` | Searches AMFI mutual fund schemes by name or 6-digit scheme code. |
-| `GET` | `/api/v1/funds/{scheme_code}` | Computes 3Y Rolling Alpha, DCR, UCR, Sortino Ratio, and NAV history. |
-| `GET` | `/api/v1/portfolio/optimize?tickers=...&max_weight=15` | Computes inverse-volatility risk-parity weights, MRC, PRC, and covariance matrix. |
-
-### cURL Quick Examples
-
-```bash
-# 1. Fetch Company 360 & Forward Forecast for TCS
-curl -X GET "http://127.0.0.1:8005/api/v1/company/TCS" -H "Accept: application/json"
-
-# 2. Fetch Multi-Timeframe Valuation Bands (5Y) for RELIANCE
-curl -X GET "http://127.0.0.1:8005/api/v1/company/RELIANCE/history?timeframe=5y" -H "Accept: application/json"
-
-# 3. Analyze AMFI Mutual Fund Rolling Alpha (Parag Parikh Flexi Cap)
-curl -X GET "http://127.0.0.1:8005/api/v1/funds/122639" -H "Accept: application/json"
-
-# 4. Optimize Risk-Parity Basket
-curl -X GET "http://127.0.0.1:8005/api/v1/portfolio/optimize?tickers=RELIANCE&tickers=TCS&tickers=HDFCBANK&tickers=INFY&tickers=ITC&tickers=LT&max_weight=15" -H "Accept: application/json"
-```
+| `GET` | `/api/v1/stocks/indices` | Live quotes for Nifty 50, Sensex, Bank Nifty, India VIX, Crude, and FII/DII flow. |
+| `GET` | `/api/v1/stocks/{ticker}/price` | Live quote, day high/low, 52W range, and volume for a single stock. |
+| `GET` | `/api/v1/funds/search?q={query}` | Searches 37,851 AMFI mutual fund schemes by name or code. |
+| `GET` | `/api/v1/funds/{scheme_code}` | Computes Active Share, monthly UCR/DCR, 3Y rolling alpha, and Sortino ratio. |
+| `POST` | `/api/v1/funds/overlap` | Calculates portfolio overlap %, common stock duplication, and fee drag for 2 schemes. |
+| `GET` | `/api/v1/portfolio/optimize?tickers=...&max_weight=15` | Computes inverse-volatility weights, risk contributions, covariance matrix, and crash replays. |
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-InvestDeskPro maintains an automated Pytest test suite covering all quantitative engines, factor bounds, DCF sensitivity matrices, forecasting formulations, AMFI parsing, and portfolio optimization:
+InvestDeskPro maintains an automated Pytest test suite covering all quantitative engines, factor scoring bounds, DCF matrices, AMFI parsing, active share, capture ratios, overlap API, and portfolio optimization:
 
 ```bash
 cd backend
-pytest -v
+PYTHONPATH=. pytest -v
 ```
 
 ```text
-======================== 25 passed in 25.67s ========================
+======================== 37 passed in 21.48s ========================
 ```
 
 ---
@@ -399,10 +429,10 @@ pytest -v
 This repository includes a native [`render.yaml`](./render.yaml) Blueprint:
 
 1. Push your code to GitHub.
-2. Log into [Render](https://render.com) and click **New +** -> **Blueprint**.
+2. Log into [Render](https://render.com) and click **New +** $\rightarrow$ **Blueprint**.
 3. Select your `InvestDeskPro` repository.
 4. Render will deploy:
-   - **`investdeskpro-api`**: FastAPI Web Service containerized with Docker and auto-healing healthchecks.
+   - **`investdeskpro-api`**: FastAPI Web Service containerized with Docker and healthchecks.
    - **`investdeskpro-dashboard`**: Next.js 15 App Router Frontend connected to the backend service.
 
 ---
@@ -412,4 +442,4 @@ This repository includes a native [`render.yaml`](./render.yaml) Blueprint:
 - **Created & Engineered by**: **Sandesh Rathi**
 - **Ecosystem Integration**: Powered by [rupeemap.in](https://rupeemap.in)
 - **Data Sources**: Association of Mutual Funds in India (AMFI), National Stock Exchange of India (NSE), and Bombay Stock Exchange (BSE).
-- **Disclaimer**: *InvestDeskPro is designed strictly for quantitative research and educational analysis. It does not constitute financial, investment, legal, or tax advice. Market investments are subject to market risks. Please read all scheme-related documents carefully and consult a SEBI-registered investment advisor before making any financial decisions.*
+- **Disclaimer**: *InvestDeskPro is designed strictly for quantitative research, financial education, and diagnostic analysis. It does not constitute financial, investment, legal, or tax advice. Market investments are subject to market risks. Please read all scheme-related documents carefully and consult a SEBI-registered investment advisor before making any financial decisions.*
