@@ -392,46 +392,62 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Primary Navigation Tabs */}
-        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0 gap-1">
+        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0 gap-1.5">
+          {/* Tab 1: Stock Intelligence */}
           <button
             onClick={() => setActiveTab("company")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer h-10 ${
+            className={`flex items-center gap-2 px-3.5 py-1 rounded-lg transition-all cursor-pointer h-10 ${
               activeTab === "company"
                 ? "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-md shadow-cyan-950"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
+            title="Single-Stock Fundamentals, DCF Valuation & Forensic Probes"
           >
-            <Building2 className="h-4 w-4 shrink-0" />
+            <Building2 className="h-4 w-4 shrink-0 text-cyan-300" />
             <div className="text-left flex flex-col justify-center">
-              <span className="text-xs font-bold leading-tight">Equities</span>
-              <span className={`text-[10px] leading-tight font-sans ${activeTab === "company" ? "text-cyan-100/90 font-medium" : "text-slate-500"}`}>
-                (company 360)
+              <span className="text-xs font-bold leading-tight">Stock Intelligence</span>
+              <span className={`text-[10px] leading-tight font-sans ${activeTab === "company" ? "text-cyan-100 font-medium" : "text-slate-500"}`}>
+                (360° Forensics)
               </span>
             </div>
           </button>
 
+          {/* Tab 2: Fund Alpha Engine */}
           <button
             onClick={() => setActiveTab("funds")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer h-10 ${
+            className={`flex items-center gap-2 px-3.5 py-1 rounded-lg transition-all cursor-pointer h-10 ${
               activeTab === "funds"
                 ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md shadow-emerald-950"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
+            title="37,851 AMFI Schemes, Dynamic Benchmarks & Rolling Alpha Distributions"
           >
-            <TrendingUp className="h-4 w-4 shrink-0" />
-            <span>Mutual Funds</span>
+            <TrendingUp className="h-4 w-4 shrink-0 text-emerald-300" />
+            <div className="text-left flex flex-col justify-center">
+              <span className="text-xs font-bold leading-tight">Fund Alpha Engine</span>
+              <span className={`text-[10px] leading-tight font-sans ${activeTab === "funds" ? "text-emerald-100 font-medium" : "text-slate-500"}`}>
+                (AMFI Analytics)
+              </span>
+            </div>
           </button>
 
+          {/* Tab 3: Quant & Stress Lab */}
           <button
             onClick={() => setActiveTab("quant")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer h-10 ${
+            className={`flex items-center gap-2 px-3.5 py-1 rounded-lg transition-all cursor-pointer h-10 ${
               activeTab === "quant"
                 ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-950"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
+            title="Factor Scorecards, Multi-Asset Covariance & Historical Crash Stress-Tests"
           >
-            <Cpu className="h-4 w-4 shrink-0" />
-            <span>Quant Desk</span>
+            <Cpu className="h-4 w-4 shrink-0 text-indigo-300" />
+            <div className="text-left flex flex-col justify-center">
+              <span className="text-xs font-bold leading-tight">Quant & Stress Lab</span>
+              <span className={`text-[10px] leading-tight font-sans ${activeTab === "quant" ? "text-indigo-100 font-medium" : "text-slate-500"}`}>
+                (Risk Parity)
+              </span>
+            </div>
           </button>
         </div>
       </div>
