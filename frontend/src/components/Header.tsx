@@ -392,40 +392,45 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Primary Navigation Tabs */}
-        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0">
+        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0 gap-1">
           <button
             onClick={() => setActiveTab("company")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer h-10 ${
               activeTab === "company"
                 ? "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-md shadow-cyan-950"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
           >
-            <Building2 className="h-3.5 w-3.5" />
-            <span>Company 360°</span>
+            <Building2 className="h-4 w-4 shrink-0" />
+            <div className="text-left flex flex-col justify-center">
+              <span className="text-xs font-bold leading-tight">Equities</span>
+              <span className={`text-[10px] leading-tight font-sans ${activeTab === "company" ? "text-cyan-100/90 font-medium" : "text-slate-500"}`}>
+                (company 360)
+              </span>
+            </div>
           </button>
 
           <button
             onClick={() => setActiveTab("funds")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer h-10 ${
               activeTab === "funds"
                 ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md shadow-emerald-950"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
           >
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>Mutual Funds & Rolling Alpha</span>
+            <TrendingUp className="h-4 w-4 shrink-0" />
+            <span>Mutual Funds</span>
           </button>
 
           <button
             onClick={() => setActiveTab("quant")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer h-10 ${
               activeTab === "quant"
                 ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-950"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
           >
-            <Cpu className="h-3.5 w-3.5" />
+            <Cpu className="h-4 w-4 shrink-0" />
             <span>Quant Desk</span>
           </button>
         </div>
