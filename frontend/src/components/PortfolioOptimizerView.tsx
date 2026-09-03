@@ -117,6 +117,11 @@ export const PortfolioOptimizerView: React.FC = () => {
   const [allocationMode, setAllocationMode] = useState<"risk_parity" | "custom">("risk_parity");
   const [customWeights, setCustomWeights] = useState<Record<string, number>>({});
 
+  // Selected tickers to display in Correlation Matrix
+  const [selectedCorrTickers, setSelectedCorrTickers] = useState<string[]>([]);
+  const [pairStockA, setPairStockA] = useState<string>("");
+  const [pairStockB, setPairStockB] = useState<string>("");
+
   // Autocomplete state for portfolio stock additions
   const [suggestions, setSuggestions] = useState<StockSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -145,6 +150,15 @@ export const PortfolioOptimizerView: React.FC = () => {
       setCustomWeights(initialMap);
       const cleanList = data.allocations.map((a) => a.ticker.replace(".NS", "").replace(".BO", ""));
       setTickerList(cleanList);
+
+      // Initialize correlation subset to top 8 holdings or all
+      const defaultSubset = data.tickers.slice(0, Math.min(8, data.tickers.length));
+      setSelectedCorrTickers(defaultSubset);
+      if (data.tickers.length >= 2) {
+        setPairStockA(data.tickers[0]);
+        setPairStockB(data.tickers[1]);
+      }
+
       if (cleanList.length < tickers.length) {
         setUploadSuccess(`Loaded ${cleanList.length} of ${tickers.length} stock holdings (unresolvable or bond symbols skipped).`);
       } else {
@@ -1374,50 +1388,203 @@ export const PortfolioOptimizerView: React.FC = () => {
             </div>
           )}
 
-          {/* Correlation Heatmap Matrix */}
+          {/* Interactive Correlation Heatmap Matrix & Pairwise Inspector */}
           {activeResult.correlation_matrix && Object.keys(activeResult.correlation_matrix).length > 0 && (
-            <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Grid className="h-4 w-4 text-emerald-400" />
-                  <span>Asset Correlation Matrix (Pearson $r$)</span>
-                </h3>
-                <span className="text-xs font-mono text-slate-500">Lower Correlation = Higher Diversification</span>
+            <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Grid className="h-4 w-4 text-emerald-400" />
+                    <span>Interactive Asset Correlation Matrix (Pearson $r$)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Select which stocks to compare or inspect individual pairs to analyze co-movement and diversification benefit.
+                  </p>
+                </div>
+
+                {/* Quick Selection Buttons */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const top = activeResult.tickers.slice(0, Math.min(8, activeResult.tickers.length));
+                      setSelectedCorrTickers(top);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-800 font-semibold transition-all cursor-pointer"
+                  >
+                    Top 8 Holdings
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCorrTickers([...activeResult.tickers])}
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold transition-all cursor-pointer"
+                  >
+                    Show All ({activeResult.tickers.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCorrTickers([])}
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 transition-all cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-center text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
-                      <th className="pb-2 text-left">Asset</th>
-                      {activeResult.tickers.map((t) => (
-                        <th key={`head-${t}`} className="pb-2 px-2 font-mono">
-                          {t.replace(".NS", "")}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {activeResult.tickers.map((rowTicker) => (
-                      <tr key={`row-${rowTicker}`} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-2.5 text-left font-bold text-slate-200">
-                          {rowTicker.replace(".NS", "")}
-                        </td>
-                        {activeResult.tickers.map((colTicker) => {
-                          const val = activeResult.correlation_matrix[rowTicker]?.[colTicker] ?? 1.0;
-                          return (
-                            <td key={`cell-${rowTicker}-${colTicker}`} className="py-2.5 px-2">
-                              <span className={`px-2 py-1 rounded text-xs block ${getCorrBg(val)}`}>
-                                {val.toFixed(2)}
-                              </span>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* 1. Interactive Stock Selector Pill Badges */}
+              <div className="space-y-2 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-300">
+                    Click stocks to include / exclude in correlation matrix:
+                  </span>
+                  <span className="text-slate-400 font-mono text-[11px]">
+                    {selectedCorrTickers.length} of {activeResult.tickers.length} Selected
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {activeResult.tickers.map((t) => {
+                    const isSelected = selectedCorrTickers.includes(t);
+                    const cleanName = t.replace(".NS", "").replace(".BO", "");
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            if (selectedCorrTickers.length <= 2) return;
+                            setSelectedCorrTickers(selectedCorrTickers.filter((x) => x !== t));
+                          } else {
+                            setSelectedCorrTickers([...selectedCorrTickers, t]);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? "bg-indigo-950/90 text-indigo-200 border border-indigo-600 shadow-sm"
+                            : "bg-slate-900/60 text-slate-400 border border-slate-800 hover:border-slate-700 hover:text-slate-300"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-indigo-400" : "bg-slate-600"}`} />
+                        <span>{cleanName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* 2. Pairwise 1-on-1 Correlation Inspector */}
+              {activeResult.tickers.length >= 2 && (
+                <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                    <span className="flex items-center gap-1.5">
+                      <Crosshair className="h-4 w-4 text-cyan-400" />
+                      <span>Pairwise Correlation Quick-Inspector</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">Real-Time Pearson $r$</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                    {/* Select Stock A */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-mono text-slate-500 block">Stock 1</label>
+                      <select
+                        value={pairStockA}
+                        onChange={(e) => setPairStockA(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+                      >
+                        {activeResult.tickers.map((t) => (
+                          <option key={`a-${t}`} value={t}>
+                            {t.replace(".NS", "").replace(".BO", "")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Select Stock B */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-mono text-slate-500 block">Stock 2</label>
+                      <select
+                        value={pairStockB}
+                        onChange={(e) => setPairStockB(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+                      >
+                        {activeResult.tickers.map((t) => (
+                          <option key={`b-${t}`} value={t}>
+                            {t.replace(".NS", "").replace(".BO", "")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Correlation Metric Display */}
+                    {(() => {
+                      const pairVal = activeResult.correlation_matrix[pairStockA]?.[pairStockB] ?? (pairStockA === pairStockB ? 1.0 : 0.5);
+                      const isHigh = pairVal >= 0.70;
+                      const isLow = pairVal < 0.35;
+                      return (
+                        <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase block font-mono">Correlation</span>
+                            <span className={`text-base font-black font-mono ${isHigh ? "text-rose-400" : isLow ? "text-emerald-400" : "text-cyan-400"}`}>
+                              r = {pairVal.toFixed(2)}
+                            </span>
+                          </div>
+                          <span className={`px-2 py-1 rounded text-[10px] font-bold font-mono ${
+                            isHigh
+                              ? "bg-rose-950 text-rose-300 border border-rose-800"
+                              : isLow
+                              ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                              : "bg-cyan-950 text-cyan-300 border border-cyan-800"
+                          }`}>
+                            {isHigh ? "High Co-Movement" : isLow ? "High Diversification" : "Moderate"}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Filtered Matrix Table */}
+              {selectedCorrTickers.length >= 2 ? (
+                <div className="overflow-x-auto pt-1">
+                  <table className="w-full text-center text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                        <th className="pb-2 text-left pl-2">Asset</th>
+                        {selectedCorrTickers.map((t) => (
+                          <th key={`head-${t}`} className="pb-2 px-2 font-mono">
+                            {t.replace(".NS", "").replace(".BO", "")}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono">
+                      {selectedCorrTickers.map((rowTicker) => (
+                        <tr key={`row-${rowTicker}`} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="py-2.5 pl-2 text-left font-bold text-slate-200">
+                            {rowTicker.replace(".NS", "").replace(".BO", "")}
+                          </td>
+                          {selectedCorrTickers.map((colTicker) => {
+                            const val = activeResult.correlation_matrix[rowTicker]?.[colTicker] ?? 1.0;
+                            return (
+                              <td key={`cell-${rowTicker}-${colTicker}`} className="py-2.5 px-2">
+                                <span className={`px-2 py-1 rounded text-xs block ${getCorrBg(val)}`}>
+                                  {val.toFixed(2)}
+                                </span>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-6 text-center text-xs text-slate-400 bg-slate-950/40 rounded-xl border border-slate-800">
+                  Please select at least 2 stocks using the pills above to view the correlation matrix.
+                </div>
+              )}
             </div>
           )}
         </div>
