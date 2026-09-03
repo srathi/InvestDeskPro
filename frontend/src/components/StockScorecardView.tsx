@@ -469,11 +469,11 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
   return (
     <div className="space-y-6">
       {/* 🌟 Top Hero Search & Multiline Suggestions Panel */}
-      <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-4 relative z-30 shadow-2xl backdrop-blur-xl">
+      <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5 relative z-30 shadow-xl backdrop-blur-xl">
         {/* Full-Width Search Input Bar */}
         <div ref={searchContainerRef} className="relative w-full">
           <form onSubmit={handleSearchSubmit} className="relative w-full flex items-center">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-cyan-400 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400 pointer-events-none" />
             <input
               type="text"
               value={tickerInput}
@@ -486,26 +486,26 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                 if (suggestions.length > 0) setShowDropdown(true);
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Search any Indian Stock by Symbol or Company Name (e.g. RELIANCE, TCS, PICCADIL, TATAMOTORS, HDFCBANK)..."
-              className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-cyan-500 rounded-2xl pl-12 pr-36 py-3.5 text-sm md:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all shadow-inner font-mono uppercase"
+              placeholder="Search any Indian Stock by Symbol or Company Name (e.g. RELIANCE, TCS, TATAMOTORS, HDFCBANK)..."
+              className="w-full bg-slate-950/90 border border-slate-700/80 hover:border-slate-600 focus:border-cyan-500 rounded-xl pl-10 pr-32 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all shadow-inner font-mono uppercase"
             />
             {isSearching && (
-              <Loader2 className="absolute right-32 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400 animate-spin" />
+              <Loader2 className="absolute right-28 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-cyan-400 animate-spin" />
             )}
             <button
               type="submit"
               disabled={loading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs md:text-sm font-semibold rounded-xl transition-all shadow-md shadow-cyan-950 flex items-center gap-1.5 disabled:opacity-50"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3.5 py-1.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white text-xs font-semibold rounded-lg transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span>Analyze Stock</span>
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+              <span>Analyze</span>
             </button>
           </form>
 
           {/* Debounced Autocomplete Dropdown */}
           {showDropdown && suggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl max-h-80 overflow-y-auto divide-y divide-slate-800/60 z-50">
-              <div className="px-4 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/98 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-2xl max-h-72 overflow-y-auto divide-y divide-slate-800/60 z-50">
+              <div className="px-3.5 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
                 <span>Matching Indian Equities ({suggestions.length})</span>
                 <span className="text-[9px] font-mono lowercase">↑↓ navigate • ↵ select • esc close</span>
               </div>
@@ -514,22 +514,22 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   key={item.ticker}
                   type="button"
                   onClick={() => selectSuggestion(item)}
-                  className={`w-full text-left px-4 py-3 flex items-center justify-between text-xs md:text-sm transition-colors ${
+                  className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between text-xs transition-colors ${
                     idx === selectedIndex ? "bg-cyan-950/70 text-cyan-200" : "hover:bg-slate-900/80 text-slate-200"
                   }`}
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-white font-mono text-sm">{item.ticker.replace(".NS", "").replace(".BO", "")}</span>
-                      <span className="px-2 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-300 rounded">
+                      <span className="font-bold text-white font-mono text-xs">{item.ticker.replace(".NS", "").replace(".BO", "")}</span>
+                      <span className="px-1.5 py-0.2 text-[9px] font-semibold bg-slate-800 text-slate-300 rounded">
                         {item.exchange}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 font-medium">{item.name}</p>
+                    <p className="text-[11px] text-slate-400 font-medium">{item.name}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-500 font-mono hidden sm:inline">{item.sector}</span>
-                    <ChevronRight className="h-4 w-4 text-slate-600" />
+                    <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">{item.sector}</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
                   </div>
                 </button>
               ))}
@@ -538,16 +538,16 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
         </div>
 
         {/* Multi-line Quick Presets Panel Below Input */}
-        <div className="pt-3 border-t border-slate-800/80 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+        <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-              <span>High-Conviction Watchlist (Instant 0-100 Factor Audit):</span>
+              <Sparkles className="h-3 w-3 text-cyan-400" />
+              <span>High-Conviction Watchlist (0-100 Factor Audit):</span>
             </span>
-            <span className="text-[10px] text-slate-500 font-normal lowercase hidden sm:inline">click to audit stock</span>
+            <span className="text-[9px] text-slate-500 font-normal lowercase hidden sm:inline">click to audit stock</span>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {PRESET_TICKERS.map((item) => (
               <button
                 key={item.ticker}
@@ -558,18 +558,15 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   setTickerInput(item.ticker);
                   loadScorecard(item.ticker);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                   data?.ticker.includes(item.ticker)
-                    ? "bg-cyan-950 text-cyan-300 border border-cyan-600 shadow-md shadow-cyan-950 font-semibold"
+                    ? "bg-cyan-950 text-cyan-300 border border-cyan-600 shadow-sm font-semibold"
                     : "bg-slate-900/70 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 hover:bg-slate-900"
                 }`}
               >
                 <span className="font-mono font-bold text-white">{item.ticker}</span>
-                <span className="text-slate-400">({item.name})</span>
-                <span className="text-[10px] font-mono text-slate-500 bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-800/80">
-                  {item.sector}
-                </span>
-                <span className="text-[10px] text-cyan-400 font-semibold">
+                <span className="text-slate-400 hidden sm:inline">({item.name})</span>
+                <span className="text-[9px] font-mono text-cyan-400 font-semibold">
                   {item.tag}
                 </span>
               </button>
