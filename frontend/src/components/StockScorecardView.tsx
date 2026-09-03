@@ -981,7 +981,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
-                  <span className="text-[10px] text-slate-500 uppercase block font-sans">Promoter Pledge</span>
+                  <JargonTooltip termKey="promoter_pledging">
+                    <span className="text-[10px] text-slate-500 uppercase block font-sans">Promoter Pledge</span>
+                  </JargonTooltip>
                   <span className="text-sm font-bold text-emerald-400 mt-1 block">
                     {(data.shareholding?.pledged_pct ?? 0) === 0 ? "0.0% (Clean)" : `${data.shareholding?.pledged_pct}%`}
                   </span>
@@ -1284,7 +1286,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   }`}
                 >
                   <Gauge className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>Factor Trajectory</span>
+                  <JargonTooltip termKey="factor_trajectory">
+                    <span>Factor Trajectory</span>
+                  </JargonTooltip>
                 </button>
 
                 <button
@@ -1297,7 +1301,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   }`}
                 >
                   <Crosshair className="h-3.5 w-3.5 text-purple-400" />
-                  <span>Peer Quadrant</span>
+                  <JargonTooltip termKey="peer_quadrant">
+                    <span>Peer Quadrant</span>
+                  </JargonTooltip>
                 </button>
 
                 <button
@@ -1310,7 +1316,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   }`}
                 >
                   <Sliders className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Valuation Bands & DMAs</span>
+                  <JargonTooltip termKey="pe_corridor">
+                    <span>Valuation Bands & DMAs</span>
+                  </JargonTooltip>
                 </button>
 
                 <button
@@ -1323,7 +1331,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   }`}
                 >
                   <Scale className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>DuPont 3-Stage ROE</span>
+                  <JargonTooltip termKey="dupont_roe">
+                    <span>DuPont 3-Stage ROE</span>
+                  </JargonTooltip>
                 </button>
 
                 <button
@@ -1336,7 +1346,9 @@ export const StockScorecardView: React.FC<StockScorecardViewProps> = ({ initialT
                   }`}
                 >
                   <Zap className="h-3.5 w-3.5 text-rose-400" />
-                  <span>Rolling Alpha & Drawdown</span>
+                  <JargonTooltip termKey="underwater_drawdown">
+                    <span>Rolling Alpha & Drawdown</span>
+                  </JargonTooltip>
                 </button>
               </div>
             </div>

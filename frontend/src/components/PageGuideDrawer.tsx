@@ -22,12 +22,17 @@ import {
   Zap,
   Crosshair,
   PieChart,
+  Target,
+  Compass,
+  ArrowUpRight,
 } from "lucide-react";
 import {
   PAGE_GUIDES,
   UNIVERSAL_GLOSSARY,
+  STRATEGY_BLUEPRINTS,
   JargonTerm,
   PageGuide,
+  StrategyBlueprint,
 } from "../data/investDeskKnowledgeBase";
 
 interface PageGuideDrawerProps {
@@ -45,7 +50,7 @@ export const PageGuideDrawer: React.FC<PageGuideDrawerProps> = ({
   quantSubTab = "stocks",
   initialTerm = null,
 }) => {
-  const [selectedDrawerTab, setSelectedDrawerTab] = useState<"page" | "glossary" | "blueprints">("page");
+  const [selectedDrawerTab, setSelectedDrawerTab] = useState<"page" | "strategies" | "glossary">("page");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedTermKey, setSelectedTermKey] = useState<string | null>(null);
@@ -60,7 +65,10 @@ export const PageGuideDrawer: React.FC<PageGuideDrawerProps> = ({
 
   // Listen for custom open event
   useEffect(() => {
-    const handleCustomOpen = (e: CustomEvent<{ term?: string }>) => {
+    const handleCustomOpen = (e: CustomEvent<{ term?: string; tab?: "page" | "strategies" | "glossary" }>) => {
+      if (e.detail?.tab) {
+        setSelectedDrawerTab(e.detail.tab);
+      }
       if (e.detail?.term) {
         setSelectedTermKey(e.detail.term);
         setSelectedDrawerTab("glossary");
@@ -173,7 +181,7 @@ export const PageGuideDrawer: React.FC<PageGuideDrawerProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search financial terms, formulas (e.g. ROCE, DCF, WACC, Beneish, DCR)..."
+                placeholder="Search strategies, financial terms, formulas (e.g. ROCE, DCF, WACC, Beneish, DCR)..."
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all font-mono"
               />
               {searchQuery && (
@@ -202,7 +210,23 @@ export const PageGuideDrawer: React.FC<PageGuideDrawerProps> = ({
                 }`}
               >
                 <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                <span>📍 Current Page Guide</span>
+                <span>📍 Page Guide</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDrawerTab("strategies");
+                  setSearchQuery("");
+                }}
+                className={`flex-1 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                  selectedDrawerTab === "strategies"
+                    ? "bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Target className="w-3.5 h-3.5 text-cyan-400" />
+                <span>🎯 Strategies ({STRATEGY_BLUEPRINTS.length})</span>
               </button>
 
               <button
@@ -215,7 +239,7 @@ export const PageGuideDrawer: React.FC<PageGuideDrawerProps> = ({
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-                <span>📚 Jargon Dictionary ({Object.keys(UNIVERSAL_GLOSSARY).length})</span>
+                <span>📚 Dictionary ({Object.keys(UNIVERSAL_GLOSSARY).length})</span>
               </button>
             </div>
           </div>
@@ -293,7 +317,75 @@ export const PageGuideDrawer: React.FC<PageGuideDrawerProps> = ({
               </div>
             )}
 
-            {/* TAB 2: Searchable Jargon Dictionary */}
+            {/* TAB 2: Institutional Strategy Blueprints */}
+            {selectedDrawerTab === "strategies" && !searchQuery && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 text-xs text-amber-200">
+                  <div className="flex items-center gap-1.5 font-bold mb-1">
+                    <Target className="w-4 h-4 text-amber-400" />
+                    <span>Institutional Investment Strategy Playbooks</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Pre-defined quantitative and fundamental rulesets designed to maximize risk-adjusted alpha across market cycles.
+                  </p>
+                </div>
+
+                {STRATEGY_BLUEPRINTS.map((strat) => (
+                  <div
+                    key={strat.id}
+                    className="bg-slate-900/80 border border-slate-800 hover:border-amber-500/50 rounded-xl p-4 space-y-3 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                          <span>{strat.name}</span>
+                        </h4>
+                        <span className="text-[11px] text-amber-400 block font-semibold mt-0.5">
+                          {strat.tagline}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 shrink-0">
+                        {strat.idealHoldingPeriod}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {strat.targetProfile}
+                    </p>
+
+                    {/* Rules */}
+                    <div className="bg-slate-950/90 p-3 rounded-lg border border-slate-800/80 space-y-1.5 text-[11px] font-mono">
+                      <span className="text-[9px] uppercase font-sans font-bold text-slate-500 block">
+                        Core Filter Rules & Metrics:
+                      </span>
+                      {strat.pillarRules.map((rule, rIdx) => (
+                        <div key={rIdx} className="flex items-start gap-1.5 text-cyan-300">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                          <span>{rule}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Example Equities */}
+                    <div className="flex items-center justify-between text-[11px] font-mono pt-1">
+                      <span className="text-slate-500">Benchmark Equities:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {strat.exampleEquities.map((eq) => (
+                          <span
+                            key={eq}
+                            className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px]"
+                          >
+                            {eq}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* TAB 3: Searchable Jargon Dictionary */}
             {(selectedDrawerTab === "glossary" || searchQuery) && (
               <div className="space-y-4 animate-fadeIn">
                 {/* Category Filter Chips */}
@@ -363,7 +455,7 @@ export const PageGuideDrawer: React.FC<PageGuideDrawerProps> = ({
                             {item.formula && (
                               <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 font-mono text-[11px] text-cyan-300">
                                 <span className="text-[9px] uppercase font-sans font-bold text-slate-500 block mb-1">
-                                  Mathematical Formula / Calculation:
+                                  Mathematical Formula / Ruleset:
                                 </span>
                                 <code>{item.formula}</code>
                               </div>

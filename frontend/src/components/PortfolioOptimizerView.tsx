@@ -42,6 +42,7 @@ import {
   StockSearchResult,
 } from "../lib/api";
 import { useDebounce } from "../hooks/useDebounce";
+import { JargonTooltip } from "./JargonTooltip";
 
 const PRESET_BASKETS = [
   {
@@ -391,7 +392,9 @@ export const PortfolioOptimizerView: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* 1. Portfolio Volatility */}
             <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Risk-Parity Volatility</span>
+              <JargonTooltip termKey="volatility_drag">
+                <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Risk-Parity Volatility</span>
+              </JargonTooltip>
               <div className="text-2xl font-black text-cyan-400 font-mono font-tabular">
                 {result.total_portfolio_volatility}%
               </div>
@@ -400,7 +403,9 @@ export const PortfolioOptimizerView: React.FC = () => {
 
             {/* 2. Volatility Reduction vs Equal Weight */}
             <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Vol Reduction vs EW</span>
+              <JargonTooltip termKey="volatility_drag" title="Volatility Reduction">
+                <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Vol Reduction vs EW</span>
+              </JargonTooltip>
               <div className="text-2xl font-black text-emerald-400 font-mono font-tabular flex items-center gap-1">
                 <span>-{result.volatility_reduction_pct}%</span>
               </div>
@@ -418,11 +423,17 @@ export const PortfolioOptimizerView: React.FC = () => {
 
             {/* 4. Portfolio Sharpe */}
             <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Portfolio Sharpe Ratio</span>
+              <JargonTooltip termKey="calmar_ratio" title="Sharpe & Risk-Adjusted Return">
+                <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Portfolio Sharpe Ratio</span>
+              </JargonTooltip>
               <div className="text-2xl font-black text-amber-400 font-mono font-tabular">
                 {result.portfolio_sharpe_ratio}
               </div>
-              <span className="text-[10px] text-slate-500">Effective Assets (ENB): {result.effective_number_of_assets.toFixed(1)}</span>
+              <span className="text-[10px] text-slate-500">
+                <JargonTooltip termKey="diversification_ratio">
+                  <span>Effective Assets (ENB): {result.effective_number_of_assets.toFixed(1)}</span>
+                </JargonTooltip>
+              </span>
             </div>
           </div>
 
@@ -433,7 +444,9 @@ export const PortfolioOptimizerView: React.FC = () => {
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <PieChartIcon className="h-4 w-4 text-cyan-400" />
-                  <span>Target Asset Allocations (Cap: {result.max_weight_constraint}%)</span>
+                  <JargonTooltip termKey="erc">
+                    <span>Target Asset Allocations (Cap: {result.max_weight_constraint}%)</span>
+                  </JargonTooltip>
                 </h3>
                 <span className="text-[10px] font-mono text-emerald-400 font-bold">Sum: 100.0%</span>
               </div>

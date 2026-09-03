@@ -4,7 +4,7 @@
 export interface JargonTerm {
   term: string;
   acronym?: string;
-  category: "Stock Diagnostic (DVM)" | "Valuation & DCF" | "Forensics & Safety" | "Mutual Funds & Alpha" | "Portfolio Math";
+  category: "Stock Diagnostic (DVM)" | "Valuation & DCF" | "Forensics & Safety" | "Mutual Funds & Alpha" | "Portfolio Math" | "Investment Strategies";
   short_def: string;
   formula?: string;
   importance: string;
@@ -15,6 +15,17 @@ export interface JargonTerm {
     moderate: string;
     bad: string;
   };
+}
+
+export interface StrategyBlueprint {
+  id: string;
+  name: string;
+  tagline: string;
+  targetProfile: string;
+  pillarRules: string[];
+  riskReturnProfile: string;
+  idealHoldingPeriod: string;
+  exampleEquities: string[];
 }
 
 export interface PageGuideSection {
@@ -159,6 +170,36 @@ export const UNIVERSAL_GLOSSARY: Record<string, JargonTerm> = {
       bad: "Price < 50 DMA < 200 DMA (Bearish Regime)"
     }
   },
+  factor_trajectory: {
+    term: "5-Year Factor Score Trajectory",
+    acronym: "Factor 5Y",
+    category: "Stock Diagnostic (DVM)",
+    short_def: "Tracks the multi-year migration of a company's Quality, Valuation, and Momentum scores across 5 fiscal periods.",
+    formula: "Trajectory = [ Score_Quality(t), Score_Valuation(t), Score_Momentum(t) ] for t in 1..5",
+    importance: "Reveals whether a high composite score is improving sustainably or deteriorating from past peak glory.",
+    playbook: "Look for stocks with rising Quality lines and stabilizing Valuation scores—classic hallmarks of durable compounders.",
+    example: "A company whose Quality score expanded from 55 to 88 over 4 years while valuation normalized is entering prime institutional accumulation.",
+    thresholds: {
+      good: "Quality line upward trending (> 75)",
+      moderate: "Stable scores across all 3 pillars",
+      bad: "Sharp downward slope in Quality or Momentum"
+    }
+  },
+  peer_quadrant: {
+    term: "2D Peer Valuation vs. Quality Quadrant",
+    acronym: "Peer Quadrant",
+    category: "Stock Diagnostic (DVM)",
+    short_def: "A 2D scatter matrix mapping companies against sector peers along Quality (X-axis) and Valuation Attractiveness (Y-axis).",
+    formula: "Quadrant X = Quality / Durability (0-100), Quadrant Y = Valuation Discount (0-100)",
+    importance: "Instantly categorizes sector peers into 4 distinct investment archetypes: Pure Compounders, Expensive Growth, Deep Value, and High Risk / Value Traps.",
+    playbook: "• Top-Right (Compounders): High Quality + Fair/Cheap Valuation (Prime Buys).\n• Top-Left (Deep Value): Low Quality + Cheap Valuation (Tactical Turnarounds).\n• Bottom-Right (Expensive Growth): High Quality + Expensive (Wait for dips).\n• Bottom-Left (High Risk): Low Quality + Expensive (Avoid).",
+    example: "Positioning TCS against Infosys, Wipro, and LTIMindtree reveals which IT bluechip offers the highest quality-per-rupee-spent.",
+    thresholds: {
+      good: "Compounder Zone (Top-Right)",
+      moderate: "Expensive Growth (Bottom-Right)",
+      bad: "High Risk / Trap (Bottom-Left)"
+    }
+  },
 
   // ==========================================
   // 2. INTRINSIC VALUATION & DCF SENSITIVITY
@@ -221,6 +262,21 @@ export const UNIVERSAL_GLOSSARY: Record<string, JargonTerm> = {
       good: "≥ 20% (Substantial Protection)",
       moderate: "5% – 19%",
       bad: "< 0% (Trading at Premium to Fair Value)"
+    }
+  },
+  reverse_dcf: {
+    term: "Reverse DCF Market Implied Growth Rate",
+    acronym: "Reverse DCF",
+    category: "Valuation & DCF",
+    short_def: "Inverts the DCF formula to calculate what annual earnings growth rate the current stock market price is baking in.",
+    formula: "Solve for g in: CMP = DCF(g_implied, WACC, Terminal_g)",
+    importance: "Tells you if market expectations are realistic (e.g., pricing 12% growth for a steady company) or absurd (e.g., pricing 45% CAGR for 10 years).",
+    playbook: "If market price implies 28% growth but company historical CAGR is 14%, stock is priced for perfection with massive downside risk.",
+    example: "A consumer stock at 70x P/E implies 32% annual profit growth for 10 years straight.",
+    thresholds: {
+      good: "Implied Growth < Historical Realized CAGR (Low Bar)",
+      moderate: "Implied Growth ≈ Historical CAGR",
+      bad: "Implied Growth > 2.5x Historical CAGR (Priced for Perfection)"
     }
   },
   ev_ebitda: {
@@ -429,8 +485,195 @@ export const UNIVERSAL_GLOSSARY: Record<string, JargonTerm> = {
       moderate: "1.15 – 1.35",
       bad: "< 1.10 (Poor Diversification)"
     }
+  },
+
+  // ==========================================
+  // 6. INSTITUTIONAL INVESTMENT STRATEGIES
+  // ==========================================
+  high_growth_compounder: {
+    term: "High-Growth Compounder Strategy",
+    acronym: "Compounder",
+    category: "Investment Strategies",
+    short_def: "Identifies dominant market leaders with massive pricing power, ROCE > 22%, 3Y Sales CAGR > 15%, and virtually zero debt (Debt/Equity < 0.3x).",
+    formula: "Filters: ROCE ≥ 22% AND Sales_CAGR_3Y ≥ 15% AND D/E ≤ 0.3x AND OCF/PAT ≥ 0.85x",
+    importance: "The core wealth-creation strategy of Warren Buffett and Saurabh Mukherjea (Coffee Can Investing). Delivers compounding independent of macro cycles.",
+    playbook: "Buy on 10%–15% market pullbacks; hold for 5–10 years without trying to time short-term cyclical peaks.",
+    example: "Titan, Astral Pipes, Page Industries, and TCS historically compounded capital at 20%+ CAGR for decades.",
+    thresholds: {
+      good: "ROCE > 25%, Sales CAGR > 18%, D/E < 0.1x",
+      moderate: "ROCE 18%–22%, Sales CAGR 12%–15%",
+      bad: "ROCE < 15% or Debt > 0.8x"
+    }
+  },
+  deep_value_moat: {
+    term: "Deep Value & Margin of Safety Strategy",
+    acronym: "Deep Value",
+    category: "Investment Strategies",
+    short_def: "Screens for fundamentally sound, cash-generating companies trading at steep historical discounts (P/E < 18x, PEG < 1.0, Piotroski Score ≥ 7).",
+    formula: "Filters: P/E ≤ 18x AND PEG ≤ 1.0 AND Piotroski_Score ≥ 7 AND MoS ≥ 20%",
+    importance: "Minimizes permanent loss of capital by demanding a large discount buffer before entry (Benjamin Graham methodology).",
+    playbook: "Accumulate when market pessimism is peak; re-rate to fair value typically delivers 30%–60% asymmetric upside in 18–24 months.",
+    example: "Buying Coal India or PSU Banks when trading at 6x P/E with 8%+ dividend yield and rising cash flows.",
+    thresholds: {
+      good: "P/E < 12x, PEG < 0.8, Piotroski 8-9",
+      moderate: "P/E 12x–18x, PEG 0.8–1.2",
+      bad: "P/E > 25x or Piotroski < 5"
+    }
+  },
+  debt_free_roce: {
+    term: "Debt-Free High ROCE Cash Generator Strategy",
+    acronym: "Cash Generator",
+    category: "Investment Strategies",
+    short_def: "Focuses exclusively on zero-debt companies converting >90% of profits into hard operating cash flow with ROCE > 25%.",
+    formula: "Filters: Total Debt / Equity ≤ 0.1x AND ROCE ≥ 25% AND CFO / PAT ≥ 0.90x",
+    importance: "Impervious to interest rate hikes and banking credit freezes. Can fund high-ROE expansion entirely from internal accruals.",
+    playbook: "Perfect defensive core allocation during tightening monetary policies and volatile market environments.",
+    example: "Infosys, TCS, Divi's Labs, and Supreme Industries.",
+    thresholds: {
+      good: "Debt = ₹0, ROCE > 30%, OCF/PAT > 1.0x",
+      moderate: "D/E < 0.2x, ROCE 20%–25%",
+      bad: "D/E > 0.5x"
+    }
+  },
+  dividend_aristocrats: {
+    term: "Dividend Aristocrats & Cash Moat Strategy",
+    acronym: "Dividend Moat",
+    category: "Investment Strategies",
+    short_def: "Companies with consistent 5+ year dividend payout histories, dividend yield > 2.0%, and strong balance sheet cash reserves.",
+    formula: "Filters: Dividend Yield ≥ 2.0% AND Payout Ratio 30%–65% AND Debt/Equity ≤ 0.5x",
+    importance: "Provides inflation-beating passive cash flow with downside protection, as dividend yield acts as a hard valuation floor.",
+    playbook: "Reinvest dividend cash flows during market corrections to accelerate geometric compounding.",
+    example: "ITC, Power Grid, Sanofi India, and TCS.",
+    thresholds: {
+      good: "Div Yield > 3.0% with growing earnings",
+      moderate: "Div Yield 1.5% – 3.0%",
+      bad: "Payout > 90% (Unsustainable dividend)"
+    }
+  },
+  momentum_multibaggers: {
+    term: "Momentum Multibagger Breakout Strategy",
+    acronym: "Momentum",
+    category: "Investment Strategies",
+    short_def: "Identifies Stage-2 growth breakouts with rising 1-Year relative price strength (>50%), 50 DMA above 200 DMA, and institutional volume buildup.",
+    formula: "Filters: 1Y Price Return ≥ 50% AND Price > 50 DMA > 200 DMA AND Volatility < 40%",
+    importance: "Captures rapid institutional markup phases in high-velocity sectors and market leadership themes.",
+    playbook: "Enter on 20/50 DMA pullbacks with trailing stop-loss below 50 DMA to let winners run while cutting laggards.",
+    example: "Trent or Bharat Electronics breaking out of multi-month base consolidation with 2x volume.",
+    thresholds: {
+      good: "1Y Return > 60%, 50 DMA > 200 DMA (Expansion)",
+      moderate: "1Y Return 25% – 50%",
+      bad: "Price < 200 DMA (Downtrend)"
+    }
+  },
+  rolling_alpha_sip: {
+    term: "Rolling Alpha SIP Compounding Strategy",
+    acronym: "Alpha SIP",
+    category: "Investment Strategies",
+    short_def: "Systematic investment in 'In-Form 🔥' mutual funds exhibiting >80% Rolling Alpha hit rate and Downside Capture < 75%.",
+    formula: "Filters: PowerUp Form = In-Form AND Downside Capture ≤ 75% AND 5Y P(Neg) = 0.0%",
+    importance: "Automates wealth creation while guaranteeing that money flows only into managers with persistent risk-adjusted alpha.",
+    playbook: "Set up monthly SIP; review PowerUp Form rating once a year; only switch if fund status drops to 'Out-of-Form ❌' for 2 consecutive quarters.",
+    example: "Parag Parikh Flexi Cap Fund SIP delivering 18%+ CAGR across 10 years by avoiding severe crash drawdowns.",
+    thresholds: {
+      good: "In-Form 🔥 with DCR < 75%",
+      moderate: "On-Track ✅",
+      bad: "Out-of-Form ❌"
+    }
+  },
+  risk_parity_all_weather: {
+    term: "All-Weather Risk-Parity Allocation Strategy",
+    acronym: "All-Weather",
+    category: "Investment Strategies",
+    short_def: "Equal Risk Contribution (ERC) allocation across Indian Equities, US Tech, Gold ETF, and Government Sovereign Bonds.",
+    formula: "Weights: Inverse Variance / Equal Marginal Risk Contribution (RC_i = 1/N × σ_p)",
+    importance: "Survives all 4 economic seasons: Growth, Recession, Inflation, and Deflation with smooth upward equity curves.",
+    playbook: "Rebalance semi-annually when asset weights deviate by ±5% to harvest the volatility rebalancing premium.",
+    example: "Ray Dalio All-Weather portfolio tailored to Indian markets (Equities 35%, Gold 25%, Long Debt 30%, Dynamic Cash 10%).",
+    thresholds: {
+      good: "Sharpe > 1.2, Max Drawdown < 10%",
+      moderate: "Sharpe 0.8 – 1.2",
+      bad: "Drawdown > 20%"
+    }
   }
 };
+
+export const STRATEGY_BLUEPRINTS: StrategyBlueprint[] = [
+  {
+    id: "high_growth_compounder",
+    name: "High-Growth Compounder Strategy",
+    tagline: "Warren Buffett & Coffee Can Moat Leaders",
+    targetProfile: "Long-term wealth builders seeking 18%–25% annual compounded returns without taking balance-sheet leverage risks.",
+    pillarRules: [
+      "ROCE > 22% & ROE > 18% consistently for 5+ years",
+      "Debt to Equity < 0.3x (Prudently financed growth)",
+      "3-Year Revenue & Net Profit CAGR > 15%",
+      "Operating Cash Flow conversion (OCF / PAT) > 0.85x"
+    ],
+    riskReturnProfile: "Moderate Risk / High Compounding Return (Alpha)",
+    idealHoldingPeriod: "5 – 10 Years (Minimum 3 Years)",
+    exampleEquities: ["TCS", "TITAN", "ASTRAL", "PAGEIND", "PIDILITIND"]
+  },
+  {
+    id: "deep_value_moat",
+    name: "Deep Value & Margin of Safety Strategy",
+    tagline: "Benjamin Graham Intrinsic Value Bargains",
+    targetProfile: "Value investors seeking asymmetric 30%–60% upside from multiple expansion with severe downside protection.",
+    pillarRules: [
+      "Trailing P/E < 18x or EV/EBITDA < 9x",
+      "PEG Ratio < 1.0 (Attractively priced growth)",
+      "Piotroski F-Score >= 7 (Confirmed balance-sheet health)",
+      "DCF Margin of Safety >= 20% discount to fair value"
+    ],
+    riskReturnProfile: "Low-to-Moderate Risk / High Asymmetric Upside",
+    idealHoldingPeriod: "18 – 36 Months (Until multiple re-rates)",
+    exampleEquities: ["COALINDIA", "ITC", "HDFCBANK", "IOC", "BANKBARODA"]
+  },
+  {
+    id: "debt_free_roce",
+    name: "Debt-Free High ROCE Cash Generator",
+    tagline: "Zero-Debt Cash Machines",
+    targetProfile: "Defensive investors demanding supreme capital safety, zero bankruptcy risk, and high dividend yields.",
+    pillarRules: [
+      "Total Debt / Equity <= 0.1x (Virtually debt-free)",
+      "ROCE >= 25% (Super-normal capital efficiency)",
+      "Free Cash Flow positive in 5 out of 5 years",
+      "Promoter Pledging = 0.0%"
+    ],
+    riskReturnProfile: "Low Risk / Steady High Quality Alpha",
+    idealHoldingPeriod: "3 – 7 Years",
+    exampleEquities: ["INFY", "TCS", "DIVISLAB", "SUPREMEIND", "LALPATHLAB"]
+  },
+  {
+    id: "momentum_multibaggers",
+    name: "Momentum Multibagger Breakout Strategy",
+    tagline: "Stage-2 Trend & Institutional Flow Expansion",
+    targetProfile: "Growth and swing investors seeking to capture explosive multi-quarter markup rallies in market-leading themes.",
+    pillarRules: [
+      "1-Year Relative Price Return >= 40%",
+      "Stock Price > 50 DMA > 200 DMA (Golden Regime)",
+      "Institutional shareholding (DII + FII) increasing over 2 quarters",
+      "60-day realized volatility < 40%"
+    ],
+    riskReturnProfile: "Higher Volatility / Maximum Velocity Returns",
+    idealHoldingPeriod: "6 – 18 Months (Trend following)",
+    exampleEquities: ["TRENT", "BEL", "PICCADIL", "HAL", "COCHINSHIP"]
+  },
+  {
+    id: "rolling_alpha_sip",
+    name: "Rolling Alpha Mutual Fund SIP Strategy",
+    tagline: "Automated Wealth Machine with Downside Shield",
+    targetProfile: "Salaried and systematic investors compounding monthly savings into top-decile active mutual funds.",
+    pillarRules: [
+      "PowerUp Form Status: 'In-Form 🔥' or 'On-Track ✅'",
+      "Downside Capture Ratio (DCR) < 75% (Superior crash protection)",
+      "3-Year Mean Rolling Alpha > +3.0% over Nifty 500 benchmark",
+      "5-Year Probability of Negative Return = 0.0%"
+    ],
+    riskReturnProfile: "Calibrated Equity Risk / Optimal Compounding",
+    idealHoldingPeriod: "5 – 20 Years (SIP Mode)",
+    exampleEquities: ["Parag Parikh Flexi Cap", "Nippon Small Cap", "Mirae Large Cap", "HDFC Flexi Cap"]
+  }
+];
 
 export const PAGE_GUIDES: Record<string, PageGuide> = {
   // ==========================================

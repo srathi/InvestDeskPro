@@ -21,28 +21,33 @@ import {
   ScreenerStockItem,
   ScreenerFilterRequest,
 } from "../lib/api";
+import { JargonTooltip } from "./JargonTooltip";
 
 const PRESET_QUERIES = [
   {
     id: "debt_free_roce",
+    strategyKey: "debt_free_roce",
     name: "Debt-Free High ROCE",
     desc: "D/E <= 0.1, ROCE >= 25%",
     filters: { max_debt_to_equity: 0.1, min_roce: 25.0 },
   },
   {
     id: "value_growth",
+    strategyKey: "deep_value_moat",
     name: "Undervalued Growth",
     desc: "P/E <= 30, ROE >= 18%",
     filters: { max_pe: 30.0, min_roe: 18.0 },
   },
   {
     id: "dividend_cash",
+    strategyKey: "dividend_aristocrats",
     name: "Dividend Aristocrats",
     desc: "Div Yield >= 1.5%",
     filters: { min_div_yield: 1.5 },
   },
   {
     id: "momentum_leaders",
+    strategyKey: "momentum_multibaggers",
     name: "Momentum Multibaggers",
     desc: "1Y Return >= 50%",
     filters: { min_return_1y: 50.0 },
@@ -189,13 +194,15 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
             <button
               key={preset.id}
               onClick={() => handleApplyPreset(preset)}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                 activePreset === preset.id
                   ? "bg-emerald-950/80 border-emerald-600 text-emerald-200 shadow-md shadow-emerald-950"
                   : "bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300"
               }`}
             >
-              <div className="font-bold text-xs text-white">{preset.name}</div>
+              <JargonTooltip termKey={preset.strategyKey} title={preset.name}>
+                <div className="font-bold text-xs text-white">{preset.name}</div>
+              </JargonTooltip>
               <div className="text-[11px] text-slate-400 font-mono mt-0.5">{preset.desc}</div>
             </button>
           ))}
@@ -213,7 +220,9 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
           {/* Max P/E */}
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-slate-400">Max Stock P/E:</span>
+              <JargonTooltip termKey="pe_corridor" title="Max Stock P/E Multiple">
+                <span className="text-slate-400">Max Stock P/E:</span>
+              </JargonTooltip>
               <span className="font-bold text-cyan-400 font-tabular">{maxPE >= 100 ? "Any P/E" : `< ${maxPE}x`}</span>
             </div>
             <input
@@ -230,7 +239,9 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
           {/* Min ROE */}
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-slate-400">Min Return on Equity (ROE):</span>
+              <JargonTooltip termKey="roe" title="Minimum Return on Equity">
+                <span className="text-slate-400">Min Return on Equity (ROE):</span>
+              </JargonTooltip>
               <span className="font-bold text-emerald-400 font-tabular">{minROE <= 0 ? "Any ROE" : `> ${minROE}%`}</span>
             </div>
             <input
@@ -247,7 +258,9 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
           {/* Min ROCE */}
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-slate-400">Min Return on Capital (ROCE):</span>
+              <JargonTooltip termKey="roce" title="Minimum Return on Capital Employed">
+                <span className="text-slate-400">Min Return on Capital (ROCE):</span>
+              </JargonTooltip>
               <span className="font-bold text-emerald-400 font-tabular">{minROCE <= 0 ? "Any ROCE" : `> ${minROCE}%`}</span>
             </div>
             <input
@@ -264,7 +277,9 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
           {/* Max D/E */}
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-slate-400">Max Debt to Equity (D/E):</span>
+              <JargonTooltip termKey="altman_z_score" title="Max Debt to Equity Ratio">
+                <span className="text-slate-400">Max Debt to Equity (D/E):</span>
+              </JargonTooltip>
               <span className="font-bold text-amber-300 font-tabular">{maxDE >= 2.0 ? "Any D/E" : `< ${maxDE}x`}</span>
             </div>
             <input
@@ -281,8 +296,10 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
           {/* Min 1Y Return */}
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-slate-400">Min 1-Year Return (%):</span>
-              <span className="font-bold text-cyan-300 font-tabular">{min1YReturn <= -50 ? "Any Return" : `> ${min1YReturn}%`}</span>
+              <JargonTooltip termKey="momentum_multibaggers" title="1-Year Price Return">
+                <span className="text-slate-400">Min 1-Year Price Return:</span>
+              </JargonTooltip>
+              <span className="font-bold text-emerald-400 font-tabular">{min1YReturn <= -50 ? "Any Return" : `> ${min1YReturn}%`}</span>
             </div>
             <input
               type="range"
@@ -324,7 +341,7 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
             <button
               onClick={handleExportCSV}
               disabled={stocks.length === 0}
-              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-cyan-300 hover:border-cyan-800 transition-all flex items-center gap-1.5 disabled:opacity-40"
+              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-cyan-300 hover:border-cyan-800 transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
               title="Export Screened Results to CSV"
             >
               <Download className="h-3.5 w-3.5 text-cyan-400" />
@@ -351,11 +368,21 @@ export const StockScreenerView: React.FC<StockScreenerViewProps> = ({ onSelectSt
                   </div>
                 </th>
                 <th onClick={() => handleSort("price")} className="pb-2.5 text-right cursor-pointer hover:text-white">Price (₹)</th>
-                <th onClick={() => handleSort("pe")} className="pb-2.5 text-right cursor-pointer hover:text-white">P/E</th>
-                <th onClick={() => handleSort("roe")} className="pb-2.5 text-right cursor-pointer hover:text-white">ROE (%)</th>
-                <th onClick={() => handleSort("roce")} className="pb-2.5 text-right cursor-pointer hover:text-white">ROCE (%)</th>
-                <th onClick={() => handleSort("debt_to_equity")} className="pb-2.5 text-right cursor-pointer hover:text-white">D/E</th>
-                <th onClick={() => handleSort("return_1y")} className="pb-2.5 text-right cursor-pointer hover:text-white">1Y Return</th>
+                <th onClick={() => handleSort("pe")} className="pb-2.5 text-right cursor-pointer hover:text-white">
+                  <JargonTooltip termKey="pe_corridor">P/E</JargonTooltip>
+                </th>
+                <th onClick={() => handleSort("roe")} className="pb-2.5 text-right cursor-pointer hover:text-white">
+                  <JargonTooltip termKey="roe">ROE (%)</JargonTooltip>
+                </th>
+                <th onClick={() => handleSort("roce")} className="pb-2.5 text-right cursor-pointer hover:text-white">
+                  <JargonTooltip termKey="roce">ROCE (%)</JargonTooltip>
+                </th>
+                <th onClick={() => handleSort("debt_to_equity")} className="pb-2.5 text-right cursor-pointer hover:text-white">
+                  <JargonTooltip termKey="altman_z_score" title="Debt to Equity">D/E</JargonTooltip>
+                </th>
+                <th onClick={() => handleSort("return_1y")} className="pb-2.5 text-right cursor-pointer hover:text-white">
+                  <JargonTooltip termKey="momentum_multibaggers">1Y Return</JargonTooltip>
+                </th>
                 <th className="pb-2.5 text-center">Action</th>
               </tr>
             </thead>
