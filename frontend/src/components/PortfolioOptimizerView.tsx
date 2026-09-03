@@ -143,6 +143,13 @@ export const PortfolioOptimizerView: React.FC = () => {
         initialMap[a.ticker] = a.weight_pct;
       });
       setCustomWeights(initialMap);
+      const cleanList = data.allocations.map((a) => a.ticker.replace(".NS", "").replace(".BO", ""));
+      setTickerList(cleanList);
+      if (cleanList.length < tickers.length) {
+        setUploadSuccess(`Loaded ${cleanList.length} of ${tickers.length} stock holdings (unresolvable or bond symbols skipped).`);
+      } else {
+        setUploadSuccess(`Successfully loaded and optimized all ${cleanList.length} stock holdings.`);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to simulate risk-parity stress test.");
       setRawResult(null);
@@ -242,7 +249,7 @@ export const PortfolioOptimizerView: React.FC = () => {
     runOptimization(basket.tickers, maxWeight);
   };
 
-  // 📥 CSV / Excel File Upload Handler
+  // 📥 Comprehensive CSV / Excel File Upload Handler for Zerodha, Groww, Upstox, ICICI, etc.
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -252,83 +259,138 @@ export const PortfolioOptimizerView: React.FC = () => {
       try {
         const data = event.target?.result;
         const workbook = XLSX.read(data, { type: "binary" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        if (!rows || rows.length === 0) {
-          setError("The uploaded file is empty.");
-          return;
-        }
-
-        // Find candidate symbol column
-        let symbolCol = 0;
-        if (rows.length > 0 && Array.isArray(rows[0])) {
-          const headerRow = rows[0].map((c) => String(c || "").toLowerCase().trim());
-          for (let colIdx = 0; colIdx < headerRow.length; colIdx++) {
-            const h = headerRow[colIdx];
-            if (
-              h.includes("symbol") ||
-              h.includes("ticker") ||
-              h.includes("stock") ||
-              h.includes("instrument") ||
-              h.includes("isin") ||
-              h.includes("company") ||
-              h.includes("security")
-            ) {
-              symbolCol = colIdx;
-              break;
-            }
-          }
-        }
+        const IGNORED_TOKENS = new Set([
+          "TOTAL", "SUBTOTAL", "GRAND", "CHARGES", "TURNOVER", "TAX", "STT", "PROFIT", "LOSS",
+          "REALIZED", "UNREALIZED", "SHORT", "LONG", "TERM", "DATE", "SUMMARY", "NET", "BUY",
+          "SELL", "CLIENT", "PAN", "DISCLAIMER", "STATEMENT", "EQUITY", "MUTUAL", "FUNDS",
+          "DERIVATIVES", "COMMODITY", "CURRENCY", "ISIN", "QUANTITY", "VALUE", "AVERAGE",
+          "PRICE", "OPEN", "CLOSE", "HIGH", "LOW", "SCRIP", "NAME", "SYMBOL", "INSTRUMENT",
+          "SECURITY", "HOLDING", "HOLDINGS", "PORTFOLIO", "EXCHANGE", "SEGMENT", "STATUS",
+          "NIL", "NA", "NAN", "NULL", "UNDEFINED", "TRADE", "TRADES", "TRADING", "BROKERAGE",
+          "GST", "STAMP", "SEBI", "TRANSACTION", "CREDIT", "DEBIT", "AMOUNT", "SERIAL", "NO", "SR"
+        ]);
 
         const extracted: string[] = [];
-        const startRow = rows[0].some((c: any) => typeof c === "string" && isNaN(Number(c))) ? 1 : 0;
 
-        for (let r = startRow; r < rows.length; r++) {
-          const row = rows[r];
-          if (!row || row.length === 0) continue;
+        // Scan all sheets in the workbook (e.g. Tradewise-Equity, Equity, Scripmaster, Sheet1)
+        for (const sheetName of workbook.SheetNames) {
+          const sheet = workbook.Sheets[sheetName];
+          if (!sheet) continue;
+          const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          if (!rows || rows.length === 0) continue;
 
-          let raw = String(row[symbolCol] || "").trim();
-          if (!raw) {
-            for (const cell of row) {
-              if (cell && typeof cell === "string" && cell.trim().length > 0 && isNaN(Number(cell))) {
-                raw = cell.trim();
+          // Find header row by scanning first 35 rows for keyword markers
+          let headerRowIdx = -1;
+          let symbolColIdx = -1;
+
+          for (let r = 0; r < Math.min(35, rows.length); r++) {
+            const row = rows[r];
+            if (!Array.isArray(row)) continue;
+            for (let c = 0; c < row.length; c++) {
+              const cellStr = String(row[c] || "").toLowerCase().trim();
+              if (
+                cellStr === "symbol" ||
+                cellStr === "stock symbol" ||
+                cellStr === "scrip" ||
+                cellStr === "scrip name" ||
+                cellStr === "ticker" ||
+                cellStr === "instrument" ||
+                cellStr === "instrument name" ||
+                cellStr === "stock" ||
+                cellStr === "security" ||
+                cellStr === "tradename" ||
+                cellStr === "company" ||
+                cellStr === "isin"
+              ) {
+                headerRowIdx = r;
+                symbolColIdx = c;
                 break;
               }
             }
+            if (headerRowIdx !== -1) break;
           }
 
-          if (!raw) continue;
+          // If a table header was located in this sheet
+          if (headerRowIdx !== -1 && symbolColIdx !== -1) {
+            for (let r = headerRowIdx + 1; r < rows.length; r++) {
+              const row = rows[r];
+              if (!row || row.length === 0) continue;
 
-          // Clean ticker symbol (strip NSE:, BSE:, .NS, .BO, -EQ, quotes)
-          let clean = raw
-            .toUpperCase()
-            .replace(/^NSE:/, "")
-            .replace(/^BSE:/, "")
-            .replace(/\.NS$/, "")
-            .replace(/\.BO$/, "")
-            .replace(/-EQ$/, "")
-            .replace(/-BE$/, "")
-            .replace(/["']/g, "")
-            .trim();
+              let raw = String(row[symbolColIdx] || "").trim();
+              if (!raw) continue;
 
-          const token = clean.split(/[\s,]+/)[0];
-          if (token && token.length <= 25 && isNaN(Number(token))) {
-            if (!extracted.includes(token)) {
-              extracted.push(token);
+              // Clean ticker symbol (strip NSE:, BSE:, .NS, .BO, -EQ, quotes)
+              let clean = raw
+                .toUpperCase()
+                .replace(/^NSE:/, "")
+                .replace(/^BSE:/, "")
+                .replace(/\.NS$/, "")
+                .replace(/\.BO$/, "")
+                .replace(/-EQ$/, "")
+                .replace(/-BE$/, "")
+                .replace(/-BL$/, "")
+                .replace(/-BZ$/, "")
+                .replace(/["'()]/g, "")
+                .trim();
+
+              const token = clean.split(/[\s,/]+/)[0];
+              if (
+                token &&
+                token.length >= 2 &&
+                token.length <= 25 &&
+                isNaN(Number(token)) &&
+                !IGNORED_TOKENS.has(token) &&
+                !/^\d{4}-\d{2}-\d{2}/.test(token)
+              ) {
+                if (!extracted.includes(token)) {
+                  extracted.push(token);
+                }
+              }
+            }
+          } else {
+            // Fallback for raw simple single-column symbol list
+            for (let r = 0; r < rows.length; r++) {
+              const row = rows[r];
+              if (!row || row.length === 0) continue;
+              for (const cell of row) {
+                if (!cell || typeof cell !== "string") continue;
+                let clean = cell
+                  .toUpperCase()
+                  .replace(/^NSE:/, "")
+                  .replace(/^BSE:/, "")
+                  .replace(/\.NS$/, "")
+                  .replace(/\.BO$/, "")
+                  .replace(/-EQ$/, "")
+                  .replace(/-BE$/, "")
+                  .replace(/["'()]/g, "")
+                  .trim();
+                const token = clean.split(/[\s,/]+/)[0];
+                if (
+                  token &&
+                  token.length >= 2 &&
+                  token.length <= 20 &&
+                  /^[A-Z0-9&-]+$/.test(token) &&
+                  isNaN(Number(token)) &&
+                  !IGNORED_TOKENS.has(token)
+                ) {
+                  if (!extracted.includes(token)) {
+                    extracted.push(token);
+                  }
+                }
+              }
             }
           }
         }
 
         if (extracted.length < 2) {
-          setError(`Found only ${extracted.length} valid stock symbols in "${file.name}". Please ensure file contains at least 2 stock symbols.`);
+          setError(`Found only ${extracted.length} valid stock symbols in "${file.name}". Please ensure the file contains at least 2 equity stock symbols.`);
           return;
         }
 
         setTickerList(extracted);
         setAllocationMode("risk_parity");
-        setUploadSuccess(`Successfully extracted ${extracted.length} stock holdings from "${file.name}". Calculated optimal risk-parity weights.`);
+        setUploadSuccess(`Imported ${extracted.length} stock holdings from "${file.name}". Solving optimal covariance and risk-parity allocations...`);
         setError(null);
         setIsTableExpanded(true);
         runOptimization(extracted, maxWeight);

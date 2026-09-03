@@ -71,24 +71,53 @@ def fetch_historical_returns(
     closes_dict = {}
     total_returns_dict = {}
 
+    # Extract Close DataFrame directly from yf.download MultiIndex or flat DataFrame
+    close_df: Optional[pd.DataFrame] = None
+    if isinstance(data, pd.DataFrame) and not data.empty:
+        if isinstance(data.columns, pd.MultiIndex):
+            if "Close" in data.columns.levels[0]:
+                close_df = data["Close"]
+            elif "Close" in data.columns.levels[1]:
+                close_df = data.xs("Close", level=1, axis=1)
+        elif "Close" in data.columns:
+            close_df = data[["Close"]]
+
     for t in norm_tickers:
         series = None
-        if isinstance(data.columns, pd.MultiIndex):
-            if t in data.columns.levels[0]:
-                series = data[t]["Close"].dropna()
-        else:
-            if "Close" in data.columns:
-                series = data["Close"].dropna()
+        # 1. Try extracting from batch close_df
+        if close_df is not None:
+            candidates = [
+                t,
+                t.replace(".NS", ""),
+                t.replace(".BO", ""),
+                f"{t}.NS" if not t.endswith((".NS", ".BO")) else t,
+                f"{t}.BO" if not t.endswith((".NS", ".BO")) else t,
+            ]
+            for cand in candidates:
+                if cand in close_df.columns:
+                    s = close_df[cand].dropna()
+                    if len(s) >= 20:
+                        series = s
+                        break
 
-        # If batch didn't return ticker data, try single ticker fetch
+        # 2. If batch failed, try single ticker fetch with BSE / NSE fallback
         if series is None or len(series) < 20:
-            try:
-                single_t = yf.Ticker(t)
-                hist = single_t.history(period=period)
-                if not hist.empty and "Close" in hist.columns:
-                    series = hist["Close"].dropna()
-            except Exception:
-                pass
+            candidates_single = [
+                t,
+                t.replace(".NS", ".BO") if t.endswith(".NS") else (t.replace(".BO", ".NS") if t.endswith(".BO") else f"{t}.NS"),
+                t.replace(".NS", "") if t.endswith(".NS") else f"{t}.BO",
+            ]
+            for cand in candidates_single:
+                try:
+                    single_t = yf.Ticker(cand)
+                    hist = single_t.history(period=period)
+                    if not hist.empty and "Close" in hist.columns:
+                        s = hist["Close"].dropna()
+                        if len(s) >= 20:
+                            series = s
+                            break
+                except Exception:
+                    pass
 
         if series is not None and len(series) >= 20:
             dt_idx = pd.to_datetime(series.index)
@@ -104,9 +133,9 @@ def fetch_historical_returns(
 
     # Benchmark (^NSEI)
     bench_series = None
-    if isinstance(data.columns, pd.MultiIndex) and "^NSEI" in data.columns.levels[0]:
-        bench_series = data["^NSEI"]["Close"].dropna()
-    elif "^NSEI" in data.columns:
+    if close_df is not None and "^NSEI" in close_df.columns:
+        bench_series = close_df["^NSEI"].dropna()
+    elif isinstance(data, pd.DataFrame) and "^NSEI" in data.columns:
         bench_series = data["^NSEI"].dropna()
 
     if bench_series is None or len(bench_series) < 20:
@@ -118,9 +147,7 @@ def fetch_historical_returns(
         except Exception:
             pass
 
-    df_closes = pd.DataFrame(closes_dict).dropna()
-    if len(df_closes) < 30:
-        df_closes = pd.DataFrame(closes_dict).ffill().bfill().dropna()
+    df_closes = pd.DataFrame(closes_dict).ffill().bfill().dropna()
 
     if len(df_closes) < 20:
         raise ValueError("Insufficient overlapping trading dates for the selected portfolio assets.")
