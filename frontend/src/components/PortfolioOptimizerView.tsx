@@ -31,6 +31,9 @@ import {
   RotateCcw,
   Scale,
   Trash2,
+  Upload,
+  FileSpreadsheet,
+  Download,
 } from "lucide-react";
 import {
   PieChart,
@@ -46,6 +49,8 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import * as XLSX from "xlsx";
+
 import {
   optimizePortfolio,
   searchStocks,
@@ -87,6 +92,12 @@ const CHART_COLORS = [
   "#84cc16",
   "#e11d48",
   "#0ea5e9",
+  "#a855f7",
+  "#22c55e",
+  "#eab308",
+  "#f43f5e",
+  "#64748b",
+  "#38bdf8",
 ];
 
 export const PortfolioOptimizerView: React.FC = () => {
@@ -96,6 +107,7 @@ export const PortfolioOptimizerView: React.FC = () => {
   const [maxWeight, setMaxWeight] = useState(20);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [rawResult, setRawResult] = useState<PortfolioOptimizeResponse | null>(null);
 
   // Table collapse/expand state
@@ -111,6 +123,7 @@ export const PortfolioOptimizerView: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const debouncedInput = useDebounce(newTicker, 250);
 
@@ -177,10 +190,6 @@ export const PortfolioOptimizerView: React.FC = () => {
   const addTickerSymbol = (tickerToAdd: string) => {
     const clean = tickerToAdd.trim().toUpperCase().replace(".NS", "").replace(".BO", "");
     if (clean && !tickerList.includes(clean)) {
-      if (tickerList.length >= 12) {
-        setError("Maximum 12 stocks supported for optimal covariance estimation.");
-        return;
-      }
       const updated = [...tickerList, clean];
       setTickerList(updated);
       setNewTicker("");
@@ -229,7 +238,120 @@ export const PortfolioOptimizerView: React.FC = () => {
   const loadPreset = (basket: { name: string; tickers: string[] }) => {
     setTickerList(basket.tickers);
     setAllocationMode("risk_parity");
+    setUploadSuccess(null);
     runOptimization(basket.tickers, maxWeight);
+  };
+
+  // 📥 CSV / Excel File Upload Handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        if (!rows || rows.length === 0) {
+          setError("The uploaded file is empty.");
+          return;
+        }
+
+        // Find candidate symbol column
+        let symbolCol = 0;
+        if (rows.length > 0 && Array.isArray(rows[0])) {
+          const headerRow = rows[0].map((c) => String(c || "").toLowerCase().trim());
+          for (let colIdx = 0; colIdx < headerRow.length; colIdx++) {
+            const h = headerRow[colIdx];
+            if (
+              h.includes("symbol") ||
+              h.includes("ticker") ||
+              h.includes("stock") ||
+              h.includes("instrument") ||
+              h.includes("isin") ||
+              h.includes("company") ||
+              h.includes("security")
+            ) {
+              symbolCol = colIdx;
+              break;
+            }
+          }
+        }
+
+        const extracted: string[] = [];
+        const startRow = rows[0].some((c: any) => typeof c === "string" && isNaN(Number(c))) ? 1 : 0;
+
+        for (let r = startRow; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || row.length === 0) continue;
+
+          let raw = String(row[symbolCol] || "").trim();
+          if (!raw) {
+            for (const cell of row) {
+              if (cell && typeof cell === "string" && cell.trim().length > 0 && isNaN(Number(cell))) {
+                raw = cell.trim();
+                break;
+              }
+            }
+          }
+
+          if (!raw) continue;
+
+          // Clean ticker symbol (strip NSE:, BSE:, .NS, .BO, -EQ, quotes)
+          let clean = raw
+            .toUpperCase()
+            .replace(/^NSE:/, "")
+            .replace(/^BSE:/, "")
+            .replace(/\.NS$/, "")
+            .replace(/\.BO$/, "")
+            .replace(/-EQ$/, "")
+            .replace(/-BE$/, "")
+            .replace(/["']/g, "")
+            .trim();
+
+          const token = clean.split(/[\s,]+/)[0];
+          if (token && token.length <= 25 && isNaN(Number(token))) {
+            if (!extracted.includes(token)) {
+              extracted.push(token);
+            }
+          }
+        }
+
+        if (extracted.length < 2) {
+          setError(`Found only ${extracted.length} valid stock symbols in "${file.name}". Please ensure file contains at least 2 stock symbols.`);
+          return;
+        }
+
+        setTickerList(extracted);
+        setAllocationMode("risk_parity");
+        setUploadSuccess(`Successfully extracted ${extracted.length} stock holdings from "${file.name}". Calculated optimal risk-parity weights.`);
+        setError(null);
+        setIsTableExpanded(true);
+        runOptimization(extracted, maxWeight);
+      } catch (err: any) {
+        setError(`Failed to parse file "${file.name}": ${err.message || "Invalid file format."}`);
+      }
+    };
+
+    reader.readAsBinaryString(file);
+    // Reset file input so user can re-upload same file if needed
+    e.target.value = "";
+  };
+
+  const handleDownloadSampleCSV = () => {
+    const csvContent = "Symbol,Company Name\nRELIANCE,Reliance Industries Ltd\nTCS,Tata Consultancy Services Ltd\nHDFCBANK,HDFC Bank Ltd\nINFY,Infosys Ltd\nITC,ITC Ltd\nLT,Larsen & Toubro Ltd\nTATAMOTORS,Tata Motors Ltd\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "sample_portfolio.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleWeightChange = (ticker: string, newWeight: number) => {
@@ -352,6 +474,15 @@ export const PortfolioOptimizerView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Hidden File Input for CSV / XLS upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".csv, .xlsx, .xls, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+        className="hidden"
+      />
+
       {/* Interactive Stock Builder & Constraint Controls */}
       <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-4 relative z-30 shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
@@ -361,32 +492,45 @@ export const PortfolioOptimizerView: React.FC = () => {
               <span>Interactive Portfolio Stress-Tester & Risk-Parity Engine</span>
             </h2>
             <p className="text-xs text-slate-400">
-              Add 2 to 12 stocks to simulate optimal inverse-volatility weights, marginal risk contributions, and historical crash replays vs Nifty 50 TRI.
+              Add any number of Indian stocks (or import CSV / Excel) to simulate optimal inverse-volatility weights, marginal risk contributions, and historical crash replays vs Nifty 50 TRI.
             </p>
           </div>
 
-          {/* Allocation Cap Slider */}
-          <div className="flex items-center gap-3 bg-slate-950/90 px-4 py-2 rounded-xl border border-slate-800 shrink-0">
-            <Sliders className="h-4 w-4 text-cyan-400" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Max Asset Cap:</span>
-              <span className="text-xs font-bold text-cyan-300 font-mono w-8">{maxWeight}%</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* CSV / Excel File Upload Button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500 text-slate-200 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Upload holdings from Zerodha, Groww, Upstox, Excel or CSV export"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              <span>Import CSV / Excel</span>
+            </button>
+
+            {/* Allocation Cap Slider */}
+            <div className="flex items-center gap-3 bg-slate-950/90 px-4 py-2 rounded-xl border border-slate-800 shrink-0">
+              <Sliders className="h-4 w-4 text-cyan-400" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">Max Cap:</span>
+                <span className="text-xs font-bold text-cyan-300 font-mono w-8">{maxWeight}%</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="50"
+                step="1"
+                value={maxWeight}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setMaxWeight(val);
+                  if (tickerList.length >= 2) {
+                    runOptimization(tickerList, val);
+                  }
+                }}
+                className="w-24 accent-cyan-500 cursor-pointer"
+              />
             </div>
-            <input
-              type="range"
-              min="10"
-              max="35"
-              step="1"
-              value={maxWeight}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setMaxWeight(val);
-                if (tickerList.length >= 2) {
-                  runOptimization(tickerList, val);
-                }
-              }}
-              className="w-24 accent-cyan-500 cursor-pointer"
-            />
           </div>
         </div>
 
@@ -496,6 +640,7 @@ export const PortfolioOptimizerView: React.FC = () => {
               onClick={() => {
                 setTickerList([]);
                 setRawResult(null);
+                setUploadSuccess(null);
               }}
               className="text-[11px] text-rose-400 hover:text-rose-300 underline ml-2 cursor-pointer"
             >
@@ -504,6 +649,21 @@ export const PortfolioOptimizerView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {uploadSuccess && (
+        <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-700/80 text-emerald-200 text-xs md:text-sm flex items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            <span>{uploadSuccess}</span>
+          </div>
+          <button
+            onClick={() => setUploadSuccess(null)}
+            className="text-slate-400 hover:text-slate-200 text-xs underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/80 text-rose-300 text-sm flex items-center gap-3">
@@ -521,19 +681,39 @@ export const PortfolioOptimizerView: React.FC = () => {
           <div className="max-w-md mx-auto space-y-2">
             <h3 className="text-xl font-black text-white tracking-tight">Your Portfolio is Currently Empty</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Add at least <strong className="text-indigo-300">2 stocks</strong> using the search bar above, or pick one of the quick institutional templates to simulate risk-parity weights, sector exposures, and historical crash replays.
+              Add at least <strong className="text-indigo-300">2 stocks</strong> using the search bar above, <strong className="text-emerald-300">import a CSV/Excel file</strong> from your broker, or pick a template below.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              <span>Upload Portfolio (CSV / Excel)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadSampleCSV}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Download className="h-4 w-4 text-slate-400" />
+              <span>Download Sample CSV</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-slate-800/60 max-w-lg mx-auto">
             {PRESET_BASKETS.map((basket) => (
               <button
                 key={basket.name}
                 onClick={() => loadPreset(basket)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-indigo-950/80 text-slate-200 border border-slate-800 hover:border-indigo-600 transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                className="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-900/80 hover:bg-indigo-950/80 text-slate-300 border border-slate-800 hover:border-indigo-600 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
-                <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Load {basket.name} ({basket.tickers.length} Stocks)</span>
+                <Sparkles className="h-3 w-3 text-indigo-400" />
+                <span>{basket.name} ({basket.tickers.length} Stocks)</span>
               </button>
             ))}
           </div>
@@ -918,7 +1098,7 @@ export const PortfolioOptimizerView: React.FC = () => {
                       cy="50%"
                       innerRadius={65}
                       outerRadius={95}
-                      paddingAngle={3}
+                      paddingAngle={2}
                     >
                       {activeResult.allocations.map((entry, index) => (
                         <Cell
