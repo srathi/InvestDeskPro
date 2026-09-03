@@ -681,7 +681,9 @@ def get_sector_radar_heatmap(
             "rs_3m": s["rs_3m"],
             "rs_6m": s["rs_6m"],
             "rs_1y": s["rs_1y"],
-            "constituents_count": len(s["constituents"])
+            "constituents_count": len(s["constituents"]),
+            "constituents_tickers": [c["ticker"] for c in s["constituents"]],
+            "constituents_summary": [f"{c['ticker']} ({c['name']})" for c in s["constituents"]]
         })
 
     # Sort sectors by valuation percentile ascending (cheapest first)

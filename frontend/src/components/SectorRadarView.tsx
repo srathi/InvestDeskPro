@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Compass,
   TrendingUp,
@@ -20,6 +20,7 @@ import {
   Factory,
   CheckCircle2,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import {
   fetchSectorHeatmap,
@@ -42,7 +43,7 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
   const [metric, setMetric] = useState<string>("pe");
   const [lookback, setLookback] = useState<string>("5y");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("" );
 
   const [heatmapData, setHeatmapData] = useState<SectorHeatmapResponse | null>(null);
   const [selectedSectorId, setSelectedSectorId] = useState<string>("nifty_auto");
@@ -82,6 +83,38 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
       .catch((err) => console.error("Error loading capex matrix:", err));
   }, []);
 
+  // Multi-field robust search filter across sector names, categories, tickers, IDs, and constituent stocks
+  const filteredSectors = useMemo(() => {
+    if (!heatmapData?.sectors) return [];
+    if (!searchQuery.trim()) return heatmapData.sectors;
+
+    const q = searchQuery.toLowerCase().trim();
+    return heatmapData.sectors.filter((s) => {
+      const matchesName = s.name.toLowerCase().includes(q);
+      const matchesCategory = s.category.toLowerCase().includes(q);
+      const matchesId = s.id.toLowerCase().includes(q) || s.id.replace(/_/g, " ").toLowerCase().includes(q);
+      const matchesTicker = s.index_ticker.toLowerCase().includes(q);
+      const matchesConstituentTicker = s.constituents_tickers?.some((t) => t.toLowerCase().includes(q));
+      const matchesConstituentSummary = s.constituents_summary?.some((cs) => cs.toLowerCase().includes(q));
+
+      return (
+        matchesName ||
+        matchesCategory ||
+        matchesId ||
+        matchesTicker ||
+        matchesConstituentTicker ||
+        matchesConstituentSummary
+      );
+    });
+  }, [heatmapData, searchQuery]);
+
+  // Keep selected sector in sync with filtered results
+  useEffect(() => {
+    if (filteredSectors.length > 0 && !filteredSectors.some((s) => s.id === selectedSectorId)) {
+      setSelectedSectorId(filteredSectors[0].id);
+    }
+  }, [filteredSectors, selectedSectorId]);
+
   // Load sector deep dive when selected
   useEffect(() => {
     if (!selectedSectorId) return;
@@ -104,12 +137,6 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
       isMounted = false;
     };
   }, [selectedSectorId]);
-
-  const filteredSectors = heatmapData?.sectors.filter((s) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q);
-  }) || [];
 
   return (
     <div className="space-y-6">
@@ -241,19 +268,46 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
             </select>
           </div>
 
-          {/* Quick Search */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          {/* Smart Multi-Field Instant Search */}
+          <div className="relative flex items-center">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search sector..."
-              className="bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono w-36"
+              placeholder="Search sector, stock (e.g. Auto, TCS, Tata)..."
+              className="bg-slate-950 border border-slate-800 hover:border-slate-700 focus:border-cyan-500 rounded-xl pl-8 pr-7 py-1 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono w-52 transition-all shadow-inner"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Search Filter Status Pill */}
+      {searchQuery.trim() && (
+        <div className="flex items-center justify-between text-xs px-3 py-1.5 rounded-xl bg-cyan-950/40 border border-cyan-800/50 text-cyan-300 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span>
+              Showing <strong>{filteredSectors.length}</strong> of <strong>{heatmapData?.sectors.length || 16}</strong> sectors matching &quot;{searchQuery}&quot;
+            </span>
+          </div>
+          <button
+            onClick={() => setSearchQuery("")}
+            className="text-[11px] text-cyan-400 hover:text-white underline cursor-pointer"
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
 
       {/* 📊 VIEW 1: Valuation Heatmap Grid */}
       {activeSubTab === "heatmap" && (
@@ -262,6 +316,24 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
             <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
               <Activity className="w-4 h-4 text-cyan-400 animate-spin" />
               <span>Synthesizing sector valuation percentiles and historical cones...</span>
+            </div>
+          ) : filteredSectors.length === 0 ? (
+            <div className="glass-panel p-8 rounded-2xl border border-slate-800 text-center space-y-3">
+              <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                <Search className="w-5 h-5" />
+              </div>
+              <p className="text-sm font-semibold text-slate-300">
+                No sectors or constituent stocks found matching &quot;{searchQuery}&quot;
+              </p>
+              <p className="text-xs text-slate-500">
+                Try searching for sector names like <code className="text-cyan-400">Auto</code>, <code className="text-cyan-400">IT</code>, <code className="text-cyan-400">Bank</code>, or stocks like <code className="text-cyan-400">TCS</code>, <code className="text-cyan-400">Tata Motors</code>, <code className="text-cyan-400">Reliance</code>.
+              </p>
+              <button
+                onClick={() => setSearchQuery("")}
+                className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700 text-xs font-mono font-semibold transition-all cursor-pointer inline-block"
+              >
+                Reset Search Filter
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -395,23 +467,33 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
               </p>
 
               <div className="space-y-2">
-                {capexMatrix.phase_1_initiation.sectors.map((s) => (
-                  <div
-                    key={s.id}
-                    onClick={() => setSelectedSectorId(s.id)}
-                    className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-all"
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
-                      <span>{s.name}</span>
-                      <span className="text-[10px] text-cyan-400 font-mono font-normal">
-                        Gross Block: +{s.gross_block_growth_yoy}%
-                      </span>
+                {capexMatrix.phase_1_initiation.sectors.map((s) => {
+                  const matchesSearch = !searchQuery.trim() || 
+                    s.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+                    s.id.toLowerCase().includes(searchQuery.toLowerCase().trim());
+
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => setSelectedSectorId(s.id)}
+                      className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                        matchesSearch
+                          ? "bg-slate-900/90 border-slate-800 hover:border-cyan-500/50"
+                          : "bg-slate-950/40 border-slate-900 opacity-40 hover:opacity-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
+                        <span>{s.name}</span>
+                        <span className="text-[10px] text-cyan-400 font-mono font-normal">
+                          Gross Block: +{s.gross_block_growth_yoy}%
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 line-clamp-2 leading-normal">
+                        {s.commentary}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-400 line-clamp-2 leading-normal">
-                      {s.commentary}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -434,23 +516,33 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
               </p>
 
               <div className="space-y-2">
-                {capexMatrix.phase_2_execution.sectors.map((s) => (
-                  <div
-                    key={s.id}
-                    onClick={() => setSelectedSectorId(s.id)}
-                    className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 cursor-pointer transition-all"
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
-                      <span>{s.name}</span>
-                      <span className="text-[10px] text-amber-400 font-mono font-normal">
-                        Capex/OCF: {s.capex_to_ocf_pct}%
-                      </span>
+                {capexMatrix.phase_2_execution.sectors.map((s) => {
+                  const matchesSearch = !searchQuery.trim() || 
+                    s.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+                    s.id.toLowerCase().includes(searchQuery.toLowerCase().trim());
+
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => setSelectedSectorId(s.id)}
+                      className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                        matchesSearch
+                          ? "bg-slate-900/90 border-slate-800 hover:border-amber-500/50"
+                          : "bg-slate-950/40 border-slate-900 opacity-40 hover:opacity-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
+                        <span>{s.name}</span>
+                        <span className="text-[10px] text-amber-400 font-mono font-normal">
+                          Capex/OCF: {s.capex_to_ocf_pct}%
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 line-clamp-2 leading-normal">
+                        {s.commentary}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-400 line-clamp-2 leading-normal">
-                      {s.commentary}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -473,23 +565,33 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
               </p>
 
               <div className="space-y-2">
-                {capexMatrix.phase_3_harvest.sectors.map((s) => (
-                  <div
-                    key={s.id}
-                    onClick={() => setSelectedSectorId(s.id)}
-                    className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-all"
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
-                      <span>{s.name}</span>
-                      <span className="text-[10px] text-emerald-400 font-mono font-normal">
-                        RoCE: {s.roce_pct}%
-                      </span>
+                {capexMatrix.phase_3_harvest.sectors.map((s) => {
+                  const matchesSearch = !searchQuery.trim() || 
+                    s.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+                    s.id.toLowerCase().includes(searchQuery.toLowerCase().trim());
+
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => setSelectedSectorId(s.id)}
+                      className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                        matchesSearch
+                          ? "bg-slate-900/90 border-slate-800 hover:border-emerald-500/50"
+                          : "bg-slate-950/40 border-slate-900 opacity-40 hover:opacity-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
+                        <span>{s.name}</span>
+                        <span className="text-[10px] text-emerald-400 font-mono font-normal">
+                          RoCE: {s.roce_pct}%
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 line-clamp-2 leading-normal">
+                        {s.commentary}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-400 line-clamp-2 leading-normal">
-                      {s.commentary}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
