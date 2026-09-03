@@ -375,15 +375,17 @@ I am equipped with direct access to:
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-extrabold text-white tracking-tight">AlphaChanakya AI</h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono font-bold flex items-center gap-1 shadow-inner">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono font-semibold flex items-center gap-1 shadow-inner">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Online
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
-                <span>Quantitative Equity & Fund Copilot</span>
+              <p className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                <span>Google Gemini 2.5 Flash</span>
                 <span className="text-slate-600">•</span>
-                <span className="text-amber-400 font-semibold">rupeemap labs</span>
+                <span className="text-cyan-400 font-semibold uppercase">
+                  {activeTab === "company" ? "Stock Intelligence" : activeTab === "funds" ? "Fund Alpha" : "Quant Lab"}
+                </span>
               </p>
             </div>
           </div>
