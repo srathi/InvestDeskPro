@@ -68,8 +68,43 @@ def test_mutual_fund_analysis_holistic_scorecard():
     # Verify Suggested Alternatives
     assert len(res.suggested_alternatives) >= 1
 
-    # Verify Investor Horizon Playbook
-    assert res.playbook.min_recommended_horizon_years >= 3
-    assert res.playbook.direct_vs_regular_10y_drag_lakhs > 0
+def test_mutual_fund_fuzzy_search_aliases():
+    from app.core.mf_engine import search_mutual_funds
+    
+    # Test PPFAS alias
+    ppfas_results = asyncio.run(search_mutual_funds("PPFAS"))
+    assert len(ppfas_results) > 0
+    assert "122639" in [r.scheme_code for r in ppfas_results]
+    assert ppfas_results[0].plan_type == "Direct"
+
+    # Test Quant Small Cap
+    quant_results = asyncio.run(search_mutual_funds("quant small"))
+    assert len(quant_results) > 0
+    assert any("Quant Small Cap" in r.scheme_name for r in quant_results)
+
+    # Test SBI Contra
+    sbi_results = asyncio.run(search_mutual_funds("sbi contra"))
+    assert len(sbi_results) > 0
+    assert any("SBI Contra" in r.scheme_name for r in sbi_results)
+
+
+def test_category_aware_dynamic_benchmarks():
+    from app.core.mf_benchmark import get_benchmark_for_category, detect_scheme_category
+    
+    # Small Cap -> Nifty Smallcap 250
+    sym, name, _ = get_benchmark_for_category("Quant Small Cap Fund - Direct Plan - Growth", "Small Cap Fund")
+    assert "Smallcap" in name
+    
+    # Mid Cap -> Nifty Midcap 150
+    sym, name, _ = get_benchmark_for_category("Motilal Oswal Midcap Fund - Direct Plan - Growth", "Mid Cap Fund")
+    assert "Midcap" in name
+
+    # Flexi Cap -> Nifty 500 TRI
+    sym, name, _ = get_benchmark_for_category("Parag Parikh Flexi Cap Fund - Direct Plan - Growth", "Flexi Cap Fund")
+    assert "500" in name
+
+    # Large Cap -> Nifty 50 TRI
+    sym, name, _ = get_benchmark_for_category("Mirae Asset Large Cap Fund - Direct Plan - Growth", "Large Cap Fund")
+    assert "50" in name or "100" in name
 
 

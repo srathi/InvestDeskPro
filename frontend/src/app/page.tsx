@@ -6,17 +6,37 @@ import { Company360View } from "../components/Company360View";
 import { StockScreenerView } from "../components/StockScreenerView";
 import { CuratedBundlesView } from "../components/CuratedBundlesView";
 import { QuantDeskView } from "../components/QuantDeskView";
+import { FundAnalyzerView } from "../components/FundAnalyzerView";
 import { PageGuideDrawer } from "../components/PageGuideDrawer";
 import { checkApiHealth } from "../lib/api";
-import { ExternalLink, ShieldAlert, Sparkles, Cpu, Layers, BookOpen } from "lucide-react";
+import { ExternalLink, ShieldAlert, Sparkles, Cpu, Layers, BookOpen, TrendingUp } from "lucide-react";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"company" | "quant">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "funds" | "quant">("company");
   const [selectedStockTicker, setSelectedStockTicker] = useState<string>("");
   const [selectedFundCode, setSelectedFundCode] = useState<string | undefined>(undefined);
   const [apiOnline, setApiOnline] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [guideInitialTerm, setGuideInitialTerm] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      const codeParam = params.get("code");
+      const tickerParam = params.get("ticker");
+      if (tabParam === "funds" || tabParam === "quant" || tabParam === "company") {
+        setActiveTab(tabParam);
+      }
+      if (codeParam) {
+        setSelectedFundCode(codeParam);
+        if (!tabParam) setActiveTab("funds");
+      }
+      if (tickerParam) {
+        setSelectedStockTicker(tickerParam);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const check = async () => {
@@ -34,7 +54,7 @@ export default function Home() {
       setActiveTab("company");
     } else {
       setSelectedFundCode(id);
-      setActiveTab("quant");
+      setActiveTab("funds");
     }
   };
 
@@ -76,6 +96,12 @@ export default function Home() {
             initialTicker={selectedStockTicker}
             onNavigateToQuant={handleNavigateToQuant}
             onSelectEntity={handleSelectEntity}
+          />
+        )}
+
+        {activeTab === "funds" && (
+          <FundAnalyzerView
+            initialSchemeCode={selectedFundCode}
           />
         )}
 

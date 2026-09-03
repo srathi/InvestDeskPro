@@ -20,8 +20,8 @@ import {
 import { fetchOmniSearch, OmniSearchResult, fetchMarketRibbonData, MarketIndexQuote, InstitutionalFlow } from "../lib/api";
 
 interface HeaderProps {
-  activeTab: "company" | "quant";
-  setActiveTab: (tab: "company" | "quant") => void;
+  activeTab: "company" | "funds" | "quant";
+  setActiveTab: (tab: "company" | "funds" | "quant") => void;
   apiOnline: boolean;
   onSelectEntity?: (id: string, type: "stock" | "fund") => void;
   onResetHome?: () => void;
@@ -403,6 +403,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Building2 className="h-3.5 w-3.5" />
             <span>Company 360°</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("funds")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "funds"
+                ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md shadow-emerald-950"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span>Mutual Funds & Rolling Alpha</span>
           </button>
 
           <button

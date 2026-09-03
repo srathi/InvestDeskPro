@@ -292,26 +292,51 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
           {/* Debounced Autocomplete Dropdown */}
           {showDropdown && searchResults.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl max-h-80 overflow-y-auto divide-y divide-slate-800/60 z-50">
+            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/98 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl max-h-80 overflow-y-auto divide-y divide-slate-800/60 z-50">
               <div className="px-4 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
                 <span>Matching AMFI Schemes ({searchResults.length})</span>
-                <span className="text-[9px] font-mono lowercase">↑↓ navigate • ↵ select • esc close</span>
+                <span className="text-[9px] font-mono lowercase text-slate-400">↑↓ navigate • ↵ select • esc close</span>
               </div>
               {searchResults.map((fund, idx) => (
                 <button
                   key={fund.scheme_code}
                   type="button"
                   onClick={() => selectFund(fund)}
-                  className={`w-full text-left px-4 py-3 flex items-center justify-between text-xs md:text-sm transition-colors ${
-                    idx === selectedIndex ? "bg-emerald-950/70 text-emerald-200" : "hover:bg-slate-900/80 text-slate-200"
+                  className={`w-full text-left px-4 py-3 flex items-center justify-between text-xs md:text-sm transition-colors cursor-pointer ${
+                    idx === selectedIndex ? "bg-emerald-950/80 text-emerald-200 border-l-4 border-emerald-400" : "hover:bg-slate-900/90 text-slate-200"
                   }`}
                 >
-                  <span className="truncate pr-4 text-slate-200 font-medium">{fund.scheme_name}</span>
+                  <div className="truncate pr-4 space-y-1">
+                    <div className="text-slate-100 font-semibold truncate">
+                      {fund.scheme_name}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                      {fund.category && (
+                        <span className="px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+                          {fund.category}
+                        </span>
+                      )}
+                      {fund.plan_type && (
+                        <span className={`px-1.5 py-0.5 rounded border ${
+                          fund.plan_type === "Direct"
+                            ? "bg-emerald-950/80 text-emerald-300 border-emerald-800 font-bold"
+                            : "bg-slate-900 text-slate-400 border-slate-700"
+                        }`}>
+                          {fund.plan_type} {fund.option_type || "Growth"}
+                        </span>
+                      )}
+                      {fund.fund_house && (
+                        <span className="text-slate-400 font-sans">
+                          {fund.fund_house}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono text-emerald-400 text-xs bg-emerald-950/90 border border-emerald-800 px-2.5 py-0.5 rounded-lg">
+                    <span className="font-mono text-emerald-400 text-xs bg-emerald-950/90 border border-emerald-800 px-2.5 py-1 rounded-lg shadow-inner">
                       #{fund.scheme_code}
                     </span>
-                    <ChevronRight className="h-4 w-4 text-slate-600" />
+                    <ChevronRight className="h-4 w-4 text-slate-500" />
                   </div>
                 </button>
               ))}
@@ -469,7 +494,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-400">
                   {data.meta.fund_house && <span>Fund House: <strong className="text-slate-300">{data.meta.fund_house}</strong></span>}
                   {data.meta.scheme_category && (
                     <>
@@ -478,7 +503,10 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                     </>
                   )}
                   <span>•</span>
-                  <span>Benchmark: <strong className="text-emerald-400">{data.benchmark_name}</strong></span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-700/80 text-emerald-300 font-medium">
+                    <span className="text-[10px] text-emerald-400 uppercase font-mono tracking-wider">🎯 Category Benchmark:</span>
+                    <strong className="text-emerald-200 font-bold font-mono">{data.benchmark_name}</strong>
+                  </div>
                 </div>
 
                 {/* PowerUp Action Recommendation Box */}
@@ -662,7 +690,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400">Beat Nifty 50 Hit Rate:</span>
+                          <span className="text-slate-400">Beat Benchmark Hit Rate:</span>
                           <span className="font-mono font-bold text-emerald-400">
                             {dist.hit_rate_vs_bench_pct !== null && dist.hit_rate_vs_bench_pct !== undefined ? `${dist.hit_rate_vs_bench_pct}% of times` : "N/A"}
                           </span>
@@ -863,7 +891,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
 
                 <span className="text-xs font-mono text-slate-400">
                   {activeChartTab === "rolling_alpha"
-                    ? `Mean Alpha: +${data.stats.mean_3y_rolling_alpha}% vs Nifty 50 TRI`
+                    ? `Mean Alpha: +${data.stats.mean_3y_rolling_alpha}% vs ${data.benchmark_name}`
                     : `Max Fund Drawdown: -${data.stats.max_drawdown_pct}%`}
                 </span>
               </div>

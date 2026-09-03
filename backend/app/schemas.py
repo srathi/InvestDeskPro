@@ -173,6 +173,7 @@ class FundMeta(BaseModel):
     fund_house: Optional[str] = None
     scheme_type: Optional[str] = None
     scheme_category: Optional[str] = None
+    benchmark_name: Optional[str] = None
 
 
 class FundStyleBox(BaseModel):
@@ -309,6 +310,10 @@ class FundAnalysisResponse(BaseModel):
 class FundSearchResult(BaseModel):
     scheme_code: str
     scheme_name: str
+    category: Optional[str] = None
+    plan_type: Optional[str] = None  # "Direct" | "Regular"
+    option_type: Optional[str] = None  # "Growth" | "IDCW"
+    fund_house: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
