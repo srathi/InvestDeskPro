@@ -505,11 +505,11 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                 <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase font-semibold block">Latest Net Asset Value</span>
                   <div className="text-2xl font-black text-white font-mono font-tabular mt-0.5">
-                    ₹{data.latest_nav.toFixed(4)}
+                    {data.latest_nav !== null && data.latest_nav !== undefined ? `₹${data.latest_nav.toFixed(4)}` : "N/A"}
                   </div>
                   <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                     <Calendar className="h-3 w-3 text-slate-500" />
-                    <span>As of {data.latest_nav_date}</span>
+                    <span>As of {data.latest_nav_date || "Latest"}</span>
                   </span>
                 </div>
               </div>
@@ -634,21 +634,21 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                       <div className="flex items-baseline justify-between">
                         <span className="text-xs text-slate-400">Median Expected Return</span>
                         <span className="text-2xl font-black text-emerald-400 font-mono font-tabular">
-                          {dist.median_cagr.toFixed(2)}%
+                          {dist.median_cagr !== null && dist.median_cagr !== undefined ? `${dist.median_cagr.toFixed(2)}%` : "N/A"}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
                         <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
                           <span className="text-[10px] text-slate-500 block">Worst Period (Min)</span>
-                          <span className={`font-bold ${dist.min_cagr >= 0 ? "text-slate-200" : "text-rose-400"}`}>
-                            {dist.min_cagr.toFixed(2)}%
+                          <span className={`font-bold ${(dist.min_cagr ?? 0) >= 0 ? "text-slate-200" : "text-rose-400"}`}>
+                            {dist.min_cagr !== null && dist.min_cagr !== undefined ? `${dist.min_cagr.toFixed(2)}%` : "N/A"}
                           </span>
                         </div>
                         <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
                           <span className="text-[10px] text-slate-500 block">Best Period (Max)</span>
                           <span className="font-bold text-cyan-300">
-                            +{dist.max_cagr.toFixed(2)}%
+                            {dist.max_cagr !== null && dist.max_cagr !== undefined ? `${dist.max_cagr >= 0 ? "+" : ""}${dist.max_cagr.toFixed(2)}%` : "N/A"}
                           </span>
                         </div>
                       </div>
@@ -657,20 +657,20 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                       <div className="space-y-1.5 pt-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-400">Risk of Negative Return:</span>
-                          <span className={`font-mono font-bold ${dist.prob_negative_pct === 0 ? "text-emerald-400" : "text-amber-300"}`}>
-                            {dist.prob_negative_pct}% Probability
+                          <span className={`font-mono font-bold ${(dist.prob_negative_pct ?? 0) === 0 ? "text-emerald-400" : "text-amber-300"}`}>
+                            {dist.prob_negative_pct !== null && dist.prob_negative_pct !== undefined ? `${dist.prob_negative_pct}% Probability` : "N/A"}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-400">Beat Nifty 50 Hit Rate:</span>
                           <span className="font-mono font-bold text-emerald-400">
-                            {dist.hit_rate_vs_bench_pct}% of times
+                            {dist.hit_rate_vs_bench_pct !== null && dist.hit_rate_vs_bench_pct !== undefined ? `${dist.hit_rate_vs_bench_pct}% of times` : "N/A"}
                           </span>
                         </div>
                         <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mt-1">
                           <div
                             className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full"
-                            style={{ width: `${dist.hit_rate_vs_bench_pct}%` }}
+                            style={{ width: `${dist.hit_rate_vs_bench_pct ?? 0}%` }}
                           />
                         </div>
                       </div>
@@ -997,13 +997,15 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-500 block">{pillar.pillar_name}</span>
                       <div className="flex items-baseline justify-between mt-1">
-                        <span className="text-lg font-black text-white font-mono">{pillar.score.toFixed(1)}</span>
+                        <span className="text-lg font-black text-white font-mono">
+                          {pillar.score !== null && pillar.score !== undefined ? pillar.score.toFixed(1) : "0.0"}
+                        </span>
                         <span className="text-[10px] font-mono text-slate-500">/ {pillar.max_score} pts</span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mt-1.5">
                         <div
                           className="h-full bg-emerald-500 rounded-full"
-                          style={{ width: `${(pillar.score / pillar.max_score) * 100}%` }}
+                          style={{ width: `${pillar.max_score ? (pillar.score / pillar.max_score) * 100 : 0}%` }}
                         />
                       </div>
                     </div>
