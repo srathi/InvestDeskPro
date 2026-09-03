@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Cpu, Activity, TrendingUp, PieChart } from "lucide-react";
+import { Cpu, Activity, PieChart } from "lucide-react";
 import { StockScorecardView } from "./StockScorecardView";
-import { FundAnalyzerView } from "./FundAnalyzerView";
 import { PortfolioOptimizerView } from "./PortfolioOptimizerView";
 
 interface QuantDeskViewProps {
@@ -13,20 +12,11 @@ interface QuantDeskViewProps {
 
 export const QuantDeskView: React.FC<QuantDeskViewProps> = ({
   initialStockTicker,
-  initialFundCode,
 }) => {
-  const [quantSubTab, setQuantSubTab] = useState<"stocks" | "funds" | "portfolio">(
-    initialFundCode ? "funds" : "stocks"
-  );
+  const [quantSubTab, setQuantSubTab] = useState<"stocks" | "portfolio">("stocks");
 
   useEffect(() => {
-    if (initialFundCode) {
-      setQuantSubTab("funds");
-    }
-  }, [initialFundCode]);
-
-  useEffect(() => {
-    if (initialStockTicker && !initialFundCode) {
+    if (initialStockTicker) {
       setQuantSubTab("stocks");
     }
   }, [initialStockTicker]);
@@ -40,7 +30,7 @@ export const QuantDeskView: React.FC<QuantDeskViewProps> = ({
           <div>
             <h2 className="text-sm font-bold text-white">Institutional Quant Desk</h2>
             <p className="text-[11px] text-slate-400">
-              Factor Diagnostic Scorecards, 3Y AMFI Rolling Alpha & Risk-Parity Optimizer
+              Factor Diagnostic Scorecards & Multi-Asset Risk-Parity Stress-Tester
             </p>
           </div>
         </div>
@@ -48,7 +38,7 @@ export const QuantDeskView: React.FC<QuantDeskViewProps> = ({
         <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0 overflow-x-auto">
           <button
             onClick={() => setQuantSubTab("stocks")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               quantSubTab === "stocks"
                 ? "bg-indigo-950 text-indigo-300 border border-indigo-700 shadow-md shadow-indigo-950"
                 : "text-slate-400 hover:text-slate-200"
@@ -59,20 +49,8 @@ export const QuantDeskView: React.FC<QuantDeskViewProps> = ({
           </button>
 
           <button
-            onClick={() => setQuantSubTab("funds")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              quantSubTab === "funds"
-                ? "bg-emerald-950 text-emerald-300 border border-emerald-700 shadow-md shadow-emerald-950"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>AMFI Fund Rolling Alpha</span>
-          </button>
-
-          <button
             onClick={() => setQuantSubTab("portfolio")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               quantSubTab === "portfolio"
                 ? "bg-purple-950 text-purple-300 border border-purple-700 shadow-md shadow-purple-950"
                 : "text-slate-400 hover:text-slate-200"
@@ -86,7 +64,6 @@ export const QuantDeskView: React.FC<QuantDeskViewProps> = ({
 
       {/* Active Quant View */}
       {quantSubTab === "stocks" && <StockScorecardView initialTicker={initialStockTicker} />}
-      {quantSubTab === "funds" && <FundAnalyzerView initialSchemeCode={initialFundCode} />}
       {quantSubTab === "portfolio" && <PortfolioOptimizerView />}
     </div>
   );
