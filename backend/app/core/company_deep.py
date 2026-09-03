@@ -1463,7 +1463,6 @@ def fetch_company_360(ticker: str) -> Company360Response:
 
     # If still no valid price after all attempts, fail gracefully with search suggestions
     if current_price is None or current_price <= 0:
-        from app.core.factors import search_indian_stocks
         suggestions = search_indian_stocks(ticker)
         suggestion_msg = f" Did you mean '{suggestions[0].name} ({suggestions[0].ticker})'?" if suggestions else ""
         raise ValueError(
