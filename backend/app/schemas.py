@@ -1,7 +1,7 @@
 """Pydantic data models and API schemas for InvestDeskPro.
 Incorporates Trendlyne DVM, Simply Wall St Radar, Tickertape Red Flags, Morningstar Style Box & Portfolio Visualizer Models.
 """
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -776,6 +776,37 @@ class InstitutionalFlow(BaseModel):
 class MarketIndicesResponse(BaseModel):
     indices: List[MarketIndexQuote]
     institutional_flow: List[InstitutionalFlow] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# AlphaChanakya AI Copilot Models
+# ---------------------------------------------------------------------------
+
+class CopilotChatMessage(BaseModel):
+    role: str = Field(..., description="'user' or 'assistant'")
+    content: str = Field(..., description="Message text")
+
+
+class CopilotChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, description="User prompt")
+    history: List[CopilotChatMessage] = Field(default_factory=list, description="Recent conversation turns")
+    context: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Active client viewport telemetry (activeTab, selectedTicker, etc.)")
+
+
+class ToolExecutionRecord(BaseModel):
+    tool: str
+    arguments: Dict[str, Any] = Field(default_factory=dict)
+    result: Optional[Any] = None
+
+
+class CopilotChatResponse(BaseModel):
+    response: str
+    tool_calls_executed: List[ToolExecutionRecord] = Field(default_factory=list)
+    suggestions: List[str] = Field(default_factory=list)
+
+
+class CopilotSuggestionsResponse(BaseModel):
+    suggestions: List[str]
     status: str = "ok"
 
 

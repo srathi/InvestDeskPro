@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
-from app.api import company, funds, optimizer, stocks
+from app.api import company, funds, optimizer, stocks, copilot
 from app.schemas import HealthResponse
 
 app = FastAPI(
@@ -30,6 +30,7 @@ app.include_router(company.router, prefix="/api/v1")
 app.include_router(stocks.router, prefix="/api/v1")
 app.include_router(funds.router, prefix="/api/v1")
 app.include_router(optimizer.router, prefix="/api/v1")
+app.include_router(copilot.router, prefix="/api/v1")
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])

@@ -8,6 +8,8 @@ import { CuratedBundlesView } from "../components/CuratedBundlesView";
 import { QuantDeskView } from "../components/QuantDeskView";
 import { FundAnalyzerView } from "../components/FundAnalyzerView";
 import { PageGuideDrawer } from "../components/PageGuideDrawer";
+import { AlphaChanakyaDrawer } from "../components/AlphaChanakyaDrawer";
+import { FloatingChatButton } from "../components/FloatingChatButton";
 import { checkApiHealth } from "../lib/api";
 import { ExternalLink, ShieldAlert, Sparkles, Cpu, Layers, BookOpen, TrendingUp } from "lucide-react";
 
@@ -17,6 +19,7 @@ export default function Home() {
   const [selectedFundCode, setSelectedFundCode] = useState<string | undefined>(undefined);
   const [apiOnline, setApiOnline] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [guideInitialTerm, setGuideInitialTerm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,6 +39,18 @@ export default function Home() {
         setSelectedStockTicker(tickerParam);
       }
     }
+  }, []);
+
+  // Global Cmd+J / Ctrl+J hotkey to toggle AlphaChanakya AI
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setIsCopilotOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -77,6 +92,10 @@ export default function Home() {
     setIsGuideOpen(true);
   };
 
+  const handleOpenCopilot = () => {
+    setIsCopilotOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-100 selection:bg-cyan-500 selection:text-slate-950 font-sans">
       {/* Top Navbar with Omni Search & Market Ribbon */}
@@ -87,6 +106,7 @@ export default function Home() {
         onSelectEntity={handleSelectEntity}
         onResetHome={handleResetHome}
         onOpenGuide={() => handleOpenGuide()}
+        onOpenCopilot={() => handleOpenCopilot()}
       />
 
       {/* Main Content Area */}
@@ -112,6 +132,22 @@ export default function Home() {
           />
         )}
       </main>
+
+      {/* 🏛️ AlphaChanakya AI Copilot Slide-Over Drawer */}
+      <AlphaChanakyaDrawer
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+        activeTab={activeTab}
+        selectedTicker={selectedStockTicker}
+        selectedFundCode={selectedFundCode}
+        onSelectEntity={handleSelectEntity}
+      />
+
+      {/* ⚡ Floating Action Badge (FAB) - AlphaChanakya AI */}
+      <FloatingChatButton
+        isOpen={isCopilotOpen}
+        onClick={() => handleOpenCopilot()}
+      />
 
       {/* Contextual Page Guide & Financial Jargon Playbook Drawer */}
       <PageGuideDrawer
