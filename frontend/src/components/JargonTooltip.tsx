@@ -50,7 +50,7 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const handleOpenFull = (e: React.MouseEvent) => {
+  const handleOpenFull = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     setIsOpen(false);
     if (onOpenGuide) {
@@ -80,7 +80,19 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
     <span className="relative inline-flex items-center" ref={triggerRef}>
       {children ? (
         <span
-          onClick={() => setIsOpen(!isOpen)}
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }
+          }}
           onMouseEnter={() => setIsOpen(true)}
           onMouseLeave={() => setIsOpen(false)}
           className="cursor-help border-b border-dotted border-slate-500 hover:border-cyan-400 transition-colors inline-flex items-center gap-1"
@@ -88,16 +100,27 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
           {children}
         </span>
       ) : (
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }
+          }}
           onMouseEnter={() => setIsOpen(true)}
           onMouseLeave={() => setIsOpen(false)}
-          className="p-0.5 text-slate-500 hover:text-cyan-400 transition-colors focus:outline-none cursor-pointer"
+          className="p-0.5 text-slate-500 hover:text-cyan-400 transition-colors focus:outline-none cursor-pointer inline-flex items-center"
           title={`Learn about ${displayTitle}`}
         >
           <HelpCircle className="w-3.5 h-3.5" />
-        </button>
+        </span>
       )}
 
       {/* Floating Micro-Card Popover */}
@@ -141,14 +164,21 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
           {/* Footer Action */}
           <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between">
             <span className="text-[10px] text-slate-500 font-mono">InvestDesk Pro Playbook</span>
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={handleOpenFull}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleOpenFull(e);
+                }
+              }}
               className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 hover:underline font-mono cursor-pointer"
             >
               <span>Full Guide</span>
               <ExternalLink className="w-2.5 h-2.5" />
-            </button>
+            </span>
           </div>
         </div>
       )}
