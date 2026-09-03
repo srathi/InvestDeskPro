@@ -49,15 +49,15 @@ import { useDebounce } from "../hooks/useDebounce";
 
 const POPULAR_FUNDS = [
   { code: "122639", name: "Parag Parikh Flexi Cap", category: "Flexi Cap", tag: "In-Form 🔥" },
-  { code: "118834", name: "Mirae Asset Large Cap", category: "Large Cap", tag: "Core 🛡️" },
-  { code: "118989", name: "HDFC Flexi Cap", category: "Flexi Cap", tag: "In-Form 🔥" },
-  { code: "100377", name: "Quant Active Fund", category: "Multi Cap", tag: "Momentum ⚡" },
-  { code: "120716", name: "SBI Small Cap", category: "Small Cap", tag: "Shield 🛡️" },
-  { code: "120828", name: "Kotak Emerging Equity", category: "Mid Cap", tag: "Compounder 📈" },
-  { code: "125354", name: "Nippon India Small Cap", category: "Small Cap", tag: "Top Alpha ⭐" },
-  { code: "119598", name: "ICICI Pru Bluechip", category: "Large Cap", tag: "Low Vol 🛡️" },
-  { code: "118778", name: "Motilal Oswal Midcap", category: "Mid Cap", tag: "In-Form 🔥" },
-  { code: "119062", name: "HDFC Balanced Advantage", category: "Hybrid", tag: "All-Weather ⚖️" },
+  { code: "118825", name: "Mirae Asset Large Cap", category: "Large Cap", tag: "Core 🛡️" },
+  { code: "118955", name: "HDFC Flexi Cap", category: "Flexi Cap", tag: "In-Form 🔥" },
+  { code: "120828", name: "Quant Small Cap", category: "Small Cap", tag: "Momentum ⚡" },
+  { code: "125497", name: "SBI Small Cap", category: "Small Cap", tag: "Shield 🛡️" },
+  { code: "120505", name: "Axis Midcap", category: "Mid Cap", tag: "Compounder 📈" },
+  { code: "118778", name: "Nippon India Small Cap", category: "Small Cap", tag: "Top Alpha ⭐" },
+  { code: "125354", name: "Axis Small Cap", category: "Small Cap", tag: "Low Vol 🛡️" },
+  { code: "127042", name: "Motilal Oswal Midcap", category: "Mid Cap", tag: "In-Form 🔥" },
+  { code: "118968", name: "HDFC Balanced Advantage", category: "Hybrid", tag: "All-Weather ⚖️" },
 ];
 
 interface FundAnalyzerViewProps {

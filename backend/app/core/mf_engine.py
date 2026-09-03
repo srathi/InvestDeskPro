@@ -36,20 +36,17 @@ MFAPI_BASE_URL = "https://api.mfapi.in/mf"
 
 POPULAR_AMFI_FUNDS = [
     ("122639", "Parag Parikh Flexi Cap Fund - Direct Plan - Growth"),
-    ("118834", "Mirae Asset Large Cap Fund - Direct Plan - Growth"),
-    ("118989", "HDFC Top 100 Fund - Direct Plan - Growth Option"),
-    ("100377", "Quant Active Fund - Growth Option"),
-    ("120503", "Axis Bluechip Fund - Direct Plan - Growth"),
-    ("120716", "SBI Small Cap Fund - Direct Plan - Growth"),
-    ("120828", "Kotak Emerging Equity Fund - Direct Plan - Growth"),
-    ("125354", "Nippon India Small Cap Fund - Direct Plan - Growth Plan"),
-    ("119598", "ICICI Prudential Bluechip Fund - Direct Plan - Growth"),
-    ("119775", "DSP Flexi Cap Fund - Direct Plan - Growth"),
-    ("120505", "Axis Midcap Fund - Direct Plan - Growth"),
-    ("118778", "Motilal Oswal Midcap Fund - Direct Plan - Growth"),
-    ("120847", "UTI Nifty 50 Index Fund - Direct Plan - Growth"),
-    ("120717", "SBI Focused Equity Fund - Direct Plan - Growth"),
-    ("119062", "HDFC Balanced Advantage Fund - Direct Plan - Growth"),
+    ("118825", "Mirae Asset Large Cap Fund - Direct Plan - Growth"),
+    ("118955", "HDFC Flexi Cap Fund - Direct Plan - Growth Option"),
+    ("120828", "Quant Small Cap Fund - Direct Plan - Growth Option"),
+    ("125497", "SBI Small Cap Fund - Direct Plan - Growth"),
+    ("120505", "Axis Midcap Fund - Direct Plan - Growth Option"),
+    ("118778", "Nippon India Small Cap Fund - Direct Plan - Growth Option"),
+    ("125354", "Axis Small Cap Fund - Direct Plan - Growth Option"),
+    ("127042", "Motilal Oswal Midcap Fund - Direct Plan - Growth Option"),
+    ("120716", "UTI Nifty 50 Index Fund - Direct Plan - Growth"),
+    ("119076", "DSP Flexi Cap Fund - Direct Plan - Growth"),
+    ("118968", "HDFC Balanced Advantage Fund - Direct Plan - Growth Option"),
 ]
 
 
@@ -613,23 +610,22 @@ async def analyze_mutual_fund(scheme_code: str) -> FundAnalysisResponse:
     CATEGORY_BENCHMARK_PEERS: Dict[str, List[Dict[str, Any]]] = {
         "Flexi": [
             {"code": "122639", "name": "Parag Parikh Flexi Cap Fund - Direct", "cat": "Flexi Cap", "status": "In-Form 🔥", "alpha": 6.8, "dcr": 68.4, "cons": 88.5, "ter": 0.62},
-            {"code": "118989", "name": "HDFC Flexi Cap Fund - Direct", "cat": "Flexi Cap", "status": "In-Form 🔥", "alpha": 5.4, "dcr": 78.2, "cons": 82.4, "ter": 0.78},
-            {"code": "147632", "name": "JM Flexicap Fund - Direct", "cat": "Flexi Cap", "status": "In-Form 🔥", "alpha": 7.8, "dcr": 84.5, "cons": 78.2, "ter": 0.65},
+            {"code": "118955", "name": "HDFC Flexi Cap Fund - Direct", "cat": "Flexi Cap", "status": "In-Form 🔥", "alpha": 5.4, "dcr": 78.2, "cons": 82.4, "ter": 0.78},
+            {"code": "119076", "name": "DSP Flexi Cap Fund - Direct", "cat": "Flexi Cap", "status": "On-Track ✅", "alpha": 4.2, "dcr": 82.5, "cons": 79.2, "ter": 0.71},
         ],
         "Large": [
-            {"code": "118834", "name": "Mirae Asset Large Cap Fund - Direct", "cat": "Large Cap", "status": "In-Form 🔥", "alpha": 3.4, "dcr": 82.5, "cons": 76.4, "ter": 0.54},
-            {"code": "119598", "name": "ICICI Prudential Bluechip Fund - Direct", "cat": "Large Cap", "status": "In-Form 🔥", "alpha": 3.8, "dcr": 78.4, "cons": 81.2, "ter": 0.88},
-            {"code": "120847", "name": "UTI Nifty 50 Index Fund - Direct", "cat": "Large Cap Index", "status": "On-Track ✅", "alpha": 0.0, "dcr": 100.0, "cons": 50.0, "ter": 0.18},
+            {"code": "118825", "name": "Mirae Asset Large Cap Fund - Direct", "cat": "Large Cap", "status": "In-Form 🔥", "alpha": 3.4, "dcr": 82.5, "cons": 76.4, "ter": 0.54},
+            {"code": "120716", "name": "UTI Nifty 50 Index Fund - Direct", "cat": "Large Cap Index", "status": "On-Track ✅", "alpha": 0.0, "dcr": 100.0, "cons": 50.0, "ter": 0.18},
         ],
         "Mid": [
-            {"code": "118778", "name": "Motilal Oswal Midcap Fund - Direct", "cat": "Mid Cap", "status": "In-Form 🔥", "alpha": 9.2, "dcr": 74.2, "cons": 86.4, "ter": 0.68},
-            {"code": "120828", "name": "Kotak Emerging Equity Fund - Direct", "cat": "Mid Cap", "status": "In-Form 🔥", "alpha": 6.5, "dcr": 81.4, "cons": 84.2, "ter": 0.74},
+            {"code": "127042", "name": "Motilal Oswal Midcap Fund - Direct", "cat": "Mid Cap", "status": "In-Form 🔥", "alpha": 9.2, "dcr": 74.2, "cons": 86.4, "ter": 0.68},
             {"code": "120505", "name": "Axis Midcap Fund - Direct", "cat": "Mid Cap", "status": "On-Track ✅", "alpha": 4.8, "dcr": 79.5, "cons": 78.5, "ter": 0.62},
         ],
         "Small": [
-            {"code": "125354", "name": "Nippon India Small Cap Fund - Direct", "cat": "Small Cap", "status": "In-Form 🔥", "alpha": 11.4, "dcr": 76.5, "cons": 91.2, "ter": 0.72},
-            {"code": "120716", "name": "SBI Small Cap Fund - Direct", "cat": "Small Cap", "status": "In-Form 🔥", "alpha": 8.5, "dcr": 71.2, "cons": 88.4, "ter": 0.68},
-            {"code": "100377", "name": "Quant Small Cap Fund - Direct", "cat": "Small Cap", "status": "In-Form 🔥", "alpha": 12.8, "dcr": 88.4, "cons": 82.5, "ter": 0.74},
+            {"code": "118778", "name": "Nippon India Small Cap Fund - Direct", "cat": "Small Cap", "status": "In-Form 🔥", "alpha": 11.4, "dcr": 76.5, "cons": 91.2, "ter": 0.72},
+            {"code": "125497", "name": "SBI Small Cap Fund - Direct", "cat": "Small Cap", "status": "In-Form 🔥", "alpha": 8.5, "dcr": 71.2, "cons": 88.4, "ter": 0.68},
+            {"code": "125354", "name": "Axis Small Cap Fund - Direct", "cat": "Small Cap", "status": "On-Track ✅", "alpha": 7.2, "dcr": 68.4, "cons": 82.1, "ter": 0.58},
+            {"code": "120828", "name": "Quant Small Cap Fund - Direct", "cat": "Small Cap", "status": "In-Form 🔥", "alpha": 12.8, "dcr": 88.4, "cons": 82.5, "ter": 0.74},
         ],
     }
 
