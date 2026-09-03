@@ -1082,10 +1082,11 @@ _MARKET_INDICES_CACHE: Dict[str, Any] = {
 }
 
 INDEX_METADATA = [
-    {"symbol": "^NSEI", "name": "NIFTY 50", "default_price": 24823.15, "default_change": 168.20, "default_pct": 0.68},
-    {"symbol": "^BSESN", "name": "SENSEX", "default_price": 81332.72, "default_change": 445.50, "default_pct": 0.55},
-    {"symbol": "^NSEBANK", "name": "NIFTY BANK", "default_price": 51290.40, "default_change": 418.60, "default_pct": 0.82},
-    {"symbol": "^INDIAVIX", "name": "INDIA VIX", "default_price": 13.42, "default_change": -0.44, "default_pct": -3.15},
+    {"symbol": "^NSEI", "name": "NIFTY 50", "default_price": 24823.15, "default_change": 168.20, "default_pct": 0.68, "currency": "INR", "unit": ""},
+    {"symbol": "^BSESN", "name": "SENSEX", "default_price": 81332.72, "default_change": 445.50, "default_pct": 0.55, "currency": "INR", "unit": ""},
+    {"symbol": "^NSEBANK", "name": "NIFTY BANK", "default_price": 51290.40, "default_change": 418.60, "default_pct": 0.82, "currency": "INR", "unit": ""},
+    {"symbol": "^INDIAVIX", "name": "INDIA VIX", "default_price": 13.42, "default_change": -0.44, "default_pct": -3.15, "currency": "INR", "unit": ""},
+    {"symbol": "BZ=F", "name": "BRENT CRUDE", "default_price": 73.50, "default_change": -0.45, "default_pct": -0.61, "currency": "USD", "unit": "/bbl"},
 ]
 
 
@@ -1104,6 +1105,8 @@ def fetch_live_market_indices() -> List[MarketIndexQuote]:
         for meta in INDEX_METADATA:
             sym = meta["symbol"]
             name = meta["name"]
+            curr = meta.get("currency", "INR")
+            unit_val = meta.get("unit")
             price_val = None
             prev_val = None
             
@@ -1135,6 +1138,8 @@ def fetch_live_market_indices() -> List[MarketIndexQuote]:
                             price=price_rounded,
                             change=chg_val,
                             change_pct=chg_pct,
+                            currency=curr,
+                            unit=unit_val,
                             updated_at=time.strftime("%H:%M:%S IST", time.localtime()),
                         )
                     )
@@ -1146,6 +1151,8 @@ def fetch_live_market_indices() -> List[MarketIndexQuote]:
                             price=meta["default_price"],
                             change=meta["default_change"],
                             change_pct=meta["default_pct"],
+                            currency=curr,
+                            unit=unit_val,
                             updated_at=time.strftime("%H:%M:%S IST", time.localtime()),
                         )
                     )
@@ -1157,6 +1164,8 @@ def fetch_live_market_indices() -> List[MarketIndexQuote]:
                         price=meta["default_price"],
                         change=meta["default_change"],
                         change_pct=meta["default_pct"],
+                        currency=curr,
+                        unit=unit_val,
                         updated_at=time.strftime("%H:%M:%S IST", time.localtime()),
                     )
                 )
@@ -1179,8 +1188,11 @@ def fetch_live_market_indices() -> List[MarketIndexQuote]:
             price=meta["default_price"],
             change=meta["default_change"],
             change_pct=meta["default_pct"],
+            currency=meta.get("currency", "INR"),
+            unit=meta.get("unit"),
             updated_at="Live",
         )
         for meta in INDEX_METADATA
     ]
+
 

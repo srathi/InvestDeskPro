@@ -612,6 +612,8 @@ class MarketIndexQuote(BaseModel):
     price: float
     change: float
     change_pct: float
+    currency: str = "INR"
+    unit: Optional[str] = None
     updated_at: str
 
 

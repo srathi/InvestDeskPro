@@ -194,9 +194,17 @@ export const Header: React.FC<HeaderProps> = ({
           {marketIndices.map((idx) => {
             const isPos = idx.change_pct >= 0;
             const isVix = idx.name.includes("VIX");
-            const colorClass = isVix
+            const isCrude = idx.name.includes("CRUDE") || idx.name.includes("BRENT");
+            const isUsd = idx.currency === "USD" || isCrude;
+
+            // For VIX & Crude, a drop is favorable for Indian equities / macro
+            const colorClass = isVix || isCrude
               ? (idx.change_pct <= 0 ? "text-cyan-400" : "text-amber-400")
               : (isPos ? "text-emerald-400" : "text-rose-400");
+
+            const formattedPrice = isUsd
+              ? `$${idx.price.toFixed(2)}${idx.unit ? idx.unit : ""}`
+              : idx.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             return (
               <div key={idx.symbol} className="flex items-center gap-2">
@@ -205,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {idx.change_pct >= 0 ? `+${idx.change_pct.toFixed(2)}%` : `${idx.change_pct.toFixed(2)}%`}
                 </span>
                 <span className="text-slate-400 font-tabular">
-                  {idx.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formattedPrice}
                 </span>
               </div>
             );

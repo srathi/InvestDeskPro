@@ -132,11 +132,15 @@ def test_invalid_stock_ticker_validation():
 def test_market_indices_fetch():
     from app.core.factors import fetch_live_market_indices
     indices = fetch_live_market_indices()
-    assert len(indices) == 4
+    assert len(indices) == 5
     symbols = [idx.symbol for idx in indices]
     assert "^NSEI" in symbols
     assert "^BSESN" in symbols
+    assert "^NSEBANK" in symbols
+    assert "^INDIAVIX" in symbols
+    assert "BZ=F" in symbols
     for idx in indices:
         assert idx.price > 0
         assert isinstance(idx.change_pct, float)
+
 
