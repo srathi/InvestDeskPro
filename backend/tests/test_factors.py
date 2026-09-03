@@ -28,6 +28,12 @@ def test_ticker_normalization():
     assert normalize_ticker("reliance.ns") == "RELIANCE.NS"
     assert normalize_ticker("TCS.BO") == "TCS.BO"
     assert normalize_ticker("  infy  ") == "INFY.NS"
+    assert normalize_ticker("RADICO KHAITAN LTD.") == "RADICO.NS"
+    assert normalize_ticker("RADICO KHAITAN LTD..NS") == "RADICO.NS"
+    assert normalize_ticker("RADICO KHAITAN") == "RADICO.NS"
+    assert normalize_ticker("HINDUSTAN UNILEVER LIMITED") == "HINDUNILVR.NS"
+    assert normalize_ticker("PIDILITE INDUSTRIES") == "PIDILITIND.NS"
+    assert normalize_ticker("532497") == "RADICO.BO"
     # BSE 6-digit scrip codes
     assert normalize_ticker("500570") == "TMCV.BO"
     assert normalize_ticker("500180") == "HDFCBANK.BO"

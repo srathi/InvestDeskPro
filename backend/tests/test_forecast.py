@@ -106,7 +106,7 @@ def test_company_forecast_api_endpoint():
     response = client.get("/api/v1/company/INFY/forecast")
     assert response.status_code == 200
     data = response.json()
-    assert data["ticker"] == "INFY"
+    assert "INFY" in data["ticker"]
     assert "base_case" in data
     assert "bull_case" in data
     assert "bear_case" in data

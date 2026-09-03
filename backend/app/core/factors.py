@@ -235,7 +235,7 @@ TICKER_ALIASES: Dict[str, str] = {
     "APOLLO HOSPITALS": "APOLLOHOSP.NS",
     "508869": "APOLLOHOSP.BO",
 
-    # New Age Tech & Midcaps
+    # New Age Tech & Consumer Brands
     "ZOMATO": "ZOMATO.NS",
     "543320": "ZOMATO.BO",
     "PAYTM": "PAYTM.NS",
@@ -247,17 +247,96 @@ TICKER_ALIASES: Dict[str, str] = {
     "543390": "POLICYBZR.BO",
     "SUZLON": "SUZLON.NS",
     "532667": "SUZLON.BO",
+    "SWIGGY": "SWIGGY.NS",
+    "544280": "SWIGGY.BO",
+
+    # Distilleries, Breweries & Alcoholic Beverages
+    "RADICO": "RADICO.NS",
+    "RADICO KHAITAN": "RADICO.NS",
+    "RADICO KHAITAN LTD": "RADICO.NS",
+    "RADICOKHAITAN": "RADICO.NS",
+    "532497": "RADICO.BO",
+    "UNITDSPR": "UNITDSPR.NS",
+    "UNITED SPIRITS": "UNITDSPR.NS",
+    "MCDOWELL": "UNITDSPR.NS",
+    "MCDOWELL-N": "UNITDSPR.NS",
+    "532432": "UNITDSPR.BO",
+    "SULA": "SULA.NS",
+    "SULA VINEYARDS": "SULA.NS",
+    "543711": "SULA.BO",
+    "GLOBUSSPR": "GLOBUSSPR.NS",
+    "GLOBUS SPIRITS": "GLOBUSSPR.NS",
+    "533104": "GLOBUSSPR.BO",
     "PICCADILY": "PICCADIL.BO",
     "PICCADILY.NS": "PICCADIL.BO",
     "PICCADILY.BO": "PICCADIL.BO",
     "PICCADIL": "PICCADIL.BO",
     "530305": "PICCADIL.BO",
+    "GMBREW": "GMBREW.NS",
+    "507488": "GMBREW.BO",
+
+    # Industrials, Cables, Building Products & Retail
+    "POLYCAB": "POLYCAB.NS",
+    "POLYCAB INDIA": "POLYCAB.NS",
+    "542652": "POLYCAB.BO",
+    "KEI": "KEI.NS",
+    "KEI INDUSTRIES": "KEI.NS",
+    "517569": "KEI.BO",
+    "HAVELLS": "HAVELLS.NS",
+    "HAVELLS INDIA": "HAVELLS.NS",
+    "517354": "HAVELLS.BO",
+    "PIDILITIND": "PIDILITIND.NS",
+    "PIDILITE": "PIDILITIND.NS",
+    "PIDILITE INDUSTRIES": "PIDILITIND.NS",
+    "500331": "PIDILITIND.BO",
+    "ASTRAL": "ASTRAL.NS",
+    "ASTRAL PIPES": "ASTRAL.NS",
+    "532830": "ASTRAL.BO",
+    "SUPREMEIND": "SUPREMEIND.NS",
+    "SUPREME INDUSTRIES": "SUPREMEIND.NS",
+    "509930": "SUPREMEIND.BO",
+    "TRENT": "TRENT.NS",
+    "ZUDIO": "TRENT.NS",
+    "WESTSIDE": "TRENT.NS",
+    "500251": "TRENT.BO",
+    "DMART": "DMART.NS",
+    "AVENUE SUPERMARTS": "DMART.NS",
+    "540376": "DMART.BO",
+    "VBL": "VBL.NS",
+    "VARUN BEVERAGES": "VBL.NS",
+    "540180": "VBL.BO",
+    "KALYANKJIL": "KALYANKJIL.NS",
+    "KALYAN JEWELLERS": "KALYANKJIL.NS",
+    "543278": "KALYANKJIL.BO",
+    "TIINDIA": "TIINDIA.NS",
+    "TUBE INVESTMENTS": "TIINDIA.NS",
+    "540762": "TIINDIA.BO",
+    "DIXON": "DIXON.NS",
+    "DIXON TECH": "DIXON.NS",
+    "540699": "DIXON.BO",
+    "KAYNES": "KAYNES.NS",
+    "543664": "KAYNES.BO",
 }
 
 
+def clean_company_name_query(name: str) -> str:
+    """Strip common corporate suffixes (LTD, LIMITED, PVT, CORP, etc.) and clean punctuation."""
+    cleaned = name.upper()
+    for ch in [".", ",", "-", "(", ")", "/", "&"]:
+        cleaned = cleaned.replace(ch, " ")
+    tokens = [t for t in cleaned.split() if t not in {
+        "LTD", "LIMITED", "PVT", "PRIVATE", "CORP", "CORPORATION", "INC", 
+        "CO", "COMPANY", "HOLDINGS", "ENTERPRISE", "ENTERPRISES", "INDUSTRIES"
+    }]
+    return " ".join(tokens).strip()
+
+
 def normalize_ticker(ticker: str) -> str:
-    """Ensure Indian ticker has exchange suffix (.NS or .BO) with robust alias & scrip code resolution."""
-    raw = " ".join(ticker.strip().upper().split())
+    """Ensure Indian ticker has exchange suffix (.NS or .BO) with robust alias, company name, & scrip code resolution."""
+    raw = " ".join(ticker.strip().upper().replace(",", " ").split()).strip(" .")
+    if not raw:
+        return ""
+
     if raw in TICKER_ALIASES:
         return TICKER_ALIASES[raw]
 
@@ -266,17 +345,47 @@ def normalize_ticker(ticker: str) -> str:
 
     # If caller already specified an explicit exchange suffix (.NS or .BO)
     if has_ns or has_bo:
-        base = raw[:-3].strip()
+        base = raw[:-3].strip(" .")
         if base in TICKER_ALIASES:
             aliased = TICKER_ALIASES[base]
             # If caller explicitly requested .BO and the alias points to .NS, preserve .BO
             if has_bo and aliased.endswith(".NS"):
                 return f"{aliased[:-3]}.BO"
             return aliased
-        return raw
+        
+        cleaned_base = clean_company_name_query(base)
+        if cleaned_base in TICKER_ALIASES:
+            aliased = TICKER_ALIASES[cleaned_base]
+            if has_bo and aliased.endswith(".NS"):
+                return f"{aliased[:-3]}.BO"
+            return aliased
 
-    # No exchange suffix provided: auto-append .NS as primary Indian equity exchange
-    return f"{raw}.NS"
+        # If base contains spaces, search local stock universe
+        if " " in base:
+            matches = search_indian_stocks(base)
+            if matches:
+                top_tick = matches[0].ticker
+                if has_bo and top_tick.endswith(".NS"):
+                    return f"{top_tick[:-3]}.BO"
+                return top_tick
+
+        clean_base_sym = base.replace(".", "").strip()
+        return f"{clean_base_sym}.{'BO' if has_bo else 'NS'}"
+
+    # Clean corporate noise words (LTD, LIMITED, etc.)
+    cleaned_query = clean_company_name_query(raw)
+    if cleaned_query in TICKER_ALIASES:
+        return TICKER_ALIASES[cleaned_query]
+
+    # If user typed full name or multi-word phrase like "Radico Khaitan Ltd." or "Tata Motors Ltd"
+    if " " in raw or len(raw) > 10:
+        matches = search_indian_stocks(raw)
+        if matches:
+            return matches[0].ticker
+
+    # Standard clean ticker symbol
+    clean_sym = raw.replace(".", "").strip()
+    return f"{clean_sym}.NS"
 
 
 def is_bfsi_sector(sector: Optional[str] = None, industry: Optional[str] = None) -> bool:
@@ -1477,6 +1586,13 @@ INDIAN_STOCKS_DIRECTORY = [
     {"ticker": "VOLTAS.NS", "name": "Voltas Ltd.", "sector": "Consumer Electronics", "keywords": "voltas tata ac air conditioning beko refrigerators cooling"},
     {"ticker": "ASTRAL.NS", "name": "Astral Ltd.", "sector": "Building Products & Pipes", "keywords": "astral pipes cpvc plumbing water tanks building"},
     {"ticker": "SUPREMEIND.NS", "name": "Supreme Industries Ltd.", "sector": "Plastics & Industrial", "keywords": "supreme supremeind plastic pipes furniture packaging"},
+    {"ticker": "RADICO.NS", "name": "Radico Khaitan Ltd.", "sector": "Consumer Goods & Distilleries", "keywords": "radico radico khaitan magic moments 8pm rampur whisky liquor alcohol spirits"},
+    {"ticker": "UNITDSPR.NS", "name": "United Spirits Ltd. (Diageo)", "sector": "Consumer Goods & Distilleries", "keywords": "unitdspr united spirits mcdowell royal challenge signature johnnie walker liquor"},
+    {"ticker": "SULA.NS", "name": "Sula Vineyards Ltd.", "sector": "Consumer Goods & Wineries", "keywords": "sula sula vineyards wine winery dindori rasa"},
+    {"ticker": "KALYANKJIL.NS", "name": "Kalyan Jewellers India Ltd.", "sector": "Consumer Retail & Jewellery", "keywords": "kalyan kalyankjil jewellers gold jewellery candere retail"},
+    {"ticker": "SWIGGY.NS", "name": "Swiggy Ltd.", "sector": "Consumer Internet & Tech", "keywords": "swiggy instamart dineout food delivery quick commerce tech"},
+    {"ticker": "KEI.NS", "name": "KEI Industries Ltd.", "sector": "Industrial Cables & Power", "keywords": "kei kei industries wires cables epc power"},
+    {"ticker": "TIINDIA.NS", "name": "Tube Investments of India", "sector": "Auto Components & Engineering", "keywords": "ti tiindia tube investments murugappa cycles ev tract"},
 ]
 
 

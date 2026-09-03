@@ -1363,14 +1363,13 @@ def extract_historical_price_and_valuation(
 
 def fetch_company_360(ticker: str) -> Company360Response:
     """Fetch complete institutional 360 overview for Indian stock."""
-    clean_sym = ticker.strip().upper().replace(".NS", "").replace(".BO", "")
+    norm_ticker = normalize_ticker(ticker)
+    clean_sym = norm_ticker.replace(".NS", "").replace(".BO", "")
     now = time.time()
-    if clean_sym in _COMPANY_360_CACHE:
-        cached_time, cached_res = _COMPANY_360_CACHE[clean_sym]
+    if norm_ticker in _COMPANY_360_CACHE:
+        cached_time, cached_res = _COMPANY_360_CACHE[norm_ticker]
         if now - cached_time < CACHE_TTL_SECONDS:
             return cached_res
-
-    norm_ticker = normalize_ticker(clean_sym)
 
     t = yf.Ticker(norm_ticker)
     info: Dict[str, Any] = {}
@@ -1396,7 +1395,7 @@ def fetch_company_360(ticker: str) -> Company360Response:
         try:
             import json, ssl, urllib.parse, urllib.request
             ctx = ssl._create_unverified_context()
-            search_query = clean_sym.replace("-", " ")
+            search_query = ticker.strip().replace("-", " ")
             url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(search_query)}&quotesCount=5"
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"})
             with urllib.request.urlopen(req, context=ctx, timeout=4) as resp:
@@ -1421,7 +1420,19 @@ def fetch_company_360(ticker: str) -> Company360Response:
     except Exception:
         hist = pd.DataFrame()
 
+    # STRICT VALIDATION: Check if this ticker is a recognized listed company
     current_price = safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))
+    has_valid_price = current_price is not None or (not hist.empty and len(hist) > 0)
+    has_valid_info = bool(info.get("marketCap") or info.get("shortName") or info.get("longName") or info.get("trailingPE") or info.get("bookValue"))
+
+    if not has_valid_price and not has_valid_info:
+        from app.core.factors import search_indian_stocks
+        suggestions = search_indian_stocks(ticker)
+        suggestion_msg = f" Did you mean '{suggestions[0].name} ({suggestions[0].ticker})'?" if suggestions else ""
+        raise ValueError(
+            f"Stock symbol '{ticker}' is not a recognized listed equity on NSE/BSE.{suggestion_msg}"
+        )
+
     day_change = safe_float(info.get("regularMarketChange"), 0.0) or 0.0
     day_change_pct = safe_float(info.get("regularMarketChangePercent"), 0.0) or 0.0
 
@@ -1435,7 +1446,8 @@ def fetch_company_360(ticker: str) -> Company360Response:
                 day_change = round(current_price - prev_close, 2)
                 day_change_pct = round((day_change / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
 
-    current_price = current_price or 500.0
+    if current_price is None:
+        current_price = 100.0
     high_52w = safe_float(info.get("fiftyTwoWeekHigh"), current_price * 1.25) or current_price * 1.25
     low_52w = safe_float(info.get("fiftyTwoWeekLow"), current_price * 0.75) or current_price * 0.75
     mcap_val = safe_float(info.get("marketCap"), current_price * 100000000.0) or (current_price * 100000000.0)
@@ -1646,13 +1658,13 @@ def fetch_company_360(ticker: str) -> Company360Response:
         price_history=price_history,
         historical_valuation_summary=historical_valuation_summary,
         forward_estimates=calculate_forward_estimates(
-            ticker=clean_sym,
+            ticker=norm_ticker,
             financials=financials,
             essentials=essentials,
             historical_pe_summary=historical_valuation_summary,
         ),
     )
-    _COMPANY_360_CACHE[clean_sym] = (now, response)
+    _COMPANY_360_CACHE[norm_ticker] = (now, response)
     return response
 
 
@@ -1671,15 +1683,15 @@ def fetch_company_forecast(ticker: str) -> ForwardGrowthEstimates:
 
 def fetch_company_history(ticker: str, timeframe: str = "1y") -> StockHistoryResponse:
     """Fetch dedicated multi-timeframe price and valuation history for a given ticker."""
-    clean_sym = ticker.strip().upper().replace(".NS", "").replace(".BO", "")
-    cache_key = f"{clean_sym}:{(timeframe or '1y').lower().strip()}"
+    norm_ticker = normalize_ticker(ticker)
+    clean_tf = (timeframe or "1y").lower().strip()
+    cache_key = f"{norm_ticker}:{clean_tf}"
     now = time.time()
     if cache_key in _HISTORY_CACHE:
         cached_time, cached_res = _HISTORY_CACHE[cache_key]
         if now - cached_time < CACHE_TTL_SECONDS:
             return cached_res
 
-    norm_ticker = normalize_ticker(clean_sym)
     t = yf.Ticker(norm_ticker)
     info: Dict[str, Any] = {}
     try:
