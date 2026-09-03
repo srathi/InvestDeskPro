@@ -1458,6 +1458,7 @@ def fetch_company_360(ticker: str) -> Company360Response:
                 day_change = round(current_price - prev_close, 2)
                 day_change_pct = round((day_change / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
 
+    mcap_cr: Optional[float] = None
     if current_price is None or current_price <= 0:
         try:
             q_res = fetch_live_stock_quote(norm_ticker)
@@ -1481,10 +1482,14 @@ def fetch_company_360(ticker: str) -> Company360Response:
     high_52w = safe_float(info.get("fiftyTwoWeekHigh"), current_price * 1.25) or current_price * 1.25
     low_52w = safe_float(info.get("fiftyTwoWeekLow"), current_price * 0.75) or current_price * 0.75
     mcap_val = safe_float(info.get("marketCap"))
-    if mcap_val:
+    if mcap_val and mcap_val > 0:
         mcap_cr = round(mcap_val / 10000000.0, 1)
-    elif not mcap_cr:
-        mcap_cr = round((current_price * 100000000.0) / 10000000.0, 1)
+    elif mcap_cr is None or mcap_cr <= 0:
+        shares = safe_float(info.get("sharesOutstanding"))
+        if shares and shares > 0:
+            mcap_cr = round((shares * current_price) / 10000000.0, 1)
+        else:
+            mcap_cr = round((current_price * 100000000.0) / 10000000.0, 1)
 
     pe_val = safe_float(info.get("trailingPE") or info.get("forwardPE"), 24.5)
     pb_val = safe_float(info.get("priceToBook"), 3.2)
