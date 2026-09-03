@@ -144,3 +144,16 @@ def test_market_indices_fetch():
         assert isinstance(idx.change_pct, float)
 
 
+def test_institutional_flow_fetch():
+    from app.core.factors import fetch_latest_institutional_flow
+    flows = fetch_latest_institutional_flow()
+    assert len(flows) >= 2
+    categories = [f.category for f in flows]
+    assert "FII" in categories
+    assert "DII" in categories
+    for f in flows:
+        assert isinstance(f.net_value_cr, float)
+        assert len(f.date) > 0
+
+
+

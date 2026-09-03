@@ -2,7 +2,12 @@
 
 from typing import List
 from fastapi import APIRouter, HTTPException, Query
-from app.core.factors import fetch_live_market_indices, generate_stock_scorecard, search_indian_stocks
+from app.core.factors import (
+    fetch_latest_institutional_flow,
+    fetch_live_market_indices,
+    generate_stock_scorecard,
+    search_indian_stocks,
+)
 from app.schemas import MarketIndicesResponse, StockScorecardResponse, StockSearchResult
 
 router = APIRouter(prefix="/stocks", tags=["Stocks"])
@@ -11,10 +16,11 @@ router = APIRouter(prefix="/stocks", tags=["Stocks"])
 @router.get("/indices", response_model=MarketIndicesResponse)
 @router.get("/market-indices", response_model=MarketIndicesResponse)
 def get_market_indices():
-    """Retrieve live / latest market quotes for major Indian benchmark indices (Nifty, Sensex, Bank Nifty, India VIX)."""
+    """Retrieve live / latest market quotes for major Indian benchmark indices & daily FII/DII institutional cash flow."""
     try:
         indices = fetch_live_market_indices()
-        return MarketIndicesResponse(indices=indices, status="ok")
+        fii_dii = fetch_latest_institutional_flow()
+        return MarketIndicesResponse(indices=indices, institutional_flow=fii_dii, status="ok")
     except Exception as exc:
         raise HTTPException(
             status_code=500,

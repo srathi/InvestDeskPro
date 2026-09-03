@@ -617,7 +617,17 @@ class MarketIndexQuote(BaseModel):
     updated_at: str
 
 
+class InstitutionalFlow(BaseModel):
+    category: str
+    buy_value_cr: float
+    sell_value_cr: float
+    net_value_cr: float
+    date: str
+
+
 class MarketIndicesResponse(BaseModel):
     indices: List[MarketIndexQuote]
+    institutional_flow: List[InstitutionalFlow] = Field(default_factory=list)
     status: str = "ok"
+
 

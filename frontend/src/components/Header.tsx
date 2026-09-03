@@ -17,7 +17,7 @@ import {
   Loader2,
   BookOpen,
 } from "lucide-react";
-import { fetchOmniSearch, OmniSearchResult, fetchMarketIndices, MarketIndexQuote } from "../lib/api";
+import { fetchOmniSearch, OmniSearchResult, fetchMarketRibbonData, MarketIndexQuote, InstitutionalFlow } from "../lib/api";
 
 interface HeaderProps {
   activeTab: "company" | "quant";
@@ -42,30 +42,40 @@ export const Header: React.FC<HeaderProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [marketIndices, setMarketIndices] = useState<MarketIndexQuote[]>([
-    { symbol: "^NSEI", name: "NIFTY 50", price: 24823.15, change: 168.20, change_pct: 0.68, updated_at: "Live" },
-    { symbol: "^BSESN", name: "SENSEX", price: 81332.72, change: 445.50, change_pct: 0.55, updated_at: "Live" },
-    { symbol: "^NSEBANK", name: "NIFTY BANK", price: 51290.40, change: 418.60, change_pct: 0.82, updated_at: "Live" },
-    { symbol: "^INDIAVIX", name: "INDIA VIX", price: 13.42, change: -0.44, change_pct: -3.15, updated_at: "Live" },
+    { symbol: "^NSEI", name: "NIFTY 50", price: 24823.15, change: 168.20, change_pct: 0.68, currency: "INR", updated_at: "Live" },
+    { symbol: "^BSESN", name: "SENSEX", price: 81332.72, change: 445.50, change_pct: 0.55, currency: "INR", updated_at: "Live" },
+    { symbol: "^NSEBANK", name: "NIFTY BANK", price: 51290.40, change: 418.60, change_pct: 0.82, currency: "INR", updated_at: "Live" },
+    { symbol: "^INDIAVIX", name: "INDIA VIX", price: 13.42, change: -0.44, change_pct: -3.15, currency: "INR", updated_at: "Live" },
+    { symbol: "BZ=F", name: "BRENT CRUDE", price: 73.50, change: -0.45, change_pct: -0.61, currency: "USD", unit: "/bbl", updated_at: "Live" },
+  ]);
+  const [institutionalFlow, setInstitutionalFlow] = useState<InstitutionalFlow[]>([
+    { category: "FII", buy_value_cr: 26715.88, sell_value_cr: 20027.51, net_value_cr: 6688.37, date: "Latest" },
+    { category: "DII", buy_value_cr: 17639.89, sell_value_cr: 14826.91, net_value_cr: 2812.98, date: "Latest" },
   ]);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isSelectingRef = useRef(false);
 
-  // Fetch live market indices on mount & every 60s
+  // Fetch market indices (every 60s) and institutional flow (once on mount)
   useEffect(() => {
     let isMounted = true;
-    const loadIndices = async () => {
+    const loadRibbonData = async () => {
       try {
-        const data = await fetchMarketIndices();
-        if (isMounted && data && data.length > 0) {
-          setMarketIndices(data);
+        const data = await fetchMarketRibbonData();
+        if (isMounted && data) {
+          if (data.indices && data.indices.length > 0) {
+            setMarketIndices(data.indices);
+          }
+          if (data.institutional_flow && data.institutional_flow.length > 0) {
+            setInstitutionalFlow(data.institutional_flow);
+          }
         }
       } catch (e) {
         // Keep existing quotes
       }
     };
-    loadIndices();
-    const interval = setInterval(loadIndices, 60000);
+    loadRibbonData();
+    const interval = setInterval(loadRibbonData, 60000);
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -191,6 +201,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Market Indices Ribbon */}
       <div className="border-b border-slate-800/60 px-4 py-1.5 text-[11px] font-mono text-slate-400 flex items-center justify-between overflow-x-auto gap-6 whitespace-nowrap bg-slate-900/40">
         <div className="flex items-center gap-6">
+          {/* Major Indices & Commodities */}
           {marketIndices.map((idx) => {
             const isPos = idx.change_pct >= 0;
             const isVix = idx.name.includes("VIX");
@@ -218,6 +229,37 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             );
           })}
+
+          {/* Institutional Cash Flow (FII / DII Daily Activity) */}
+          {institutionalFlow.length > 0 && (
+            <>
+              <span className="text-slate-700 select-none">|</span>
+              {institutionalFlow.map((flow) => {
+                const isBuy = flow.net_value_cr >= 0;
+                const formattedNet = Math.abs(flow.net_value_cr).toLocaleString("en-IN", {
+                  maximumFractionDigits: 0,
+                });
+                return (
+                  <div
+                    key={flow.category}
+                    className="flex items-center gap-1.5"
+                    title={`${flow.category} Cash Activity (${flow.date}): Buy ₹${flow.buy_value_cr.toLocaleString("en-IN")} Cr | Sell ₹${flow.sell_value_cr.toLocaleString("en-IN")} Cr`}
+                  >
+                    <span className="font-semibold text-slate-300 uppercase">
+                      {flow.category} NET
+                    </span>
+                    <span
+                      className={`font-bold ${
+                        isBuy ? "text-emerald-400" : "text-rose-400"
+                      }`}
+                    >
+                      {isBuy ? `+₹${formattedNet} Cr` : `-₹${formattedNet} Cr`}
+                    </span>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
