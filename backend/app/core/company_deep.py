@@ -1476,10 +1476,20 @@ def fetch_company_360(ticker: str) -> Company360Response:
         mcap_cr = round(mcap_val / 10000000.0, 1)
     elif mcap_cr is None or mcap_cr <= 0:
         shares = safe_float(info.get("sharesOutstanding"))
+        if not shares or shares <= 0:
+            try:
+                shares = safe_float(t.fast_info.get("shares") if hasattr(t, "fast_info") and hasattr(t.fast_info, "get") else getattr(t.fast_info, "shares", None))
+            except Exception:
+                pass
         if shares and shares > 0:
             mcap_cr = round((shares * current_price) / 10000000.0, 1)
         else:
-            mcap_cr = round((current_price * 100000000.0) / 10000000.0, 1)
+            from app.core.screener_engine import MASTER_STOCK_UNIVERSE
+            match = next((s for s in MASTER_STOCK_UNIVERSE if s.ticker.upper() == norm_ticker.upper() or s.ticker.upper().startswith(clean_sym)), None)
+            if match and match.market_cap_cr and match.market_cap_cr > 100:
+                mcap_cr = match.market_cap_cr
+            else:
+                mcap_cr = round((current_price * 50000000.0) / 10000000.0, 1)
 
     pe_val = safe_float(info.get("trailingPE") or info.get("forwardPE"), 24.5)
     pb_val = safe_float(info.get("priceToBook"), 3.2)
