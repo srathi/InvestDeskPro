@@ -12,7 +12,7 @@ export function FloatingChatButton({ onClick, isOpen }: FloatingChatButtonProps)
   if (isOpen) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-40">
+    <div className="fixed bottom-20 sm:bottom-5 right-4 sm:right-5 z-40">
       <button
         type="button"
         onClick={onClick}

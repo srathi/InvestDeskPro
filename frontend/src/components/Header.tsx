@@ -201,7 +201,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-md sticky top-0 z-50">
       {/* Top Market Indices Ribbon */}
-      <div className="border-b border-slate-800/60 px-4 py-1.5 text-[11px] font-mono text-slate-400 flex items-center justify-between overflow-x-auto gap-6 whitespace-nowrap bg-slate-900/40">
+      <div className="border-b border-slate-800/60 px-4 py-1.5 text-[11px] font-mono text-slate-400 flex items-center justify-between overflow-x-auto no-scrollbar gap-6 whitespace-nowrap bg-slate-900/40">
         <div className="flex items-center gap-6">
           {/* Major Indices & Commodities */}
           {marketIndices.map((idx) => {
@@ -349,7 +349,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               onKeyDown={handleKeyDown}
               placeholder="Search Stocks or Mutual Funds (e.g. Tata Motors, Piccadily, 122639)..."
-              className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-10 pr-16 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono shadow-inner"
+              className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-10 pr-16 py-2 text-base md:text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono shadow-inner"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
               {isSearching ? (
@@ -407,8 +407,8 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Primary Navigation Tabs */}
-        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0 gap-1.5">
+        {/* Primary Navigation Tabs (Desktop md:flex, Mobile handled by bottom nav) */}
+        <div className="hidden md:flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0 gap-1.5">
           {/* Tab 1: Stock Intelligence */}
           <button
             onClick={() => setActiveTab("company")}

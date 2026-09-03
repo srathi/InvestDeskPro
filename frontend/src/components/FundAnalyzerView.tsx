@@ -370,14 +370,14 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
   return (
     <div className="space-y-6">
       {/* 🌟 Top Hero Search & Multiline Suggestions Panel */}
-      <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 space-y-4 relative z-30 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+      <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5 relative z-30 shadow-xl backdrop-blur-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-emerald-400" />
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
               <span>Institutional Mutual Fund Alpha Engine</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-400 mt-0.5">
               Instant AMFI Search across 37,851 Schemes • Manager Skill Isolation • Active Share • Cross-Fund Overlap
             </p>
           </div>
@@ -389,9 +389,9 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                 handleRunOverlap(selectedFundA.scheme_code, selectedFundB.scheme_code);
               }
             }}
-            className="px-4 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/80 text-xs font-bold transition-all shadow-md shadow-purple-950 flex items-center gap-2 shrink-0 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/80 text-xs font-bold transition-all shadow-md shadow-purple-950 flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
           >
-            <Scale className="h-4 w-4 text-purple-400" />
+            <Scale className="h-3.5 w-3.5 text-purple-400" />
             <span>Cross-Fund Overlap Matrix</span>
           </button>
         </div>
@@ -399,7 +399,7 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
         {/* Full-Width Search Input Bar */}
         <div ref={searchContainerRef} className="relative w-full">
           <form onSubmit={handleSearchSubmit} className="relative w-full flex items-center">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-400 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
@@ -412,26 +412,26 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Search any Indian Mutual Fund by Scheme Name or AMFI Code (e.g. 122639, Parag Parikh Flexi, HDFC, SBI Small Cap)..."
-              className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-emerald-500 rounded-2xl pl-12 pr-36 py-3.5 text-sm md:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all shadow-inner"
+              placeholder="Search any Indian Mutual Fund by Scheme Name or AMFI Code (e.g. 122639, Parag Parikh Flexi, HDFC)..."
+              className="w-full bg-slate-950/90 border border-slate-700/80 hover:border-slate-600 focus:border-emerald-500 rounded-xl pl-10 pr-28 py-2 text-base md:text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all shadow-inner"
             />
             {isSearching && (
-              <Loader2 className="absolute right-32 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-400 animate-spin" />
+              <Loader2 className="absolute right-28 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-400 animate-spin" />
             )}
             <button
               type="submit"
               disabled={isSearching}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs md:text-sm font-semibold rounded-xl transition-all shadow-md shadow-emerald-950 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-semibold rounded-lg transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
-              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span>Search AMFI</span>
+              {isSearching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+              <span>Search</span>
             </button>
           </form>
 
           {/* Debounced Autocomplete Dropdown */}
           {showDropdown && searchResults.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-950/98 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl max-h-80 overflow-y-auto divide-y divide-slate-800/60 z-50">
-              <div className="px-4 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950/98 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-2xl max-h-72 overflow-y-auto divide-y divide-slate-800/60 z-50">
+              <div className="px-3.5 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-900/80 flex items-center justify-between">
                 <span>Matching AMFI Schemes ({searchResults.length})</span>
                 <span className="text-[9px] font-mono lowercase text-slate-400">↑↓ navigate • ↵ select • esc close</span>
               </div>
@@ -440,41 +440,41 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   key={fund.scheme_code}
                   type="button"
                   onClick={() => selectFund(fund)}
-                  className={`w-full text-left px-4 py-3 flex items-center justify-between text-xs md:text-sm transition-colors cursor-pointer ${
+                  className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between text-xs transition-colors cursor-pointer ${
                     idx === selectedIndex ? "bg-emerald-950/80 text-emerald-200 border-l-4 border-emerald-400" : "hover:bg-slate-900/90 text-slate-200"
                   }`}
                 >
-                  <div className="truncate pr-4 space-y-1">
-                    <div className="text-slate-100 font-semibold truncate">
+                  <div className="truncate pr-4 space-y-0.5">
+                    <div className="text-slate-100 font-semibold truncate text-xs">
                       {fund.scheme_name}
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                    <div className="flex items-center gap-2 text-[10px]">
                       {fund.category && (
-                        <span className="px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+                        <span className="text-emerald-400 font-mono">
                           {fund.category}
                         </span>
                       )}
                       {fund.plan_type && (
-                        <span className={`px-1.5 py-0.5 rounded border ${
+                        <span className={`px-1.5 py-0.2 rounded font-mono ${
                           fund.plan_type === "Direct"
-                            ? "bg-emerald-950/80 text-emerald-300 border-emerald-800 font-bold"
+                            ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-bold"
                             : "bg-slate-900 text-slate-400 border-slate-700"
                         }`}>
                           {fund.plan_type} {fund.option_type || "Growth"}
                         </span>
                       )}
                       {fund.fund_house && (
-                        <span className="text-slate-400 font-sans">
+                        <span className="text-slate-400 font-sans hidden sm:inline">
                           {fund.fund_house}
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono text-emerald-400 text-xs bg-emerald-950/90 border border-emerald-800 px-2.5 py-1 rounded-lg shadow-inner">
+                    <span className="font-mono text-emerald-400 text-[11px] bg-emerald-950/90 border border-emerald-800 px-2 py-0.5 rounded-lg shadow-inner">
                       #{fund.scheme_code}
                     </span>
-                    <ChevronRight className="h-4 w-4 text-slate-500" />
+                    <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
                   </div>
                 </button>
               ))}
@@ -482,17 +482,17 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
           )}
         </div>
 
-        {/* Multi-line Quick Presets Panel Below Input */}
-        <div className="pt-3 border-t border-slate-800/80 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+        {/* Quick Presets Panel Below Input */}
+        <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-              <span>Popular High-Volume Schemes (Instant 1-Click Institutional Audit):</span>
+              <Sparkles className="h-3 w-3 text-cyan-400" />
+              <span>Popular High-Volume Schemes (Instant 1-Click Audit):</span>
             </span>
-            <span className="text-[10px] text-slate-500 font-normal lowercase hidden sm:inline">click to audit scheme</span>
+            <span className="text-[9px] text-slate-500 font-normal lowercase hidden sm:inline">click to audit scheme</span>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 md:flex-wrap md:overflow-visible">
             {POPULAR_FUNDS.map((item) => (
               <button
                 key={item.code}
@@ -504,17 +504,17 @@ export const FundAnalyzerView: React.FC<FundAnalyzerViewProps> = ({
                   loadFund(item.code);
                   setSearchQuery("");
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 shrink-0 md:shrink cursor-pointer ${
                   schemeCode === item.code
-                    ? "bg-emerald-950 text-emerald-300 border border-emerald-600 shadow-md shadow-emerald-950"
+                    ? "bg-emerald-950 text-emerald-300 border border-emerald-600 shadow-sm font-semibold"
                     : "bg-slate-900/70 text-slate-300 border border-slate-800 hover:text-white hover:border-slate-700 hover:bg-slate-900"
                 }`}
               >
                 <span>{item.name}</span>
-                <span className="text-[10px] font-mono text-slate-400 bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-800/80">
+                <span className="text-[9px] font-mono text-slate-400 bg-slate-950/60 px-1 py-0.2 rounded border border-slate-800/80">
                   {item.category}
                 </span>
-                <span className="text-[10px] text-emerald-400 font-semibold">
+                <span className="text-[9px] text-emerald-400 font-semibold">
                   {item.tag}
                 </span>
               </button>

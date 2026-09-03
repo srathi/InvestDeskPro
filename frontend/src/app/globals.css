@@ -67,3 +67,19 @@ body {
 .font-tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Mobile Scrollbar Utilities */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Touch responsiveness - remove mobile 300ms tap delay */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}

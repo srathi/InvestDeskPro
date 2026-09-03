@@ -269,14 +269,14 @@ export const SectorRadarView: React.FC<SectorRadarViewProps> = ({
           </div>
 
           {/* Smart Multi-Field Instant Search */}
-          <div className="relative flex items-center">
+          <div className="relative flex-1 sm:flex-initial flex items-center min-w-[200px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search sector, stock (e.g. Auto, TCS, Tata)..."
-              className="bg-slate-950 border border-slate-800 hover:border-slate-700 focus:border-cyan-500 rounded-xl pl-8 pr-7 py-1 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono w-52 transition-all shadow-inner"
+              className="bg-slate-950 border border-slate-800 hover:border-slate-700 focus:border-cyan-500 rounded-xl pl-8 pr-7 py-1 text-base sm:text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono w-full sm:w-52 transition-all shadow-inner"
             />
             {searchQuery && (
               <button

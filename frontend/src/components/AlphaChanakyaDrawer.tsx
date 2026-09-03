@@ -344,8 +344,8 @@ export function AlphaChanakyaDrawer({
 
   return (
     <>
-      {/* Slide-over / Modal Chat Window (Viz-to-Viz Match with SwingTradeDesk) */}
-      <div className="fixed bottom-4 right-4 z-50 w-[95vw] sm:w-[480px] h-[600px] max-h-[90vh] bg-[#080d1a]/95 backdrop-blur-2xl border border-cyan-500/40 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
+      {/* Slide-over / Modal Chat Window (Bottom Sheet on Mobile, Floating Card on Desktop) */}
+      <div className="fixed inset-x-0 bottom-0 sm:bottom-4 sm:right-4 sm:left-auto z-50 w-full sm:w-[480px] h-[85vh] sm:h-[600px] max-h-[92vh] bg-[#080d1a]/98 sm:bg-[#080d1a]/95 backdrop-blur-2xl border-t sm:border border-cyan-500/40 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
         
         {/* Header Bar */}
         <div className="bg-gradient-to-r from-[#0c1427] via-[#091122] to-[#080d1a] border-b border-gray-800/80 p-3.5 flex items-center justify-between">
@@ -516,12 +516,12 @@ export function AlphaChanakyaDrawer({
         </div>
 
         {/* Quick Starter Chips */}
-        <div className="px-3.5 py-2 bg-gray-950/90 border-t border-gray-900 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+        <div className="px-3.5 py-2 bg-gray-950/90 border-t border-gray-900 overflow-x-auto no-scrollbar flex items-center gap-1.5">
           {starterChips.map((chip, idx) => (
             <button
               key={idx}
               onClick={() => handleSendMessage(chip.query)}
-              className="whitespace-nowrap text-[10px] px-2.5 py-1 rounded-full bg-gray-900 hover:bg-cyan-500/20 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 font-mono transition-all flex-shrink-0"
+              className="whitespace-nowrap text-[10px] px-2.5 py-1 rounded-full bg-gray-900 hover:bg-cyan-500/20 border border-gray-800 hover:border-cyan-500/40 text-gray-300 hover:text-cyan-300 font-mono transition-all flex-shrink-0 cursor-pointer"
             >
               {chip.label}
             </button>
@@ -543,12 +543,12 @@ export function AlphaChanakyaDrawer({
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               placeholder="Ask about DCF, Forensics, Rolling Alpha, or Overlap..."
-              className="flex-1 bg-gray-950 border border-gray-800 focus:border-cyan-400 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-sans"
+              className="flex-1 bg-gray-950 border border-gray-800 focus:border-cyan-400 rounded-xl px-3.5 py-2 text-base sm:text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-sans"
             />
             <button
               type="submit"
               disabled={!inputVal.trim() || loading}
-              className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-40 text-white font-medium shadow-lg shadow-cyan-600/20 transition-all active:scale-95 flex-shrink-0"
+              className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-40 text-white font-medium shadow-lg shadow-cyan-600/20 transition-all active:scale-95 flex-shrink-0 cursor-pointer"
               title="Send query"
             >
               <Send className="w-4 h-4" />
