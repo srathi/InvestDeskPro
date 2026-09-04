@@ -32,6 +32,7 @@ from app.schemas import (
     StockScorecardResponse,
     StockSearchResult,
 )
+from app.core.shareholding_registry import resolve_authentic_shareholding
 
 # ---------------------------------------------------------------------------
 # Comprehensive Indian Ticker Aliases, BSE Scrip Codes & Normalization
@@ -941,50 +942,19 @@ def extract_annual_financials(t: yf.Ticker) -> Tuple[List[AnnualFinancialYear], 
     return years_data, cagr_rev, cagr_prof, yoy_r, yoy_p
 
 
-def extract_shareholding_pattern(t: yf.Ticker, info: Dict[str, Any]) -> ShareholdingPattern:
+def extract_shareholding_pattern(
+    t: yf.Ticker,
+    info: Dict[str, Any],
+    ticker: str = "",
+    company_name: str = "",
+) -> ShareholdingPattern:
     """Extract Screener-grade Shareholding pattern (Promoters, FIIs, DIIs, Public, Pledged)."""
-    promoters = None
-    institutions = None
-
-    try:
-        mh = t.major_holders
-        if mh is not None and not mh.empty:
-            for idx, row in mh.iterrows():
-                b_name = str(row.get("Breakdown") or idx).lower()
-                val = row.get("Value")
-                if "insiders" in b_name and val is not None:
-                    promoters = round(float(val) * 100.0, 2)
-                elif "institutions" in b_name and "float" not in b_name and "count" not in b_name and val is not None:
-                    institutions = round(float(val) * 100.0, 2)
-    except Exception:
-        pass
-
-    if promoters is None:
-        raw_insiders = info.get("heldPercentInsiders")
-        if raw_insiders is not None:
-            promoters = round(float(raw_insiders) * 100.0, 2)
-
-    if institutions is None:
-        raw_inst = info.get("heldPercentInstitutions")
-        if raw_inst is not None:
-            institutions = round(float(raw_inst) * 100.0, 2)
-
-    promoters = promoters if promoters is not None else 50.0
-    institutions = institutions if institutions is not None else 20.0
-    public_retail = max(0.0, round(100.0 - promoters - institutions, 2))
-
-    fii = round(institutions * 0.6, 2)
-    dii = round(institutions * 0.4, 2)
-    pledged = 0.0
-
-    return ShareholdingPattern(
-        promoters_pct=promoters,
-        institutions_pct=institutions,
-        fii_pct=fii,
-        dii_pct=dii,
-        public_retail_pct=public_retail,
-        pledged_pct=pledged,
+    _, pattern, _, _, _ = resolve_authentic_shareholding(
+        ticker=ticker,
+        company_name=company_name or info.get("longName") or info.get("shortName") or "",
+        info=info,
     )
+    return pattern
 
 
 def compute_stock_classification(
@@ -1315,7 +1285,7 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         else:
             div_yield = 0.0
 
-    shareholding = extract_shareholding_pattern(t, info)
+    shareholding = extract_shareholding_pattern(t, info, ticker=norm_ticker, company_name=company_name)
     classification = compute_stock_classification(
         company_name=company_name,
         rev_cagr_3y=cagr_rev,

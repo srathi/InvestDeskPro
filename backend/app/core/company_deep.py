@@ -23,6 +23,7 @@ from app.core.factors import (
     safe_float,
     search_indian_stocks,
 )
+from app.core.shareholding_registry import resolve_authentic_shareholding
 from app.core.growth_forecast import calculate_forward_estimates
 from app.schemas import (
     Company360Response,
@@ -1529,13 +1530,17 @@ def fetch_company_360(ticker: str) -> Company360Response:
     div_yield_pct = round(div_yield * 100.0, 2) if div_yield is not None else 1.2
     fcf_val = safe_float(info.get("freeCashflow"))
     fcf_cr = round(fcf_val / 10000000.0, 1) if fcf_val is not None else round(mcap_cr * 0.04, 1)
-    promoter_pct = safe_float(info.get("heldPercentInsiders"))
-    promoter_holding = round(promoter_pct * 100.0, 1) if promoter_pct is not None else 54.2
-
     company_name = info.get("longName") or info.get("shortName")
     if not company_name:
         master_matches = search_indian_stocks(clean_sym, limit=1)
         company_name = master_matches[0].name if master_matches else clean_sym
+
+    # Resolve authentic SEBI shareholding pattern & 4-quarter history
+    shareholding_quarters, shareholding_pattern, promoter_holding, pledged_holding, sh_notes = resolve_authentic_shareholding(
+        ticker=norm_ticker,
+        company_name=company_name,
+        info=info,
+    )
 
     sector = info.get("sector")
     if not sector or sector == "Diversified Indian Equities":
@@ -1662,18 +1667,12 @@ def fetch_company_360(ticker: str) -> Company360Response:
     quarterly_financials = extract_quarterly_financials(t, info, current_price, mcap_cr=mcap_cr)
 
     # Shareholding Evolution (4 Quarters) & Institutional Delta
-    p_pct = promoter_holding
-    f_pct = round(safe_float(info.get("heldPercentInstitutions"), 0.18) * 100.0, 1) if info.get("heldPercentInstitutions") else 18.4
-    d_pct = round(max(5.0, 100.0 - p_pct - f_pct - 14.5), 1)
-    pub_pct = round(max(5.0, 100.0 - p_pct - f_pct - d_pct), 1)
-
-    shareholding = [
-        ShareholdingQuarter(quarter="Q1 (Prior)", promoter_pct=round(p_pct - 0.2, 1), fii_pct=round(f_pct - 0.5, 1), dii_pct=round(d_pct + 0.3, 1), public_pct=pub_pct, pledged_pct=0.0),
-        ShareholdingQuarter(quarter="Q2", promoter_pct=round(p_pct - 0.1, 1), fii_pct=round(f_pct - 0.2, 1), dii_pct=round(d_pct + 0.1, 1), public_pct=pub_pct, pledged_pct=0.0),
-        ShareholdingQuarter(quarter="Q3", promoter_pct=p_pct, fii_pct=f_pct, dii_pct=d_pct, public_pct=pub_pct, pledged_pct=0.0),
-        ShareholdingQuarter(quarter="Q4 (Latest)", promoter_pct=round(p_pct + 0.1, 1), fii_pct=round(f_pct + 0.3, 1), dii_pct=d_pct, public_pct=round(pub_pct - 0.4, 1), pledged_pct=0.0),
-    ]
+    shareholding = shareholding_quarters
     institutional_delta = calculate_institutional_delta(shareholding)
+    if pledged_holding > 0.0:
+        institutional_delta.pledged_shares_pct = pledged_holding
+    if sh_notes:
+        institutional_delta.shareholding_notes = sh_notes
 
     # Authentic Sector Peers with Genuine Fundamental Benchmarks
     peers = resolve_authentic_sector_peers(

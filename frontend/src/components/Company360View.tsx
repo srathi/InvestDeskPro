@@ -30,6 +30,7 @@ import {
   Table,
   Target,
   Calculator,
+  Info,
 } from "lucide-react";
 import { JargonTooltip } from "./JargonTooltip";
 import {
@@ -2663,8 +2664,12 @@ export const Company360View: React.FC<Company360ViewProps> = ({
 
                     <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
                       <span className="text-[10px] text-slate-500 uppercase font-semibold block">Promoter Pledging</span>
-                      <div className="text-sm font-bold text-emerald-400 font-mono font-tabular">
-                        0.0% Pledged
+                      <div className={`text-sm font-bold font-mono font-tabular ${
+                        (data.institutional_delta.pledged_shares_pct || 0) > 0 ? "text-amber-400" : "text-emerald-400"
+                      }`}>
+                        {(data.institutional_delta.pledged_shares_pct ?? 0) === 0
+                          ? "0.0% Pledged"
+                          : `${data.institutional_delta.pledged_shares_pct}% Pledged`}
                       </div>
                     </div>
                   </div>
@@ -2695,6 +2700,14 @@ export const Company360View: React.FC<Company360ViewProps> = ({
                     </tbody>
                   </table>
                 </div>
+
+                {/* Contextual Shareholding Notes (e.g. Government of India holding, Co-founders, Trusts) */}
+                {data.institutional_delta?.shareholding_notes && (
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-400 flex items-start gap-2">
+                    <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <span><strong>Ownership Structure:</strong> {data.institutional_delta.shareholding_notes}</span>
+                  </div>
+                )}
               </div>
 
               {/* Section 7: Sector Peer Comparison Table */}

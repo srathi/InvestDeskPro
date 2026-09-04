@@ -602,6 +602,7 @@ class InstitutionalDelta(BaseModel):
     public_qoq_delta: float
     pledged_shares_pct: float = 0.0
     net_institutional_sentiment: str
+    shareholding_notes: Optional[str] = None
 
 
 class HistoricalValuationSummary(BaseModel):
