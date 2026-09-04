@@ -25,6 +25,16 @@ from app.core.factors import (
 )
 from app.core.shareholding_registry import resolve_authentic_shareholding
 from app.core.growth_forecast import calculate_forward_estimates
+from app.core.data_reconciliation import (
+    reconcile_valuation_multiples,
+    reconcile_profitability_metrics,
+    reconcile_solvency_and_leverage,
+    is_bfsi_company,
+    get_cached_financials,
+    set_cached_financials,
+    get_cached_price,
+    set_cached_price,
+)
 from app.schemas import (
     Company360Response,
     CompanyEssentials,
@@ -1557,15 +1567,42 @@ def fetch_company_360(ticker: str) -> Company360Response:
     )
     website = info.get("website") or None
 
-    # PEG Ratio extraction & dynamic calculation
+    # Apply Non-Destructive Data Reconciliation & Sanity Guardrails
+    is_bfsi = is_bfsi_company(sector, industry, company_name)
+    reconciled_prof = reconcile_profitability_metrics(
+        raw_roe=roe_val,
+        raw_roce=roce_val,
+        raw_opm=None,
+        raw_npm=None,
+        is_bfsi=is_bfsi,
+    )
+    roe_pct = reconciled_prof["roe"] if reconciled_prof["roe"] is not None else roe_pct
+    roce_pct = reconciled_prof["roce"] if reconciled_prof["roce"] is not None else roce_pct
+
+    reconciled_solv = reconcile_solvency_and_leverage(
+        raw_de=de_val,
+        raw_current_ratio=None,
+        raw_interest_coverage=None,
+        is_bfsi=is_bfsi,
+    )
+    de_val = reconciled_solv["debt_to_equity"] if reconciled_solv["debt_to_equity"] is not None else de_val
+
     raw_peg = safe_float(info.get("pegRatio")) or safe_float(info.get("trailingPegRatio"))
-    if raw_peg and 0.1 <= raw_peg <= 20.0:
-        peg_val = round(raw_peg, 2)
-    elif pe_val and pe_val > 0:
-        growth_rate = max(5.0, min(50.0, float(roce_pct or roe_pct or 15.0)))
-        peg_val = round(pe_val / growth_rate, 2)
-    else:
-        peg_val = 1.25
+    reconciled_val = reconcile_valuation_multiples(
+        raw_pe=pe_val,
+        raw_pb=pb_val,
+        raw_peg=raw_peg,
+        raw_ev_ebitda=None,
+        raw_div_yield=div_yield_pct,
+        current_price=current_price,
+        mcap_cr=mcap_cr,
+        roe_pct=roe_pct,
+        roce_pct=roce_pct,
+    )
+    pe_val = reconciled_val["pe"]
+    pb_val = reconciled_val["pb"]
+    peg_val = reconciled_val["peg_ratio"] or 1.25
+    div_yield_pct = reconciled_val["dividend_yield"] if reconciled_val["dividend_yield"] is not None else div_yield_pct
 
     essentials = CompanyEssentials(
         market_cap_cr=mcap_cr,

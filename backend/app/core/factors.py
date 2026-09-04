@@ -33,6 +33,14 @@ from app.schemas import (
     StockSearchResult,
 )
 from app.core.shareholding_registry import resolve_authentic_shareholding
+from app.core.data_reconciliation import (
+    reconcile_valuation_multiples,
+    reconcile_profitability_metrics,
+    reconcile_solvency_and_leverage,
+    is_bfsi_company,
+    get_cached_price,
+    set_cached_price,
+)
 
 # ---------------------------------------------------------------------------
 # Comprehensive Indian Ticker Aliases, BSE Scrip Codes & Normalization
@@ -1235,8 +1243,52 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         leverage = de_val if de_val is not None else 0.5
         roce_val = round((roe_val / (1.0 + leverage)) * (1.2 + min(1.0, 0.3 * leverage)), 2)
 
+    # Determine Sector & BFSI Classification
+    sector_str = info.get("sector") or "Indian Equities"
+    industry_str = info.get("industry") or "Equities"
+    is_bfsi = is_bfsi_sector(sector_str, industry_str) or is_bfsi_company(sector_str, industry_str, info.get("longName"))
+    factor_model_type = "BFSI Banking & Financials" if is_bfsi else "Standard Corporate"
+
+    # Apply Non-Destructive Data Reconciliation & Sanity Guardrails
+    reconciled_prof = reconcile_profitability_metrics(
+        raw_roe=roe_val,
+        raw_roce=roce_val,
+        raw_opm=op_margin,
+        raw_npm=net_margin,
+        is_bfsi=is_bfsi,
+    )
+    roe_val = reconciled_prof["roe"]
+    roce_val = reconciled_prof["roce"]
+    op_margin = reconciled_prof["opm_pct"]
+    net_margin = reconciled_prof["npm_pct"]
+
+    reconciled_solv = reconcile_solvency_and_leverage(
+        raw_de=de_val,
+        raw_current_ratio=safe_float(info.get("currentRatio")),
+        raw_interest_coverage=safe_float(info.get("interestCoverage")),
+        is_bfsi=is_bfsi,
+    )
+    de_val = reconciled_solv["debt_to_equity"]
+
+    mcap_val = safe_float(info.get("marketCap"))
+    mcap_cr_val = round(mcap_val / 10000000.0, 1) if mcap_val else None
+    reconciled_val = reconcile_valuation_multiples(
+        raw_pe=trailing_pe,
+        raw_pb=price_to_book,
+        raw_peg=peg_ratio,
+        raw_ev_ebitda=safe_float(info.get("enterpriseToEbitda")),
+        raw_div_yield=None,
+        current_price=current_price,
+        mcap_cr=mcap_cr_val,
+        roe_pct=roe_val,
+        roce_pct=roce_val,
+    )
+    trailing_pe = reconciled_val["pe"]
+    price_to_book = reconciled_val["pb"]
+    peg_ratio = reconciled_val["peg_ratio"]
+
     fundamentals = StockFundamentals(
-        market_cap=safe_float(info.get("marketCap")),
+        market_cap=mcap_val,
         roe=roe_val,
         roce=roce_val,
         debt_to_equity=de_val,
@@ -1252,12 +1304,6 @@ def generate_stock_scorecard(ticker: str) -> StockScorecardResponse:
         realized_vol_60d=realized_vol_60d,
         current_price=current_price,
     )
-
-    # Determine Sector & BFSI Classification
-    sector_str = info.get("sector") or "Indian Equities"
-    industry_str = info.get("industry") or "Equities"
-    is_bfsi = is_bfsi_sector(sector_str, industry_str)
-    factor_model_type = "BFSI Banking & Financials" if is_bfsi else "Standard Corporate"
 
     # Compute Factor Pillars (Raw Score & Grade) with Sector-Specific Logic
     q_score, q_grade, q_summary = compute_quality_score(fundamentals, is_bfsi=is_bfsi)
